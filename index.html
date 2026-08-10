@@ -1,11 +1,24 @@
 <!DOCTYPE html>
-<!-- Quiz Math Foot - Version 18.6 (correctif plantage import fichier sur tablette) - 10/08/2026
-     Base : version 18.5 (email enseignant retiré du code source).
-     Correctif v18.6 : le bouton "IMPORTER UN ÉLÈVE" faisait planter le navigateur sur tablette dès
-     le clic (avant même le choix d'un fichier), remontant l'utilisateur à l'écran d'accueil de la
-     tablette. Cause probable : bug connu de certaines WebView Android/Chrome avec le filtre de type
-     de fichier accept="application/json" (MIME strict). Remplacé par accept=".json,application/json"
-     (filtre par extension, plus largement compatible). À confirmer sur la tablette de Fred.
+<!-- Quiz Math Foot - Version 18.9 (icône afficher/masquer le mot de passe) - 10/08/2026
+     Base : version 18.8 (renommer un élève + correctif suppression).
+     Ajout v18.9 : icône 👁️ dans le champ mot de passe de l'écran Connexion Mode Prof, pour basculer
+     entre saisie masquée et texte en clair (basculerAffichageMdp) — utile sur clavier tactile.
+     Ajout v18.8 : bouton "Renommer" par élève dans l'écran Gérer les élèves (édition inline,
+     détection de collision de nom, déplace le profil vers la nouvelle clé et recrée le document
+     Firestore sous le nouveau nom). Corrige aussi le bug de suppression qui ne "prenait" pas : les
+     règles Firestore données précédemment référençaient request.resource.size() pour TOUTE écriture
+     y compris la suppression, alors que request.resource n'existe pas pour une opération delete —
+     ce qui bloquait silencieusement toute suppression côté serveur (l'élève réapparaissait). Les
+     règles à jour séparent désormais create/update (avec la vérification de taille) de delete (sans
+     cette vérification) — voir échange avec Fred du 10/08/2026 pour le texte exact à recoller dans
+     la console Firebase.
+     Correctif v18.7 : remplacement du mécanisme <label for="fichier-import-eleve"> (qui déclenche
+     l'input file caché par association HTML native) par un vrai <button> appelant
+     document.getElementById('fichier-import-eleve').click() en JavaScript (declencherImportEleve).
+     L'input file passe de display:none à une technique "visually hidden" (position absolute,
+     1x1px, clip) plutôt que display:none, car display:none sur un input file a des bugs documentés
+     sur certaines versions de WebView Android lors du déclenchement via <label for>. À confirmer
+     sur la tablette de Fred.
      Ajout v18.5 : l'adresse email du compte enseignant était écrite en clair dans le code (constante
      TEACHER_EMAIL + pré-remplissage du champ de connexion), donc visible par quiconque affichait le
      code source de la page — y compris via le dépôt GitHub public. Elle est retirée : côté client,
@@ -464,7 +477,11 @@
         <label for="prof-email">Adresse email</label>
         <input type="email" id="prof-email" placeholder="ton-email@exemple.fr">
         <label for="prof-mdp">Mot de passe</label>
-        <input type="password" id="prof-mdp" placeholder="Mot de passe">
+        <div style="position:relative;">
+            <input type="password" id="prof-mdp" placeholder="Mot de passe" style="padding-right:44px; width:100%; box-sizing:border-box;">
+            <button type="button" onclick="basculerAffichageMdp()" aria-label="Afficher ou masquer le mot de passe"
+                style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; font-size:1.2em; cursor:pointer; padding:4px 6px; margin:0; line-height:1;">👁️</button>
+        </div>
         <div id="erreur-connexion-prof"></div>
         <button class="main" onclick="connecterProf()">SE CONNECTER</button>
         <button class="secondary" onclick="changerDeJoueur()">ANNULER</button>
@@ -478,8 +495,8 @@
         <button class="secondary" onclick="afficherGestionEleves()">GÉRER LA LISTE DES ÉLÈVES 👥</button>
         <button class="secondary" onclick="afficherLectureRapportTous()">LIRE / IMPRIMER LE RAPPORT DE TOUS LES ÉLÈVES 🖨️</button>
         <button class="secondary" onclick="telechargerRapportTousLesEleves()">TÉLÉCHARGER LE RAPPORT DE TOUS LES ÉLÈVES 📄</button>
-        <label for="fichier-import-eleve" class="bouton-fichier-label">IMPORTER UN ÉLÈVE (fichier .json) 📂</label>
-        <input type="file" id="fichier-import-eleve" accept=".json,application/json" onchange="importerEleve(event)" style="display:none;">
+        <button type="button" class="bouton-fichier-label" onclick="declencherImportEleve()">IMPORTER UN ÉLÈVE (fichier .json) 📂</button>
+        <input type="file" id="fichier-import-eleve" accept=".json,application/json" onchange="importerEleve(event)" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">
         <div id="message-import" style="min-height:20px; font-weight:bold; margin-top:6px;"></div>
         <button class="secondary" onclick="changerDeJoueur()">RETOUR À L'ACCUEIL</button>
     </div>
@@ -622,7 +639,7 @@
         <button class="secondary no-print" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
-    <div class="footer-version">Quiz Math Foot — v18.6 <span id="statut-connexion">🔄 connexion…</span></div>
+    <div class="footer-version">Quiz Math Foot — v18.9 <span id="statut-connexion">🔄 connexion…</span></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1731,8 +1748,16 @@ function afficherModeProf() {
 function afficherEcranConnexionProf() {
     document.getElementById('prof-email').value = '';
     document.getElementById('prof-mdp').value = '';
+    document.getElementById('prof-mdp').type = 'password';
     document.getElementById('erreur-connexion-prof').textContent = '';
     afficherEcran('ecran-connexion-prof');
+}
+
+// Bascule entre "•••" et texte en clair pour le champ mot de passe (v18.9), utile sur clavier
+// tactile où les fautes de frappe sont fréquentes et invisibles autrement.
+function basculerAffichageMdp() {
+    const champ = document.getElementById('prof-mdp');
+    champ.type = (champ.type === 'password') ? 'text' : 'password';
 }
 
 function connecterProf() {
@@ -1760,7 +1785,12 @@ function revenirEnModeEleve() {
 }
 
 // ========================= GESTION DE LA LISTE DES ÉLÈVES (v18.0) =========================
+// nom de l'élève actuellement en cours de renommage dans l'écran Gérer les élèves (bascule la
+// ligne correspondante en mode édition). null = aucune ligne en édition.
+let nomEnRenommage = null;
+
 function afficherGestionEleves() {
+    nomEnRenommage = null;
     construireGestionEleves();
     afficherEcran('ecran-gestion-eleves');
 }
@@ -1776,20 +1806,68 @@ function construireGestionEleves() {
     noms.forEach(nom => {
         const ligne = document.createElement('div');
         ligne.className = 'eleve-prof-btn';
-        ligne.style.display = 'flex';
-        ligne.style.justifyContent = 'space-between';
-        ligne.style.alignItems = 'center';
         ligne.style.cursor = 'default';
-        const span = document.createElement('span');
-        span.textContent = nom;
-        ligne.appendChild(span);
-        const btnRetirer = document.createElement('button');
-        btnRetirer.type = 'button';
-        btnRetirer.className = 'tertiaire';
-        btnRetirer.style.margin = '0';
-        btnRetirer.textContent = 'Retirer';
-        btnRetirer.onclick = () => retirerEleveDeLaGestion(nom);
-        ligne.appendChild(btnRetirer);
+
+        if (nomEnRenommage === nom) {
+            ligne.style.display = 'block';
+            const rangeeEdition = document.createElement('div');
+            rangeeEdition.style.display = 'flex';
+            rangeeEdition.style.gap = '6px';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = nom;
+            input.style.flex = '1';
+            input.style.minWidth = '0';
+            rangeeEdition.appendChild(input);
+            const btnValider = document.createElement('button');
+            btnValider.type = 'button';
+            btnValider.className = 'tertiaire';
+            btnValider.style.margin = '0';
+            btnValider.textContent = 'Valider';
+            btnValider.onclick = () => validerRenommageEleve(nom, input.value);
+            rangeeEdition.appendChild(btnValider);
+            const btnAnnuler = document.createElement('button');
+            btnAnnuler.type = 'button';
+            btnAnnuler.className = 'tertiaire';
+            btnAnnuler.style.margin = '0';
+            btnAnnuler.textContent = 'Annuler';
+            btnAnnuler.onclick = () => { nomEnRenommage = null; construireGestionEleves(); };
+            rangeeEdition.appendChild(btnAnnuler);
+            ligne.appendChild(rangeeEdition);
+            const erreurDiv = document.createElement('div');
+            erreurDiv.id = 'erreur-renommage';
+            erreurDiv.style.color = '#c0392b';
+            erreurDiv.style.fontSize = '0.85em';
+            erreurDiv.style.marginTop = '4px';
+            ligne.appendChild(erreurDiv);
+        } else {
+            ligne.style.display = 'flex';
+            ligne.style.justifyContent = 'space-between';
+            ligne.style.alignItems = 'center';
+            ligne.style.gap = '6px';
+            const span = document.createElement('span');
+            span.textContent = nom;
+            ligne.appendChild(span);
+            const boutons = document.createElement('div');
+            boutons.style.display = 'flex';
+            boutons.style.gap = '6px';
+            boutons.style.flexShrink = '0';
+            const btnRenommer = document.createElement('button');
+            btnRenommer.type = 'button';
+            btnRenommer.className = 'tertiaire';
+            btnRenommer.style.margin = '0';
+            btnRenommer.textContent = 'Renommer';
+            btnRenommer.onclick = () => { nomEnRenommage = nom; construireGestionEleves(); };
+            boutons.appendChild(btnRenommer);
+            const btnRetirer = document.createElement('button');
+            btnRetirer.type = 'button';
+            btnRetirer.className = 'tertiaire';
+            btnRetirer.style.margin = '0';
+            btnRetirer.textContent = 'Retirer';
+            btnRetirer.onclick = () => retirerEleveDeLaGestion(nom);
+            boutons.appendChild(btnRetirer);
+            ligne.appendChild(boutons);
+        }
         liste.appendChild(ligne);
     });
 
@@ -1818,6 +1896,41 @@ function construireGestionEleves() {
     } else if (zoneMigration) {
         zoneMigration.innerHTML = '';
     }
+}
+
+function validerRenommageEleve(ancienNom, nouveauNomBrut) {
+    const nouveauNom = (nouveauNomBrut || '').trim();
+    const erreurDiv = document.getElementById('erreur-renommage');
+    if (nouveauNom === '') { if (erreurDiv) erreurDiv.textContent = 'Le nouveau prénom ne peut pas être vide.'; return; }
+    if (nouveauNom === ancienNom) { nomEnRenommage = null; construireGestionEleves(); return; }
+    if ((listeEleveAutorises || []).includes(nouveauNom) || donnees.users[nouveauNom]) {
+        if (erreurDiv) erreurDiv.textContent = 'Ce prénom est déjà utilisé par un autre élève.';
+        return;
+    }
+    renommerEleve(ancienNom, nouveauNom);
+    nomEnRenommage = null;
+    construireGestionEleves();
+}
+
+// Renomme un élève : déplace son profil (parties, badges, records) vers la nouvelle clé, met à
+// jour le roster en ligne, et recrée le document Firestore sous le nouveau nom (Firestore n'a pas
+// de "renommer" natif pour un identifiant de document — il faut créer le nouveau puis supprimer
+// l'ancien).
+function renommerEleve(ancienNom, nouveauNom) {
+    donnees.users[nouveauNom] = donnees.users[ancienNom];
+    delete donnees.users[ancienNom];
+
+    retirerEleveDeLaListeFirestore(ancienNom);
+    ajouterEleveALaListeFirestore(nouveauNom);
+    if (listeEleveAutorises) {
+        listeEleveAutorises = listeEleveAutorises.filter(n => n !== ancienNom);
+        if (!listeEleveAutorises.includes(nouveauNom)) listeEleveAutorises.push(nouveauNom);
+    }
+
+    sauvegarderDonnees(nouveauNom);
+    supprimerEleveDeFirestore(ancienNom);
+
+    if (utilisateurCourant === ancienNom) utilisateurCourant = nouveauNom;
 }
 
 function ajouterEleveDepuisGestion() {
@@ -2748,6 +2861,13 @@ function supprimerEleve() {
     if (listeEleveAutorises) listeEleveAutorises = listeEleveAutorises.filter(n => n !== nom);
     sauvegarderDonnees();
     afficherModeProf();
+}
+
+// v18.7 : déclenche le sélecteur de fichiers par un vrai clic JS plutôt que par un <label for="">,
+// qui provoquait un plantage du navigateur sur au moins une tablette (bug connu de certaines
+// versions de WebView Android avec ce mécanisme combiné à display:none sur l'input).
+function declencherImportEleve() {
+    document.getElementById('fichier-import-eleve').click();
 }
 
 function importerEleve(event) {
