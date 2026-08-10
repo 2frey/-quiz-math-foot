@@ -1,0 +1,2664 @@
+<!DOCTYPE html>
+<!-- Quiz Math Foot - Version 18.1 (authentification anonyme Firebase) - 10/08/2026
+     Base : version 18.0 (accès en ligne Firebase + liste d'élèves gérée par le prof).
+     Ajout v18.1 : chaque appareil se connecte silencieusement en anonyme (firebase.auth()) avant
+     toute lecture/écriture Firestore — aucun mot de passe côté élève, mais les règles Firestore
+     peuvent désormais exiger request.auth != null, ce qui bloque les robots/scripts qui scannent le
+     web à la recherche de bases mal protégées. firebaseOK ne passe à vrai qu'après confirmation de
+     cette connexion anonyme (voir INITIALISATION en fin de script).
+     Ajout v18.0 : intégration Firebase/Firestore (SDK compat via CDN, pas de bundler). Deux
+     collections : classe/liste (roster géré par le prof, écouté en temps réel sur l'écran de
+     connexion) et eleves/{nom} (un document par profil élève, poussé à chaque sauvegarde locale).
+     Les élèves ne créent plus leur profil librement : seul le prof ajoute/retire un nom via le
+     nouvel écran "Gérer les élèves" (accessible depuis Mode Prof). Le Mode Prof reçoit les
+     mises à jour des profils élèves en temps réel depuis n'importe quel appareil connecté au même
+     projet Firebase. localStorage reste la sauvegarde immédiate sur chaque appareil (fonctionnement
+     hors-ligne conservé) ; Firestore est une synchronisation en plus, pas un remplacement — si le
+     réseau est coupé, l'appli continue de fonctionner normalement en local. -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Math Foot</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(135deg, #1e8449 0%, #58d68d 100%);
+        min-height: 100vh;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+    .card {
+        background: #ffffff;
+        width: 100%;
+        max-width: 580px;
+        border-radius: 18px;
+        border: 4px solid #145a32;
+        box-shadow: 8px 8px 0 rgba(0,0,0,0.25);
+        padding: 28px;
+        text-align: center;
+    }
+    h1 { color: #145a32; font-size: 1.9em; margin: 0 0 6px; }
+    h2 { color: #145a32; font-size: 1.5em; margin: 0 0 6px; }
+    .consigne {
+        background: #eafaf1;
+        border: 2px dashed #1e8449;
+        border-radius: 10px;
+        padding: 12px 16px;
+        color: #145a32;
+        font-weight: bold;
+        margin-bottom: 18px;
+        font-size: 1.05em;
+    }
+    .avertissement {
+        background: #fdf3d0;
+        border: 2px dashed #d68910;
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: #7d5a00;
+        font-size: 0.9em;
+        margin-bottom: 16px;
+    }
+    label { font-weight: bold; color: #333; }
+    input[type="text"], input[type="email"], select.champ-select {
+        width: 100%;
+        padding: 10px;
+        font-size: 1.1em;
+        border: 2px solid #1e8449;
+        border-radius: 8px;
+        margin: 8px 0 14px;
+        text-align: center;
+    }
+    fieldset {
+        border: 2px solid #1e8449;
+        border-radius: 10px;
+        margin-bottom: 18px;
+        padding: 12px;
+        text-align: left;
+    }
+    legend { font-weight: bold; color: #145a32; padding: 0 8px; }
+    .tables-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+    .table-choice {
+        width: 46px;
+        height: 46px;
+        border-radius: 8px;
+        border: 2px solid #ccc;
+        background: #fff;
+        font-weight: bold;
+        font-size: 1.1em;
+        cursor: pointer;
+        color: #333;
+    }
+    .table-choice.selected { background: #f39c12; border-color: #d68910; color: #fff; }
+    .table-choice.verrouillee { background: #eee; border-color: #ccc; color: #aaa; cursor: not-allowed; font-size: 0.9em; }
+    .table-choice.suggeree:not(.verrouillee) { box-shadow: 0 0 0 3px #8e44ad; }
+
+    .suggestion-table {
+        background: #f6ecf6; border: 2px dashed #8e44ad; border-radius: 10px;
+        padding: 10px 16px; margin-bottom: 16px; color: #6c3483; font-weight: bold; font-size: 0.95em;
+    }
+    .suggestion-table:empty { display: none; }
+
+    /* Popup de suggestion de table (v17.0) : très visible, grand format */
+    .popup-suggestion-carte {
+        background: linear-gradient(135deg, #f6ecf6 0%, #e8d5f0 100%);
+        border: 4px solid #8e44ad;
+        border-radius: 16px;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 6px 6px 0 rgba(142, 68, 173, 0.3);
+        animation: popup-suggestion-apparition 0.35s ease-out;
+    }
+    #popup-suggestion-texte {
+        font-size: 1.35em;
+        font-weight: bold;
+        color: #6c3483;
+        line-height: 1.4;
+        margin: 12px 0 24px;
+    }
+    @keyframes popup-suggestion-apparition {
+        from { transform: scale(0.85); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    .count-choice-row { display: flex; justify-content: center; gap: 10px; }
+    .count-choice {
+        flex: 1; max-width: 160px; padding: 10px; border-radius: 8px;
+        border: 2px solid #ccc; background: #fff; font-weight: bold; cursor: pointer;
+    }
+    .count-choice.selected { background: #3498db; border-color: #21618c; color: #fff; }
+    button.main {
+        width: 100%; padding: 14px; font-size: 1.25em; font-weight: bold; color: #fff;
+        background: #1e8449; border: 3px solid #145a32; border-radius: 10px; cursor: pointer;
+        margin-top: 6px;
+    }
+    button.main:disabled { background: #aaa; border-color: #888; cursor: not-allowed; }
+    button.secondary {
+        width: 100%; padding: 12px; font-size: 1.05em; font-weight: bold; color: #145a32;
+        background: #eafaf1; border: 2px solid #1e8449; border-radius: 10px; cursor: pointer;
+        margin-top: 10px;
+    }
+    button.tertiaire {
+        width: 100%; padding: 10px; font-size: 0.95em; font-weight: bold; color: #555;
+        background: #f4f4f4; border: 2px solid #ccc; border-radius: 10px; cursor: pointer;
+        margin-top: 8px;
+    }
+    .row-2 { display: flex; gap: 10px; }
+    .row-2 > button { flex: 1; }
+    #erreur-tables, #erreur-nom { color: #c0392b; font-weight: bold; min-height: 20px; margin: -6px 0 10px; }
+
+    /* Écran utilisateur */
+    .liste-joueurs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+    .joueur-btn {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 16px; border: 2px solid #1e8449; border-radius: 10px;
+        background: #eafaf1; cursor: pointer; font-weight: bold; color: #145a32; font-size: 1.05em;
+    }
+    .joueur-badges { font-size: 1.1em; }
+
+    /* Écran jeu */
+    .progress { font-weight: bold; color: #555; margin-bottom: 6px; }
+    #question { font-size: 3.2em; font-weight: bold; color: #145a32; margin: 10px 0 18px; }
+    #reponse {
+        width: 60%; padding: 12px; font-size: 1.6em; text-align: center;
+        border: 3px solid #3498db; border-radius: 10px; margin-bottom: 14px;
+    }
+    #feedback { min-height: 30px; font-weight: bold; font-size: 1.15em; margin-bottom: 10px; }
+    #feedback.ok { color: #1e8449; }
+    #feedback.ko { color: #c0392b; }
+
+    /* Écran résultat */
+    .score-final { font-size: 2.4em; font-weight: bold; color: #145a32; margin: 10px 0; }
+    .message-record {
+        background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px;
+        padding: 12px; margin: 10px 0; font-weight: bold; color: #856404;
+    }
+    .message-badges {
+        background: #eafaf1; border: 2px solid #1e8449; border-radius: 10px;
+        padding: 12px; margin: 10px 0; color: #145a32; font-weight: bold;
+    }
+    .liste-erreurs {
+        text-align: left; background: #fdecea; border: 2px solid #e6b0aa;
+        border-radius: 10px; padding: 14px 18px; margin: 16px 0;
+    }
+    .liste-erreurs h3 { color: #c0392b; margin-top: 0; }
+    .liste-erreurs li { margin-bottom: 4px; }
+
+    /* Écran profil / classement */
+    .badges-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 14px 0; }
+    .badge-item { width: 100px; padding: 10px 6px; border-radius: 10px; text-align: center; font-size: 0.85em; }
+    .badge-item.gagne { background: #fff3cd; border: 2px solid #ffc107; color: #856404; font-weight: bold; }
+    .badge-item.non-gagne { background: #f4f4f4; border: 2px solid #ddd; color: #aaa; }
+    .badge-emoji { font-size: 1.8em; display: block; margin-bottom: 4px; }
+    table.records { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table.records th, table.records td { padding: 8px; border-bottom: 1px solid #ddd; text-align: left; font-size: 0.95em; }
+    table.records th { color: #145a32; }
+    select#select-config { width: 100%; padding: 10px; font-size: 1em; border: 2px solid #1e8449; border-radius: 8px; margin-bottom: 12px; }
+    .ligne-utilisateur-courant { background: #eafaf1; font-weight: bold; }
+    .rang { font-weight: bold; color: #1e8449; }
+
+    .hidden { display: none; }
+    .footer-version { margin-top: 16px; font-size: 0.75em; color: #999; }
+
+    /* Message d'encouragement (écran résultat) */
+    .message-encouragement {
+        background: #e8f6ff; border: 2px solid #3498db; border-radius: 10px;
+        padding: 12px; margin: 10px 0; color: #1a5276; font-weight: bold; text-align: left;
+    }
+
+    /* Mode Prof : liste des élèves */
+    .liste-eleves-prof { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+    .eleve-prof-btn {
+        text-align: left; padding: 12px 16px; border: 2px solid #640064; border-radius: 10px;
+        background: #f6ecf6; cursor: pointer; font-weight: bold; color: #640064; font-size: 1.05em;
+    }
+
+    /* Carte des tables (heatmap) */
+    .carte-tables { display: inline-block; border-collapse: collapse; margin: 14px auto; }
+    .carte-tables th { padding: 4px; font-size: 0.8em; color: #555; }
+    .carte-tables td {
+        width: 30px; height: 30px; text-align: center; font-size: 0.75em;
+        border: 1px solid #fff; font-weight: bold; color: #333;
+    }
+    .cellule-acquis { background: #a9dfbf; }
+    .cellule-en-cours { background: #fad7a0; }
+    .cellule-a-travailler { background: #f5b7b1; }
+    .cellule-non-teste { background: #eee; color: #bbb; }
+    .cellule-confusion { background: #d7bde2; }
+    .legende-carte { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; font-size: 0.8em; margin-bottom: 10px; }
+    .legende-item { display: flex; align-items: center; gap: 5px; }
+    .legende-puce { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+    .liste-priorites { text-align: left; background: #fdecea; border: 2px solid #e6b0aa; border-radius: 10px; padding: 12px 18px; margin: 14px 0; }
+    .liste-priorites li, .liste-commutativite li, .liste-paliers li { margin-bottom: 6px; }
+    .liste-commutativite { text-align: left; background: #eaf2ff; border: 2px solid #aed6f1; border-radius: 10px; padding: 12px 18px; margin: 14px 0; }
+    .liste-paliers { text-align: left; background: #f6ecf6; border: 2px solid #d7bde2; border-radius: 10px; padding: 12px 18px; margin: 14px 0; list-style: none; }
+    .section-prof { text-align: left; margin: 18px 0; }
+    .section-prof h3 { color: #640064; font-size: 1.1em; border-bottom: 1px dashed #640064; padding-bottom: 4px; }
+    .zone-graphique { text-align: center; margin: 10px 0 20px; }
+    .zone-graphique p.legende-graphique { font-size: 0.85em; color: #555; margin-top: -4px; }
+
+    /* Mode défi (écran résultat) */
+    #form-defi {
+        text-align: left; background: #eaf2ff; border: 2px solid #3498db; border-radius: 10px;
+        padding: 14px 16px; margin-top: 10px;
+    }
+    #erreur-defi { color: #c0392b; font-weight: bold; min-height: 20px; margin: 4px 0; }
+
+    /* Détail des parties (Mode Prof, v6.0) */
+    .detail-partie {
+        border: 2px solid #ddd; border-radius: 8px; margin-bottom: 8px; padding: 8px 12px; background: #fafafa;
+    }
+    .detail-partie summary { cursor: pointer; font-weight: bold; color: #333; }
+    table.records.petit th, table.records.petit td { font-size: 0.85em; padding: 5px; }
+
+    /* Paramètres (v6.0) */
+    .ligne-contact {
+        display: flex; justify-content: space-between; align-items: center;
+        background: #f4f4f4; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px;
+    }
+    .ligne-contact button { background: #e74c3c; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-weight: bold; }
+
+    /* Objectif quotidien (v8.0) */
+    .widget-objectif {
+        border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; text-align: center;
+        border: 3px solid; transition: background-color 0.3s, border-color 0.3s;
+    }
+    #widget-objectif-emoji { font-size: 2em; display: block; }
+    #widget-objectif-texte { font-weight: bold; color: #333; margin-top: 2px; }
+    .barre-progression { background: #fff; border-radius: 8px; height: 14px; overflow: hidden; margin-top: 8px; border: 1px solid rgba(0,0,0,0.1); }
+    .barre-remplissage { height: 100%; background: #27ae60; width: 0%; transition: width 0.4s; }
+    .objectif-vert { background: #eafaf1; border-color: #27ae60; }
+    .objectif-neutre { background: #eaf2ff; border-color: #3498db; }
+    .objectif-orange { background: #fdf3d0; border-color: #f39c12; }
+    .objectif-rouge { background: #fdecea; border-color: #c0392b; }
+    .objectif-rouge-fonce { background: #f5b7b1; border-color: #922b21; }
+
+    .bouton-danger { background: #e74c3c !important; color: #fff !important; border-color: #922b21 !important; }
+    .bouton-fichier-label {
+        display: block; width: 100%; padding: 10px; font-size: 0.95em; font-weight: bold; color: #145a32;
+        background: #eafaf1; border: 2px solid #1e8449; border-radius: 10px; cursor: pointer; text-align: center;
+        margin-top: 8px; box-sizing: border-box;
+    }
+
+    /* Lecture du rapport (v7.0) */
+    .bloc-rapport-eleve { margin-bottom: 30px; }
+    .bloc-rapport-eleve h2 { font-size: 1.4em; border-bottom: 2px solid #145a32; padding-bottom: 4px; }
+    .bloc-rapport-eleve h3 { font-size: 1.05em; color: #145a32; margin-top: 16px; }
+    #zone-impression-rapport { text-align: left; }
+
+    /* Impression / export PDF : n'imprimer que le rapport, sans décor ni boutons */
+    @media print {
+        body { background: #fff !important; }
+        .card { box-shadow: none !important; border: none !important; padding: 6px !important; max-width: 100%; }
+        .no-print { display: none !important; }
+        .carte-tables td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .saut-page-eleve:not(:first-of-type) { page-break-before: always; }
+    }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+    <!-- ================= ÉCRAN UTILISATEUR ================= -->
+    <div id="ecran-utilisateur">
+        <h1>⚽ Quiz Math Foot</h1>
+        <div class="consigne">Qui joue aujourd'hui ?</div>
+        <div id="avertissement-stockage" class="avertissement hidden">
+            La sauvegarde n'est pas disponible sur cet appareil (navigation privée ?). Le jeu fonctionne, mais les scores et badges ne seront pas conservés.
+        </div>
+        <div class="liste-joueurs" id="liste-joueurs"></div>
+        <p style="color:#999; font-size:0.85em;">Ton prénom n'est pas dans la liste ? Demande à ton professeur de t'ajouter (Mode Prof → Gérer les élèves).</p>
+        <button class="tertiaire" onclick="afficherModeProf()">MODE PROF 📊</button>
+        <button class="tertiaire" onclick="afficherParametres()">PARAMÈTRES ⚙️</button>
+    </div>
+
+    <!-- ================= ÉCRAN POPUP SUGGESTION DE TABLE (v17.0) ================= -->
+    <div id="ecran-popup-suggestion" class="hidden">
+        <div class="popup-suggestion-carte">
+            <div style="font-size:3.5em;">💡</div>
+            <p id="popup-suggestion-texte">Suggestion du jour</p>
+            <button class="main" onclick="fermerPopupSuggestion()">C'EST PARTI ! ⚽</button>
+        </div>
+    </div>
+
+    <!-- ================= ÉCRAN ACCUEIL ================= -->
+    <div id="ecran-accueil" class="hidden">
+        <h1>⚽ Quiz Math Foot</h1>
+        <div class="consigne" id="salutation-joueur">Bonjour !</div>
+
+        <div id="suggestion-table" class="suggestion-table"></div>
+
+        <div id="widget-objectif" class="widget-objectif">
+            <span id="widget-objectif-emoji">🙂</span>
+            <div id="widget-objectif-texte">Objectif du jour : 7 parties</div>
+            <div class="barre-progression"><div id="widget-objectif-barre" class="barre-remplissage"></div></div>
+        </div>
+
+        <fieldset>
+            <legend>1. Choisis les tables à réviser</legend>
+            <div class="tables-grid" id="tables-grid"></div>
+            <div id="erreur-tables"></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>2. Choisis le nombre de questions</legend>
+            <div class="count-choice-row">
+                <button type="button" class="count-choice selected" data-count="10">10 questions</button>
+                <button type="button" class="count-choice" data-count="20">20 questions</button>
+            </div>
+        </fieldset>
+
+        <button class="main" onclick="demarrerPartie()">COUP D'ENVOI ⚽</button>
+        <div class="row-2">
+            <button class="secondary" onclick="afficherProfil()">MON PROFIL 🎖️</button>
+            <button class="secondary" onclick="afficherClassement()">CLASSEMENT 🏆</button>
+        </div>
+        <button class="tertiaire" onclick="changerDeJoueur()">Changer de joueur</button>
+    </div>
+
+    <!-- ================= ÉCRAN ANNONCE MISE À JOUR (v14.0) ================= -->
+    <div id="ecran-annonce-maj" class="hidden">
+        <h2>🆕 Quoi de neuf ?</h2>
+        <div id="annonce-maj-texte" style="text-align:left; white-space:pre-line; line-height:1.5; margin:16px 0;"></div>
+        <button class="main" onclick="fermerAnnonceMAJ()">J'AI COMPRIS, ON JOUE !</button>
+    </div>
+
+    <!-- ================= ÉCRAN JEU ================= -->
+    <div id="ecran-jeu" class="hidden">
+        <div class="consigne">Calcule et écris le résultat, puis valide.</div>
+        <div class="progress" id="progression">Question 1 / 10</div>
+        <div id="question">1 × 1</div>
+        <input type="number" id="reponse" placeholder="?" autocomplete="off">
+        <div id="feedback"></div>
+        <button class="main" id="btn-valider" onclick="validerReponse()">VALIDER</button>
+    </div>
+
+    <!-- ================= ÉCRAN RÉSULTAT ================= -->
+    <div id="ecran-resultat" class="hidden">
+        <h1>🏁 Match terminé !</h1>
+        <div class="score-final" id="score-final">0 / 10</div>
+        <div id="temps-final" style="color:#555; font-weight:bold; margin-bottom:10px;"></div>
+        <div id="bloc-vitesse-partie" style="color:#555; font-weight:bold; margin-bottom:10px;"></div>
+        <div id="bloc-encouragement"></div>
+        <div id="bloc-record"></div>
+        <div id="bloc-nouveaux-badges"></div>
+        <div id="bloc-erreurs"></div>
+
+        <div id="zone-defi">
+            <button class="secondary" id="btn-ouvrir-defi" onclick="ouvrirDefi()">DÉFIER QUELQU'UN PAR EMAIL 📧</button>
+            <div id="form-defi" class="hidden">
+                <label for="defi-destinataire">Qui défier ?</label>
+                <select id="defi-destinataire" class="champ-select"></select>
+                <div id="erreur-defi"></div>
+                <button class="main" id="btn-envoyer-defi" onclick="envoyerDefi()">ENVOYER LE DÉFI</button>
+                <button class="tertiaire" onclick="fermerDefi()">ANNULER</button>
+            </div>
+        </div>
+
+        <button class="main" onclick="rejouerMemeReglages()">REJOUER</button>
+        <button class="secondary" onclick="retourAccueil()">CHANGER LES TABLES</button>
+    </div>
+
+    <!-- ================= ÉCRAN PROFIL ================= -->
+    <div id="ecran-profil" class="hidden">
+        <h2>🎖️ Profil de <span id="profil-nom"></span></h2>
+        <p id="profil-stats" style="color:#555;"></p>
+        <div class="badges-grid" id="profil-badges"></div>
+        <h2 style="font-size:1.2em; margin-top:20px;">Mes records (sans faute)</h2>
+        <table class="records" id="profil-records"></table>
+        <h2 style="font-size:1.2em; margin-top:20px;">Ma progression</h2>
+        <div id="profil-progression"></div>
+        <button class="secondary" onclick="retourAccueil()">RETOUR</button>
+    </div>
+
+    <!-- ================= ÉCRAN CLASSEMENT ================= -->
+    <div id="ecran-classement" class="hidden">
+        <h2>🏆 Classement des chronos</h2>
+        <p style="color:#555; font-size:0.9em;">Classement basé uniquement sur les parties sans faute, pour une configuration identique de tables et de nombre de questions.</p>
+        <select id="select-config" onchange="afficherClassementPourConfig()"></select>
+        <table class="records" id="classement-tableau"></table>
+        <p id="classement-vide" class="hidden" style="color:#999;">Aucun score sans faute enregistré pour cette configuration pour l'instant.</p>
+        <button class="secondary" onclick="retourAccueil()">RETOUR</button>
+    </div>
+
+    <!-- ================= ÉCRAN MODE PROF : LISTE DES ÉLÈVES ================= -->
+    <div id="ecran-mode-prof" class="hidden">
+        <h2>📊 Mode Prof — Choisir un élève</h2>
+        <div class="liste-eleves-prof" id="liste-eleves-prof"></div>
+        <button class="secondary" onclick="afficherGestionEleves()">GÉRER LA LISTE DES ÉLÈVES 👥</button>
+        <button class="secondary" onclick="afficherLectureRapportTous()">LIRE / IMPRIMER LE RAPPORT DE TOUS LES ÉLÈVES 🖨️</button>
+        <button class="secondary" onclick="telechargerRapportTousLesEleves()">TÉLÉCHARGER LE RAPPORT DE TOUS LES ÉLÈVES 📄</button>
+        <label for="fichier-import-eleve" class="bouton-fichier-label">IMPORTER UN ÉLÈVE (fichier .json) 📂</label>
+        <input type="file" id="fichier-import-eleve" accept="application/json" onchange="importerEleve(event)" style="display:none;">
+        <div id="message-import" style="min-height:20px; font-weight:bold; margin-top:6px;"></div>
+        <button class="secondary" onclick="changerDeJoueur()">RETOUR À L'ACCUEIL</button>
+    </div>
+
+    <!-- ================= ÉCRAN GESTION DES ÉLÈVES (v18.0) ================= -->
+    <div id="ecran-gestion-eleves" class="hidden">
+        <h2>👥 Gérer la liste des élèves</h2>
+        <p style="color:#555; font-size:0.9em;">Cette liste est celle proposée aux élèves sur l'écran de connexion, sur tous les appareils connectés. Retirer un élève ne supprime pas ses données, juste son accès à la liste.</p>
+        <div class="liste-eleves-prof" id="liste-gestion-eleves"></div>
+        <label for="nouvel-eleve-nom">Ajouter un élève :</label>
+        <input type="text" id="nouvel-eleve-nom" placeholder="Prénom">
+        <div id="erreur-nouvel-eleve"></div>
+        <button class="main" onclick="ajouterEleveDepuisGestion()">AJOUTER À LA LISTE</button>
+        <div id="zone-migration-locale"></div>
+        <button class="secondary" onclick="afficherModeProf()">RETOUR</button>
+    </div>
+
+    <!-- ================= ÉCRAN MODE PROF : ANALYSE D'UN ÉLÈVE ================= -->
+    <div id="ecran-analyse-eleve" class="hidden">
+        <h2>📊 Analyse de <span id="analyse-nom"></span></h2>
+        <p id="analyse-stats-globales" style="color:#555;"></p>
+
+        <div class="section-prof">
+            <h3>Objectif quotidien</h3>
+            <p id="analyse-objectif-texte" style="color:#555;"></p>
+            <button class="tertiaire" onclick="reinitialiserObjectif()">RÉINITIALISER L'OBJECTIF (7 tentatives)</button>
+        </div>
+
+        <div class="section-prof">
+            <h3>Tables autorisées pour ce joueur</h3>
+            <p style="color:#555; font-size:0.9em;">Clique pour autoriser/verrouiller une table. Les tables verrouillées n'apparaissent plus sélectionnables sur son écran d'accueil.</p>
+            <div class="tables-grid" id="analyse-tables-autorisees"></div>
+        </div>
+
+        <div class="section-prof">
+            <h3>Repères du programme CM1</h3>
+            <div id="analyse-paliers"></div>
+        </div>
+
+        <div class="section-prof">
+            <h3>Carte des tables</h3>
+            <div class="legende-carte">
+                <span class="legende-item"><span class="legende-puce cellule-acquis"></span>Acquis</span>
+                <span class="legende-item"><span class="legende-puce cellule-en-cours"></span>En cours</span>
+                <span class="legende-item"><span class="legende-puce cellule-a-travailler"></span>À travailler</span>
+                <span class="legende-item"><span class="legende-puce cellule-non-teste"></span>Non testé</span>
+            </div>
+            <div style="text-align:center;" id="analyse-carte-tables"></div>
+        </div>
+
+        <div class="section-prof">
+            <h3>Vitesse × exactitude</h3>
+            <p style="color:#555; font-size:0.9em;">Basé sur le temps de réponse moyen (parties jouées depuis la v6.0). Ce profil influence directement le tirage des questions : un calcul juste mais lent continue d'apparaître souvent, jusqu'à devenir rapide.</p>
+            <div class="legende-carte">
+                <span class="legende-item"><span class="legende-puce cellule-acquis"></span>Automatisé</span>
+                <span class="legende-item"><span class="legende-puce cellule-en-cours"></span>En reconstruction</span>
+                <span class="legende-item"><span class="legende-puce cellule-confusion"></span>Confusion mémorisée</span>
+                <span class="legende-item"><span class="legende-puce cellule-a-travailler"></span>Non construit</span>
+            </div>
+            <div style="text-align:center;" id="analyse-carte-vitesse"></div>
+        </div>
+
+        <div class="section-prof">
+            <h3>Commutativité</h3>
+            <div id="analyse-commutativite"></div>
+        </div>
+
+        <div class="section-prof">
+            <h3>Priorités de travail</h3>
+            <div id="analyse-priorites"></div>
+        </div>
+
+        <div class="section-prof">
+            <h3>Courbe de progression</h3>
+            <div id="analyse-progression"></div>
+        </div>
+
+        <div class="section-prof">
+            <h3>Dernières parties (clique pour voir le détail de chaque calcul)</h3>
+            <div id="analyse-historique"></div>
+        </div>
+
+        <div class="section-prof" style="text-align:center;">
+            <h3>Rapport</h3>
+            <button class="secondary" onclick="afficherLectureRapportEleve()">LIRE / IMPRIMER LE RAPPORT 🖨️</button>
+            <button class="secondary" onclick="telechargerRapportEleve()">TÉLÉCHARGER EN .TXT 📄</button>
+            <button class="secondary" onclick="envoyerRapportEleveParEmail()">ENVOYER PAR EMAIL 📧</button>
+            <div id="message-rapport" style="min-height:20px; font-weight:bold; margin-top:6px;"></div>
+        </div>
+
+        <div class="section-prof" style="text-align:center;">
+            <h3>Gestion du profil</h3>
+            <button class="secondary" onclick="exporterEleve()">EXPORTER (SAUVEGARDE) 💾</button>
+            <button class="secondary bouton-danger" onclick="supprimerEleve()">SUPPRIMER CET ÉLÈVE 🗑️</button>
+        </div>
+
+        <button class="secondary" onclick="afficherModeProf()">RETOUR À LA LISTE DES ÉLÈVES</button>
+    </div>
+
+    <!-- ================= ÉCRAN PARAMÈTRES ================= -->
+    <div id="ecran-parametres" class="hidden">
+        <h2>⚙️ Paramètres</h2>
+
+        <fieldset>
+            <legend>Mon adresse email (pour recevoir les rapports)</legend>
+            <input type="email" id="param-email-prof" placeholder="prof@ecole.fr">
+            <button class="secondary" onclick="enregistrerEmailProf()">ENREGISTRER</button>
+            <div id="confirmation-email-prof" style="min-height:20px; font-weight:bold; margin-top:6px;"></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Carnet d'adresses pour le mode défi</legend>
+            <div id="liste-contacts"></div>
+            <label for="contact-nom">Nom affiché dans la liste :</label>
+            <input type="text" id="contact-nom" placeholder="Ex : Papa, Classe de CM1B...">
+            <label for="contact-email">Adresse email :</label>
+            <input type="email" id="contact-email" placeholder="adresse@exemple.fr">
+            <div id="erreur-contact" style="color:#c0392b; font-weight:bold; min-height:20px;"></div>
+            <button class="secondary" onclick="ajouterContact()">AJOUTER CE CONTACT</button>
+        </fieldset>
+
+        <button class="secondary" onclick="changerDeJoueur()">RETOUR À L'ACCUEIL</button>
+    </div>
+
+    <!-- ================= ÉCRAN LECTURE DU RAPPORT (v7.0) ================= -->
+    <div id="ecran-lecture-rapport" class="hidden">
+        <h2 id="titre-lecture-rapport" class="no-print">📄 Rapport</h2>
+        <div id="zone-impression-rapport"></div>
+        <button class="main no-print" onclick="imprimerRapport()">IMPRIMER / EXPORTER EN PDF 🖨️</button>
+        <button class="secondary no-print" onclick="afficherModeProf()">RETOUR</button>
+    </div>
+
+    <div class="footer-version">Quiz Math Foot — v18.1 <span id="statut-connexion">🔄 connexion…</span></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+// ========================= FIREBASE (v18.0) =========================
+const firebaseConfig = {
+    apiKey: "AIzaSyAP8dleVoF3ejPe4R4Q5ef8HpY1QQSIwtg",
+    authDomain: "quizz-multiplication.firebaseapp.com",
+    projectId: "quizz-multiplication",
+    storageBucket: "quizz-multiplication.firebasestorage.app",
+    messagingSenderId: "869707235327",
+    appId: "1:869707235327:web:cc122791ba8727687a71ca"
+};
+
+let db = null;
+// firebaseOK ne devient vrai qu'une fois la connexion anonyme confirmée (v18.1) : les règles
+// Firestore exigent un appareil authentifié (même anonymement) pour lire/écrire, ce qui bloque les
+// robots/scripts qui scannent le web à la recherche de bases mal protégées, sans imposer le moindre
+// mot de passe aux élèves (connexion invisible, automatique).
+let firebaseOK = false;
+try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+} catch (e) {
+    console.warn('Firebase indisponible, fonctionnement hors-ligne uniquement.', e);
+}
+
+const REF_LISTE_CLASSE = db ? db.collection('classe').doc('liste') : null;
+const REF_ELEVES = db ? db.collection('eleves') : null;
+
+// null tant que la liste n'a pas encore été reçue de Firestore (permet de savoir s'il faut retomber
+// sur les élèves déjà connus localement, pour un fonctionnement hors-ligne ou au tout premier essai).
+let listeEleveAutorises = null;
+
+function majStatutConnexion(texte) {
+    const el = document.getElementById('statut-connexion');
+    if (el) el.textContent = texte;
+}
+
+// Firestore interdit '/' dans un identifiant de document ; les noms viennent du prof (saisie
+// courte), pas d'une saisie libre élève, mais on nettoie par précaution.
+function nomDocValide(nom) {
+    return nom.replace(/\//g, '_').trim();
+}
+
+function creerProfilParDefaut() {
+    return {
+        history: [], bestTimes: {}, badges: [], dateCreation: dateStrLocale(), reponsesErronees: {},
+        compteurs: { recordsBattus: 0, defisEnvoyes: 0 }, tentativesRequises: TENTATIVES_INITIAL,
+        serieSansFauteQualifiants: 0, dernierJourVerifie: dateStrLocale(), compteurAnnonceMAJ: 0,
+        tablesAutorisees: [1,2,3,4,5,6,7,8,9,10], factStats: {}
+    };
+}
+
+function pousserEleveVersFirestore(nom) {
+    if (!firebaseOK || !nom || !donnees.users[nom]) return;
+    REF_ELEVES.doc(nomDocValide(nom)).set(donnees.users[nom])
+        .then(() => majStatutConnexion('🟢 en ligne'))
+        .catch(e => { majStatutConnexion('🔴 hors ligne'); console.warn('Synchronisation impossible pour ' + nom + '.', e); });
+}
+
+function supprimerEleveDeFirestore(nom) {
+    if (!firebaseOK || !nom) return;
+    REF_ELEVES.doc(nomDocValide(nom)).delete().catch(e => console.warn('Suppression en ligne impossible.', e));
+}
+
+function ajouterEleveALaListeFirestore(nom) {
+    if (!firebaseOK || !nom) return;
+    REF_LISTE_CLASSE.set({ noms: firebase.firestore.FieldValue.arrayUnion(nom) }, { merge: true })
+        .catch(e => console.warn('Ajout à la liste en ligne impossible.', e));
+}
+
+function retirerEleveDeLaListeFirestore(nom) {
+    if (!firebaseOK || !nom) return;
+    REF_LISTE_CLASSE.set({ noms: firebase.firestore.FieldValue.arrayRemove(nom) }, { merge: true })
+        .catch(e => console.warn('Retrait de la liste en ligne impossible.', e));
+}
+
+// Écoute en direct la liste des élèves gérée par le prof : dès qu'il ajoute/retire un nom depuis
+// n'importe quel appareil, l'écran de connexion et l'écran de gestion se mettent à jour ici aussi.
+function demarrerEcouteListeClasse() {
+    if (!firebaseOK) return;
+    REF_LISTE_CLASSE.onSnapshot(doc => {
+        listeEleveAutorises = (doc.exists && Array.isArray(doc.data().noms)) ? doc.data().noms : [];
+        majStatutConnexion('🟢 en ligne');
+        const ecranUtil = document.getElementById('ecran-utilisateur');
+        if (ecranUtil && !ecranUtil.classList.contains('hidden')) construireListeJoueurs();
+        const ecranGestion = document.getElementById('ecran-gestion-eleves');
+        if (ecranGestion && !ecranGestion.classList.contains('hidden')) construireGestionEleves();
+    }, err => { majStatutConnexion('🔴 hors ligne'); console.warn('Écoute de la liste de classe impossible.', err); });
+}
+
+// Écoute en direct les profils de tous les élèves (Mode Prof en temps réel, depuis n'importe quel
+// appareil). Ne touche jamais au profil de l'élève actuellement connecté SUR CET appareil, pour ne
+// pas écraser une partie en cours par une version distante en léger décalage.
+function demarrerEcouteElevesDistants() {
+    if (!firebaseOK) return;
+    REF_ELEVES.onSnapshot(snap => {
+        snap.docChanges().forEach(change => {
+            const nom = change.doc.id;
+            if (nom === utilisateurCourant) return;
+            if (change.type === 'removed') { delete donnees.users[nom]; return; }
+            donnees.users[nom] = change.doc.data();
+        });
+        try { localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees)); } catch (e) {}
+        const ecranProf = document.getElementById('ecran-mode-prof');
+        if (ecranProf && !ecranProf.classList.contains('hidden')) afficherModeProf();
+    }, err => console.warn('Écoute des élèves à distance impossible.', err));
+}
+
+// ========================= STOCKAGE LOCAL =========================
+const CLE_STOCKAGE = 'quizMathFoot_v2';
+let stockageDisponible = true;
+
+function chargerDonnees() {
+    try {
+        const brut = localStorage.getItem(CLE_STOCKAGE);
+        return brut ? JSON.parse(brut) : { users: {} };
+    } catch (e) {
+        stockageDisponible = false;
+        return { users: {} };
+    }
+}
+
+// nomAPousser (optionnel) : nom de l'élève dont le profil doit être synchronisé vers Firestore.
+// Par défaut, l'élève actuellement connecté (utilisateurCourant) — couvre le cas le plus courant
+// (une partie jouée). Pour une action du prof sur un AUTRE élève (Mode Prof), il faut préciser
+// explicitement ce nom en argument, sinon rien n'est poussé en ligne pour ce profil.
+function sauvegarderDonnees(nomAPousser) {
+    if (stockageDisponible) {
+        try {
+            localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees));
+        } catch (e) {
+            stockageDisponible = false;
+        }
+    }
+    const cible = (nomAPousser !== undefined) ? nomAPousser : utilisateurCourant;
+    if (cible) pousserEleveVersFirestore(cible);
+}
+
+let donnees = chargerDonnees();
+// Déclaré ici (avant la migration ci-dessous qui appelle sauvegarderDonnees) car sauvegarderDonnees
+// lit utilisateurCourant pour savoir quel profil pousser vers Firestore (v18.0).
+let utilisateurCourant = null;
+if (!donnees.parametres) donnees.parametres = { emailProf: '', contacts: {} };
+if (!donnees.parametres.contacts) donnees.parametres.contacts = {};
+
+// Migration v8.0 : chaque profil a besoin d'une date de création (référence pour le calcul de l'objectif quotidien)
+function dateStrLocale(d) {
+    const dt = d || new Date();
+    const y = dt.getFullYear(), m = String(dt.getMonth() + 1).padStart(2, '0'), j = String(dt.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + j;
+}
+let migrationEffectuee = false;
+Object.values(donnees.users).forEach(u => {
+    if (!u.dateCreation) {
+        u.dateCreation = (u.history && u.history.length > 0) ? dateStrLocale(new Date(u.history[0].date)) : dateStrLocale();
+        migrationEffectuee = true;
+    }
+    if (!u.reponsesErronees) { u.reponsesErronees = {}; migrationEffectuee = true; }
+    if (!u.compteurs) { u.compteurs = { recordsBattus: 0, defisEnvoyes: 0 }; migrationEffectuee = true; }
+    if (u.tentativesRequises === undefined) { u.tentativesRequises = 7; migrationEffectuee = true; }
+    if (u.serieSansFauteQualifiants === undefined) { u.serieSansFauteQualifiants = 0; migrationEffectuee = true; }
+    // v13.0 : on démarre le suivi "à partir de maintenant" — aucune pénalité rétroactive pour les
+    // jours d'avant cette version, qu'on ne peut de toute façon pas juger équitablement.
+    if (!u.dernierJourVerifie) { u.dernierJourVerifie = dateStrLocale(); migrationEffectuee = true; }
+    if (u.compteurAnnonceMAJ === undefined) { u.compteurAnnonceMAJ = 0; migrationEffectuee = true; }
+    if (!u.tablesAutorisees) { u.tablesAutorisees = [1,2,3,4,5,6,7,8,9,10]; migrationEffectuee = true; }
+});
+if (migrationEffectuee) sauvegarderDonnees();
+
+// ========================= CATALOGUE DE BADGES (34 au total depuis la v11.0) =========================
+const BADGES = [
+    { id: 'premier_match', emoji: '⚽', label: 'Premier match joué' },
+    { id: 'sans_faute', emoji: '🎯', label: 'Premier sans-faute' },
+    { id: 'record_battu', emoji: '🏅', label: 'Record personnel battu' },
+    { id: 'cinq_sans_faute', emoji: '🏆', label: '5 sans-faute réalisés' },
+    { id: 'rapide_et_juste', emoji: '⚡', label: 'Sans faute et rapide' },
+    // --- Régularité ---
+    { id: 'serie_3', emoji: '🔥', label: '3 jours de suite' },
+    { id: 'serie_7', emoji: '🔥🔥', label: '7 jours de suite' },
+    { id: 'serie_30', emoji: '🔥🔥🔥', label: '30 jours de suite' },
+    { id: 'objectif_5x', emoji: '📅', label: 'Objectif quotidien atteint 5 fois' },
+    { id: 'objectif_20x', emoji: '📅', label: 'Objectif quotidien atteint 20 fois' },
+    // --- Progression ---
+    { id: 'grand_bond', emoji: '🚀', label: 'Grand bond (temps amélioré de 30%+)' },
+    { id: 'retour_gagnant', emoji: '🔄', label: 'Retour gagnant après une pause' },
+    { id: 'trois_records', emoji: '🏅', label: '3 records personnels battus' },
+    // --- Maîtrise / paliers CM1 ---
+    { id: 'palier1_maitrise', emoji: '✅', label: 'Palier 1 maîtrisé (2, 5, 10)' },
+    { id: 'palier2_maitrise', emoji: '✅', label: 'Palier 2 maîtrisé (doubles)' },
+    { id: 'palier3_maitrise', emoji: '✅', label: 'Palier 3 maîtrisé (3, 6, 9)' },
+    { id: 'palier4_maitrise', emoji: '👑', label: 'Palier 4 maîtrisé (table de 7)' },
+    { id: 'toutes_tables', emoji: '🌟', label: 'Toutes les tables acquises' },
+    { id: 'automatisation_totale', emoji: '🧠', label: 'Automatisation totale' },
+    { id: 'maitre_commutativite', emoji: '↔️', label: 'Maître de la commutativité' },
+    // --- Vitesse ---
+    { id: 'cinq_rapide_juste', emoji: '⚡⚡', label: '5 parties sans faute et rapides' },
+    { id: 'ultra_rapide', emoji: '🐆', label: 'Ultra rapide (< 2 s par calcul)' },
+    // --- Effort / correction ---
+    { id: 'confusion_corrigee', emoji: '🎯', label: 'Confusion corrigée' },
+    { id: 'perseverant', emoji: '💪', label: 'Persévérant' },
+    // --- Volume ---
+    { id: 'cent_calculs', emoji: '🔢', label: '100 calculs répondus' },
+    { id: 'cinq_cents_calculs', emoji: '🔢', label: '500 calculs répondus' },
+    { id: 'mille_calculs', emoji: '🔢', label: '1000 calculs répondus' },
+    { id: 'explorateur', emoji: '🗺️', label: 'Explorateur (10 tables testées)' },
+    { id: 'cinquante_parties', emoji: '🎮', label: '50 parties jouées' },
+    { id: 'cent_parties', emoji: '🎮', label: '100 parties jouées' },
+    // --- Défi ---
+    { id: 'premier_defi', emoji: '📧', label: 'Premier défi envoyé' },
+    { id: 'cinq_defis', emoji: '🤝', label: '5 défis envoyés' },
+    // --- Fun ---
+    { id: 'hat_trick', emoji: '🥅', label: 'Hat-trick (3 sans-faute même jour)' },
+    { id: 'capitaine', emoji: '🎽', label: 'Capitaine (10 badges débloqués)' }
+];
+
+// ========================= ÉTAT DU JEU =========================
+let tablesSelectionnees = new Set([1,2,3,4,5,6,7,8,9,10]);
+let nbQuestions = 10;
+let questions = [];
+let indexQuestion = 0;
+let score = 0;
+let erreurs = [];
+let heureDebut = 0;
+let heureDebutQuestion = 0; // chrono de la question en cours (v6.0)
+let historiqueReponses = []; // {a, b, correcte} pour CHAQUE question répondue (v3.0, base de l'analyse par opération)
+let dernierResultatDefi = null; // {score, total, temps, tablesLabel} pour le mode défi (v5.0)
+
+// ========================= UTILITAIRES =========================
+function afficherEcran(id) {
+    ['ecran-utilisateur','ecran-accueil','ecran-jeu','ecran-resultat','ecran-profil','ecran-classement','ecran-mode-prof','ecran-gestion-eleves','ecran-analyse-eleve','ecran-parametres','ecran-lecture-rapport','ecran-annonce-maj','ecran-popup-suggestion']
+        .forEach(e => document.getElementById(e).classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+}
+
+function calculerSignature(tables, count) {
+    const tri = Array.from(tables).sort((a,b) => a - b);
+    return tri.join('-') + '_' + count;
+}
+
+function libelleConfig(tables, count) {
+    const tri = Array.from(tables).sort((a,b) => a - b);
+    return 'Tables ' + tri.join(', ') + ' · ' + count + ' questions';
+}
+
+// ========================= OBJECTIF QUOTIDIEN PAR TENTATIVES (v12.0) =========================
+// Remplace l'ancien système par minutes/dette (v8.0-v11.0). L'objectif n'est plus un temps de jeu
+// mais un nombre de parties à jouer, qui évolue partie après partie selon la réussite (état
+// persisté sur le profil : u.tentativesRequises, u.serieSansFauteQualifiants — contrairement à la
+// dette, cette évolution dépend de l'ORDRE des parties, pas seulement de dates, donc on la stocke
+// plutôt que de la recalculer à chaque fois).
+const TENTATIVES_MIN = 3;
+const TENTATIVES_MAX = 7;
+const TENTATIVES_INITIAL = 7;
+const SERIE_REQUISE_POUR_BAISSE = 3;
+
+function compterPartiesAujourdhui(u) {
+    const aujourdHui = dateStrLocale();
+    return u.history.filter(h => dateStrLocale(new Date(h.date)) === aujourdHui).length;
+}
+
+// Détermine si une partie est 'qualifiante' (compte pour la série), 'echec' (casse la série),
+// ou 'neutre' (sans-faute mais uniquement sur des tables faciles déjà bien maîtrisées -> ne prouve
+// rien de nouveau). IMPORTANT : appelée AVANT la mise à jour de factStats avec cette partie, pour
+// juger la difficulté à partir de ce que l'élève savait déjà EN ENTRANT dans cette partie.
+function evaluerPartieQualifiante(u, sansFaute, details) {
+    if (!sansFaute) return 'echec';
+    const tablesFaciles = new Set(PALIERS_CM1[0].tables); // tables 1, 2, 5, 10
+    if (!details || details.length === 0) return 'qualifiante'; // détail indisponible -> jugée normalement
+    const toutesFaciles = details.every(q => tablesFaciles.has(q.a));
+    if (!toutesFaciles) return 'qualifiante';
+
+    // Uniquement des tables faciles : ne compte que si la quasi-totalité (≥80%) des calculs posés
+    // n'étaient pas encore acquis pour cet élève (sinon : trop facile, neutre).
+    const stats = u.factStats || {};
+    const nbNonAcquis = details.filter(q => statutOperation(stats[q.a + '_' + q.b]) !== 'acquis').length;
+    return (nbNonAcquis / details.length) >= 0.8 ? 'qualifiante' : 'neutre';
+}
+
+function mettreAJourTentativesRequises(u, evaluation) {
+    if (u.tentativesRequises === undefined) u.tentativesRequises = TENTATIVES_INITIAL;
+    if (u.serieSansFauteQualifiants === undefined) u.serieSansFauteQualifiants = 0;
+    if (evaluation === 'neutre') return;
+
+    if (evaluation === 'qualifiante') {
+        u.serieSansFauteQualifiants++;
+        if (u.serieSansFauteQualifiants >= SERIE_REQUISE_POUR_BAISSE) {
+            u.tentativesRequises = Math.max(TENTATIVES_MIN, u.tentativesRequises - 1);
+            u.serieSansFauteQualifiants = 0;
+        }
+    } else { // 'echec'
+        u.serieSansFauteQualifiants = 0;
+        u.tentativesRequises = Math.min(TENTATIVES_MAX, u.tentativesRequises + 1);
+    }
+}
+
+// L'échelle de couleur/emoji reprend l'esprit "Duolingo" d'origine, mais adaptée : plus de dette
+// entre les jours, donc l'urgence monte avec l'heure de la journée tant que rien n'a été fait.
+function calculerEtatObjectif(u) {
+    const n = u.tentativesRequises || TENTATIVES_INITIAL;
+    const faites = compterPartiesAujourdhui(u);
+    return { n, faites, atteint: faites >= n, heureActuelle: new Date().getHours() };
+}
+
+function classeCouleurObjectif(etat) {
+    if (etat.atteint) return 'objectif-vert';
+    if (etat.faites === 0) {
+        if (etat.heureActuelle >= 19) return 'objectif-rouge';
+        if (etat.heureActuelle >= 16) return 'objectif-orange';
+        return 'objectif-neutre';
+    }
+    return (etat.faites / etat.n) >= 0.5 ? 'objectif-neutre' : 'objectif-orange';
+}
+
+function emojiObjectif(etat) {
+    if (etat.atteint) return '😊';
+    if (etat.faites === 0) {
+        if (etat.heureActuelle >= 19) return '😠';
+        if (etat.heureActuelle >= 16) return '😟';
+        return '🙂';
+    }
+    return (etat.faites / etat.n) >= 0.5 ? '🙂' : '😟';
+}
+
+function actualiserWidgetObjectif() {
+    const u = donnees.users[utilisateurCourant];
+    if (!u) return;
+    const etat = calculerEtatObjectif(u);
+
+    const widget = document.getElementById('widget-objectif');
+    widget.className = 'widget-objectif ' + classeCouleurObjectif(etat);
+    document.getElementById('widget-objectif-emoji').textContent = emojiObjectif(etat);
+
+    const texteEl = document.getElementById('widget-objectif-texte');
+    const restantes = Math.max(0, etat.n - etat.faites);
+    if (etat.atteint) {
+        texteEl.textContent = 'Objectif du jour atteint : ' + etat.faites + ' / ' + etat.n + ' parties. Bravo !';
+    } else {
+        texteEl.textContent = etat.faites + ' / ' + etat.n + ' parties aujourd\'hui — encore ' + restantes + ' pour atteindre l\'objectif';
+    }
+
+    const pourcentage = etat.n > 0 ? Math.min(100, Math.round(100 * etat.faites / etat.n)) : 100;
+    document.getElementById('widget-objectif-barre').style.width = pourcentage + '%';
+}
+
+// v13.0 : pénalité de fin de journée, EN PLUS de la pénalité immédiate par partie ratée. Pour
+// chaque jour écoulé depuis la dernière vérification (généralement hier, ou plus si l'appli n'a
+// pas été ouverte), si le nombre de parties jouées ce jour-là est resté sous l'objectif alors en
+// vigueur, l'objectif du lendemain augmente d'une tentative (plafond 7). Traité jour par jour et
+// dans l'ordre chronologique : la valeur de N utilisée pour juger un jour donné est bien celle qui
+// était réellement en vigueur ce jour-là (elle n'a pu changer, dans l'intervalle, qu'à cause d'un
+// jour précédent déjà traité dans cette même boucle). Un jour SANS AUCUNE partie compte aussi comme
+// un échec du jour (0 < objectif). Appelée une fois par connexion (v13.0), pas en continu.
+function verifierEchecsJoursPasses(u) {
+    if (!u.dernierJourVerifie) { u.dernierJourVerifie = dateStrLocale(); return 0; }
+    if (u.tentativesRequises === undefined) u.tentativesRequises = TENTATIVES_INITIAL;
+
+    let curseur = new Date(u.dernierJourVerifie + 'T00:00:00');
+    const aujourdHuiDate = new Date(dateStrLocale() + 'T00:00:00');
+    let joursEnEchec = 0;
+
+    while (curseur < aujourdHuiDate) {
+        const jourStr = dateStrLocale(curseur);
+        const partiesCeJourLa = u.history.filter(h => dateStrLocale(new Date(h.date)) === jourStr).length;
+        if (partiesCeJourLa < u.tentativesRequises) {
+            u.tentativesRequises = Math.min(TENTATIVES_MAX, u.tentativesRequises + 1);
+            joursEnEchec++;
+        }
+        curseur.setDate(curseur.getDate() + 1);
+    }
+
+    u.dernierJourVerifie = dateStrLocale();
+    if (joursEnEchec > 0) sauvegarderDonnees();
+    return joursEnEchec;
+}
+
+// ========================= ÉCRAN UTILISATEUR =========================
+// v18.0 : la liste vient du roster géré par le prof (listeEleveAutorises, synchronisé par
+// Firestore). Tant qu'elle n'a pas encore été reçue (pas de réseau, ou tout premier chargement),
+// on retombe sur les élèves déjà connus sur cet appareil pour que l'outil reste utilisable
+// hors-ligne. Un élève listé mais jamais encore joué sur cet appareil obtient un profil par défaut
+// à la volée.
+function construireListeJoueurs() {
+    const liste = document.getElementById('liste-joueurs');
+    liste.innerHTML = '';
+    const noms = listeEleveAutorises !== null ? listeEleveAutorises : Object.keys(donnees.users);
+    if (noms.length === 0) {
+        liste.innerHTML = '<p style="color:#999;">Aucun élève enregistré pour l\'instant. Demande à ton professeur de t\'ajouter (Mode Prof).</p>';
+    }
+    noms.forEach(nom => {
+        if (!donnees.users[nom]) donnees.users[nom] = creerProfilParDefaut();
+        const u = donnees.users[nom];
+        const btn = document.createElement('div');
+        btn.className = 'joueur-btn';
+        const badgesEmoji = (u.badges || []).map(id => (BADGES.find(b => b.id === id) || {}).emoji || '').join(' ');
+        const emojiObjectifUser = emojiObjectif(calculerEtatObjectif(u));
+        btn.innerHTML = '<span>' + emojiObjectifUser + ' ' + nom + '</span><span class="joueur-badges">' + badgesEmoji + '</span>';
+        btn.onclick = () => selectionnerUtilisateur(nom);
+        liste.appendChild(btn);
+    });
+    document.getElementById('avertissement-stockage').classList.toggle('hidden', stockageDisponible);
+}
+
+function selectionnerUtilisateur(nom) {
+    utilisateurCourant = nom;
+    const u = donnees.users[nom];
+    const joursEnEchec = verifierEchecsJoursPasses(u);
+    let salutation = 'Bonjour ' + nom + ' ! Prêt(e) pour l\'entraînement ?';
+    if (joursEnEchec > 0) {
+        salutation += ' L\'objectif du jour est passé à ' + u.tentativesRequises + ' partie' + (u.tentativesRequises > 1 ? 's' : '') +
+            ' (l\'objectif n\'avait pas été complètement atteint ' + (joursEnEchec > 1 ? 'les jours précédents' : 'la dernière fois') + ').';
+    }
+    document.getElementById('salutation-joueur').textContent = salutation;
+    synchroniserTablesSelectionneesAvecAutorisations(u);
+    const suggestion = afficherSuggestionTable(u);
+    construireGrilleTables();
+    actualiserWidgetObjectif();
+
+    if (suggestion) {
+        document.getElementById('popup-suggestion-texte').textContent = texteSuggestionTable(suggestion);
+        afficherEcran('ecran-popup-suggestion');
+    } else {
+        afficherEcran('ecran-accueil');
+    }
+}
+
+function fermerPopupSuggestion() {
+    afficherEcran('ecran-accueil');
+}
+
+// Retire de la sélection courante toute table qui ne serait plus autorisée (ex : l'enseignant vient
+// de restreindre l'accès à une table). Si plus rien n'est sélectionnable, retombe sur "tout ce qui
+// est autorisé" plutôt que de laisser une sélection vide sans explication.
+function synchroniserTablesSelectionneesAvecAutorisations(u) {
+    const autorisees = new Set((u && u.tablesAutorisees) ? u.tablesAutorisees : [1,2,3,4,5,6,7,8,9,10]);
+    Array.from(tablesSelectionnees).forEach(t => { if (!autorisees.has(t)) tablesSelectionnees.delete(t); });
+    if (tablesSelectionnees.size === 0) autorisees.forEach(t => tablesSelectionnees.add(t));
+}
+
+function changerDeJoueur() {
+    utilisateurCourant = null;
+    construireListeJoueurs();
+    afficherEcran('ecran-utilisateur');
+}
+
+// ========================= ÉCRAN ACCUEIL =========================
+// v16.0 : détermine quelle table conseiller en priorité à l'élève, à partir de ses statistiques
+// (factStats) et en respectant les tables autorisées par l'enseignant. Priorité aux tables où des
+// difficultés sont déjà mesurées (essais suffisants, taux < 85%) ; à défaut, propose une table
+// encore peu pratiquée (exploration) ; si tout est déjà bien maîtrisé, aucune suggestion (null).
+function calculerTablePrioritaire(u) {
+    const stats = u.factStats || {};
+    const autorisees = (u.tablesAutorisees && u.tablesAutorisees.length > 0) ? u.tablesAutorisees : [1,2,3,4,5,6,7,8,9,10];
+
+    const candidats = autorisees.map(t => {
+        let essais = 0, erreurs = 0;
+        for (let b = 1; b <= 10; b++) {
+            const s = stats[t + '_' + b];
+            if (s) { essais += s.essais; erreurs += s.erreurs; }
+        }
+        return { table: t, essais, taux: essais > 0 ? (essais - erreurs) / essais : null };
+    });
+
+    const aTravailler = candidats.filter(c => c.essais >= 5 && c.taux < 0.85).sort((a, b) => a.taux - b.taux);
+    if (aTravailler.length > 0) return { table: aTravailler[0].table, raison: 'a-travailler' };
+
+    const peuPratiquees = candidats.filter(c => c.essais < 5).sort((a, b) => a.essais - b.essais);
+    if (peuPratiquees.length > 0) return { table: peuPratiquees[0].table, raison: 'a-decouvrir' };
+
+    return null;
+}
+
+let tableSuggereeCourante = null;
+
+function texteSuggestionTable(suggestion) {
+    if (suggestion.raison === 'a-travailler') {
+        return '💡 On te conseille de travailler la table de ' + suggestion.table + ' aujourd\'hui, tu vas vite progresser !';
+    }
+    return '💡 Tu n\'as pas encore beaucoup pratiqué la table de ' + suggestion.table + ' — pourquoi pas aujourd\'hui ?';
+}
+
+// Calcule la suggestion, met à jour le surlignage de la grille et le texte discret sur l'accueil
+// (utilisé aussi bien au moment du popup qu'à chaque retour à l'accueil en cours de session).
+function afficherSuggestionTable(u) {
+    const suggestion = calculerTablePrioritaire(u);
+    tableSuggereeCourante = suggestion ? suggestion.table : null;
+    document.getElementById('suggestion-table').textContent = suggestion ? texteSuggestionTable(suggestion) : '';
+    return suggestion;
+}
+
+// v15.0 : la grille dépend désormais du profil connecté — une table non autorisée par
+// l'enseignant (u.tablesAutorisees) est affichée verrouillée et n'est pas cliquable.
+function construireGrilleTables() {
+    const grille = document.getElementById('tables-grid');
+    grille.innerHTML = '';
+    const u = utilisateurCourant ? donnees.users[utilisateurCourant] : null;
+    const autorisees = new Set((u && u.tablesAutorisees) ? u.tablesAutorisees : [1,2,3,4,5,6,7,8,9,10]);
+
+    for (let t = 1; t <= 10; t++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.table = t;
+
+        if (autorisees.has(t)) {
+            let classe = 'table-choice' + (tablesSelectionnees.has(t) ? ' selected' : '');
+            if (t === tableSuggereeCourante) classe += ' suggeree';
+            btn.className = classe;
+            btn.textContent = t;
+            btn.onclick = () => toggleTable(t, btn);
+        } else {
+            btn.className = 'table-choice verrouillee';
+            btn.textContent = '🔒';
+            btn.title = 'Table non autorisée pour le moment';
+            btn.disabled = true;
+        }
+        grille.appendChild(btn);
+    }
+}
+
+function toggleTable(t, btn) {
+    if (tablesSelectionnees.has(t)) {
+        tablesSelectionnees.delete(t);
+        btn.classList.remove('selected');
+    } else {
+        tablesSelectionnees.add(t);
+        btn.classList.add('selected');
+    }
+    document.getElementById('erreur-tables').textContent = '';
+}
+
+document.querySelectorAll('.count-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.count-choice').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        nbQuestions = parseInt(btn.dataset.count, 10);
+    });
+});
+
+// ========================= GÉNÉRATION DES QUESTIONS (v4.0 : tirage adaptatif) =========================
+
+// Poids de tirage selon le statut de la connaissance (défini plus bas dans le fichier,
+// mais accessible ici car les déclarations "function" sont hoistées)
+const POIDS_PAR_STATUT = { 'a-travailler': 5, 'en-cours': 3, 'non-teste': 3, 'acquis': 1 };
+
+// v10.0 : quand on a assez de données de temps, le poids se base sur le profil vitesse×exactitude
+// (un calcul juste-mais-lent reste presque aussi prioritaire qu'un calcul pas encore su : il n'est
+// pas encore automatisé). Sinon on retombe sur le statut classique (exactitude seule).
+const POIDS_PAR_PROFIL_VITESSE = { 'automatise': 1, 'en-reconstruction': 4, 'confusion': 5, 'non-construit': 5 };
+
+function calculerPoidsFait(statExactitude, statTemps) {
+    const profil = profilVitesseExactitude(statTemps);
+    if (profil !== 'donnees-insuffisantes') return POIDS_PAR_PROFIL_VITESSE[profil];
+    return POIDS_PAR_STATUT[statutOperation(statExactitude)];
+}
+
+function construirePoolPondere(tables) {
+    const u = utilisateurCourant ? donnees.users[utilisateurCourant] : null;
+    const statsExactitude = (u && u.factStats) ? u.factStats : {};
+    const statsTemps = u ? calculerStatsTempsParFait(u) : {};
+    const pool = [];
+    tables.forEach(a => {
+        for (let b = 1; b <= 10; b++) {
+            const cle = a + '_' + b;
+            pool.push({ a, b, poids: calculerPoidsFait(statsExactitude[cle], statsTemps[cle]) });
+        }
+    });
+    return pool;
+}
+
+function tirerAuSortPondere(pool) {
+    const total = pool.reduce((s, p) => s + p.poids, 0);
+    let r = Math.random() * total;
+    for (const p of pool) {
+        if (r < p.poids) return p;
+        r -= p.poids;
+    }
+    return pool[pool.length - 1];
+}
+
+function genererQuestions(tables, count) {
+    const pool = construirePoolPondere(tables);
+    const liste = [];
+    let dernierePaire = null;
+    for (let i = 0; i < count; i++) {
+        let choix, tentatives = 0;
+        do {
+            choix = tirerAuSortPondere(pool);
+            tentatives++;
+        } while ((choix.a + 'x' + choix.b) === dernierePaire && tentatives < 20);
+        dernierePaire = choix.a + 'x' + choix.b;
+        liste.push({ a: choix.a, b: choix.b, reponse: choix.a * choix.b });
+    }
+    return liste;
+}
+
+// ========================= DÉMARRAGE / DÉROULÉ DE PARTIE =========================
+function demarrerPartie() {
+    if (tablesSelectionnees.size === 0) {
+        document.getElementById('erreur-tables').textContent = 'Choisis au moins une table avant de jouer.';
+        return;
+    }
+    questions = genererQuestions(tablesSelectionnees, nbQuestions);
+    indexQuestion = 0;
+    score = 0;
+    erreurs = [];
+    historiqueReponses = [];
+    heureDebut = Date.now();
+
+    if (doitAfficherAnnonceMAJ()) {
+        afficherAnnonceMAJ();
+    } else {
+        demarrerJeuApresAnnonce();
+    }
+}
+
+function demarrerJeuApresAnnonce() {
+    afficherEcran('ecran-jeu');
+    afficherQuestion();
+}
+
+// ========================= ANNONCE DE MISE À JOUR (v14.0) =========================
+// Message ciblé selon l'initiale du prénom connecté, affiché juste avant la 1ère question,
+// au maximum 3 fois par profil concerné. Aucune fenêtre pour les autres profils.
+function doitAfficherAnnonceMAJ() {
+    const u = donnees.users[utilisateurCourant];
+    if (!u) return false;
+    if (u.compteurAnnonceMAJ === undefined) u.compteurAnnonceMAJ = 0;
+    const initiale = utilisateurCourant.trim().charAt(0).toUpperCase();
+    return (initiale === 'Y' || initiale === 'L') && u.compteurAnnonceMAJ < 3;
+}
+
+function texteAnnonceMAJ(nom, initiale) {
+    if (initiale === 'Y') {
+        return '🐰 Coucou mon lapin !\n\n' +
+            'Papa a fait une mise à jour de l\'application pendant que tu dormais…\n\n' +
+            'Maintenant, tu peux gagner plein de badges à collectionner (34 en tout !) : pour tes séries de sans-faute, ta rapidité, les tables que tu maîtrises bien, et plein d\'autres surprises à découvrir.\n\n' +
+            'Chaque jour, tu as un petit nombre de parties à faire. Si tu enchaînes de bons résultats, ce nombre baisse — génial, non ? Mais si tu oublies de jouer, il remonte un peu. Alors essaie de ne pas sauter de jour !\n\n' +
+            'Le jeu te repropose aussi un peu plus souvent les calculs que tu ne maîtrises pas encore à 100%, pour t\'aider à bien les retenir.\n\n' +
+            'Allez, à toi de jouer ! ⚽🎯';
+    }
+    return 'Hey ' + nom + ' 👋\n\n' +
+        'Petite mise à jour de l\'appli de calcul, avec quelques trucs sympas ajoutés.\n\n' +
+        'Il y a maintenant 34 badges à débloquer — séries de sans-faute, rapidité, maîtrise complète des tables, et deux ou trois surprises à découvrir.\n\n' +
+        'Le nombre de parties à faire chaque jour s\'ajuste tout seul : plus tu enchaînes les bons résultats, plus il baisse. Si tu sautes un jour ou que tu enchaînes les erreurs, il remonte — donc autant rester régulier, ça se voit vite.\n\n' +
+        'L\'appli est aussi plus maline : elle te repropose plus souvent les calculs que tu ne connais pas encore sur le bout des doigts.\n\n' +
+        'Et si tu te sens sûr de toi : tu peux défier quelqu\'un directement depuis l\'appli pour voir qui fait le meilleur score. À toi de voir si tu tentes le coup. 😏';
+}
+
+function afficherAnnonceMAJ() {
+    const initiale = utilisateurCourant.trim().charAt(0).toUpperCase();
+    document.getElementById('annonce-maj-texte').textContent = texteAnnonceMAJ(utilisateurCourant, initiale);
+    afficherEcran('ecran-annonce-maj');
+}
+
+function fermerAnnonceMAJ() {
+    const u = donnees.users[utilisateurCourant];
+    if (u) {
+        u.compteurAnnonceMAJ = (u.compteurAnnonceMAJ || 0) + 1;
+        sauvegarderDonnees();
+    }
+    demarrerJeuApresAnnonce();
+}
+
+function afficherQuestion() {
+    const q = questions[indexQuestion];
+    document.getElementById('progression').textContent = 'Question ' + (indexQuestion + 1) + ' / ' + questions.length;
+    document.getElementById('question').textContent = q.a + ' × ' + q.b;
+    const champ = document.getElementById('reponse');
+    champ.value = '';
+    champ.disabled = false;
+    champ.focus();
+    document.getElementById('feedback').textContent = '';
+    document.getElementById('feedback').className = '';
+    document.getElementById('btn-valider').disabled = false;
+    heureDebutQuestion = Date.now();
+}
+
+function validerReponse() {
+    const champ = document.getElementById('reponse');
+    if (champ.value === '') return;
+    const q = questions[indexQuestion];
+    const reponseDonnee = parseInt(champ.value, 10);
+    const feedback = document.getElementById('feedback');
+    const tempsQuestionMs = Date.now() - heureDebutQuestion;
+
+    if (reponseDonnee === q.reponse) {
+        score++;
+        feedback.textContent = 'Bravo, c\'est correct !';
+        feedback.className = 'ok';
+        historiqueReponses.push({ a: q.a, b: q.b, correcte: true, tempsMs: tempsQuestionMs });
+    } else {
+        erreurs.push({ a: q.a, b: q.b, correct: q.reponse, donne: reponseDonnee });
+        feedback.textContent = 'C\'est ' + q.a + ' × ' + q.b + ' = ' + q.reponse;
+        feedback.className = 'ko';
+        historiqueReponses.push({ a: q.a, b: q.b, correcte: false, tempsMs: tempsQuestionMs, donnee: reponseDonnee });
+    }
+
+    champ.disabled = true;
+    document.getElementById('btn-valider').disabled = true;
+
+    setTimeout(() => {
+        indexQuestion++;
+        if (indexQuestion < questions.length) {
+            afficherQuestion();
+        } else {
+            terminerPartie();
+        }
+    }, 1200);
+}
+
+document.getElementById('reponse').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') validerReponse();
+});
+
+// ========================= FIN DE PARTIE : ENREGISTREMENT =========================
+function enregistrerResultat(signature, tablesLabel, count, scoreObtenu, total, tempsSec) {
+    const u = donnees.users[utilisateurCourant];
+    if (!u.factStats) u.factStats = {};
+    if (!u.reponsesErronees) u.reponsesErronees = {};
+    if (!u.compteurs) u.compteurs = { recordsBattus: 0, defisEnvoyes: 0 };
+    if (u.tentativesRequises === undefined) u.tentativesRequises = TENTATIVES_INITIAL;
+    if (u.serieSansFauteQualifiants === undefined) u.serieSansFauteQualifiants = 0;
+    const sansFaute = scoreObtenu === total;
+
+    // Match précédent de même configuration, capturé AVANT d'ajouter le nouveau (sert au message de progression)
+    const matchsMemeConfig = u.history.filter(h => h.signature === signature);
+    const dernierMatchMemeConfig = matchsMemeConfig.length > 0 ? matchsMemeConfig[matchsMemeConfig.length - 1] : null;
+
+    // v12.0 : évaluer la partie AVANT de mettre à jour factStats, pour juger sa difficulté à partir
+    // de ce que l'élève savait déjà EN ENTRANT dans cette partie (pas après avoir répondu).
+    const objectifDuJourAvant = u.tentativesRequises;
+    const evaluationTentative = evaluerPartieQualifiante(u, sansFaute, historiqueReponses);
+    mettreAJourTentativesRequises(u, evaluationTentative);
+
+    // Mise à jour du suivi par opération (essais / erreurs pour chaque a×b rencontré)
+    // et de la valeur donnée à chaque erreur (v9.0, pour détecter les confusions récurrentes)
+    historiqueReponses.forEach(r => {
+        const cle = r.a + '_' + r.b;
+        if (!u.factStats[cle]) u.factStats[cle] = { essais: 0, erreurs: 0 };
+        u.factStats[cle].essais++;
+        if (!r.correcte) {
+            u.factStats[cle].erreurs++;
+            if (!u.reponsesErronees[cle]) u.reponsesErronees[cle] = {};
+            const valeur = String(r.donnee);
+            u.reponsesErronees[cle][valeur] = (u.reponsesErronees[cle][valeur] || 0) + 1;
+        }
+    });
+
+    const nbReponsesRapides = historiqueReponses.filter(r => r.correcte && r.tempsMs < SEUIL_TEMPS_RAPIDE_MS).length;
+    const toutRapide = historiqueReponses.length > 0 && nbReponsesRapides === historiqueReponses.length;
+
+    u.history.push({ date: new Date().toISOString(), signature, tablesLabel, count, score: scoreObtenu, total, temps: tempsSec, sansFaute, toutRapide, objectifDuJour: objectifDuJourAvant, evaluationTentative, details: historiqueReponses.slice() });
+
+    let nouveauRecord = false;
+    let ancienRecord = null;
+    if (sansFaute) {
+        const recordActuel = u.bestTimes[signature];
+        if (!recordActuel || tempsSec < recordActuel.temps) {
+            ancienRecord = recordActuel ? recordActuel.temps : null;
+            u.bestTimes[signature] = { temps: tempsSec, date: new Date().toISOString() };
+            nouveauRecord = !!recordActuel;
+            if (nouveauRecord) u.compteurs.recordsBattus = (u.compteurs.recordsBattus || 0) + 1;
+        }
+    }
+
+    const nouveauxBadges = mettreAJourBadges(u);
+
+    return { sansFaute, nouveauRecord, ancienRecord, meilleurTemps: u.bestTimes[signature] ? u.bestTimes[signature].temps : null, nouveauxBadges, dernierMatchMemeConfig, nbReponsesRapides };
+}
+
+// Construit un message TOUJOURS positif, ciblant si besoin la table la plus fragile de CE match.
+// v10.0 : tient aussi compte de la vitesse, pas seulement de l'exactitude.
+function construireMessageEncouragement(scoreObtenu, total, tempsSec, dernierMatchMemeConfig, nbReponsesRapides) {
+    const sansFaute = scoreObtenu === total;
+    let phrases = [];
+
+    if (sansFaute) {
+        if (nbReponsesRapides === total) {
+            phrases.push('Sans faute et rapide : ces calculs sont vraiment maîtrisés ! 🎯⚡');
+        } else {
+            phrases.push('Sans faute, bravo ! Essaie maintenant de répondre encore un peu plus vite pour automatiser complètement ces calculs. 🎯');
+        }
+    } else {
+        // Table la plus représentée parmi les erreurs de ce match
+        const comptageParTable = {};
+        erreurs.forEach(e => { comptageParTable[e.a] = (comptageParTable[e.a] || 0) + 1; });
+        let tablePrioritaire = null, maxErreurs = 0;
+        Object.keys(comptageParTable).forEach(t => {
+            if (comptageParTable[t] > maxErreurs) { maxErreurs = comptageParTable[t]; tablePrioritaire = t; }
+        });
+        if (tablePrioritaire) {
+            phrases.push('Bon match ! La table de ' + tablePrioritaire + ' est encore en cours d\'acquisition — continue à t\'entraîner dessus, tu vas vite la maîtriser !');
+        } else {
+            phrases.push('Bon match ! Continue à t\'entraîner régulièrement, tu progresses.');
+        }
+    }
+
+    // Comparaison avec la partie précédente sur la même configuration
+    if (dernierMatchMemeConfig) {
+        if (scoreObtenu > dernierMatchMemeConfig.score) {
+            phrases.push('Tu as fait moins d\'erreurs que la dernière fois sur cette sélection : belle progression ! 📈');
+        } else if (scoreObtenu === dernierMatchMemeConfig.score && sansFaute && tempsSec < dernierMatchMemeConfig.temps) {
+            phrases.push('Et en plus tu es plus rapide que la dernière fois !');
+        }
+    }
+
+    return phrases.join(' ');
+}
+
+function terminerPartie() {
+    const tempsSec = Math.round((Date.now() - heureDebut) / 1000);
+    const signature = calculerSignature(tablesSelectionnees, nbQuestions);
+    const tablesLabel = libelleConfig(tablesSelectionnees, nbQuestions);
+
+    afficherEcran('ecran-resultat');
+    document.getElementById('score-final').textContent = score + ' / ' + questions.length;
+    document.getElementById('temps-final').textContent = 'Temps : ' + tempsSec + ' s';
+
+    const nbReponsesRapidesAffichage = historiqueReponses.filter(r => r.correcte && r.tempsMs < SEUIL_TEMPS_RAPIDE_MS).length;
+    document.getElementById('bloc-vitesse-partie').textContent = 'Réponses rapides (< 3 s) : ' + nbReponsesRapidesAffichage + ' / ' + questions.length;
+
+    dernierResultatDefi = { score: score, total: questions.length, temps: tempsSec, tablesLabel: tablesLabel };
+    fermerDefi();
+
+    const blocErreurs = document.getElementById('bloc-erreurs');
+    if (erreurs.length === 0) {
+        blocErreurs.innerHTML = '<p style="color:#1e8449; font-weight:bold;">Sans faute, félicitations ! ⚽🎉</p>';
+    } else {
+        let html = '<div class="liste-erreurs"><h3>À revoir :</h3><ul>';
+        erreurs.forEach(e => { html += '<li>' + e.a + ' × ' + e.b + ' = ' + e.correct + ' (tu avais répondu ' + e.donne + ')</li>'; });
+        html += '</ul></div>';
+        blocErreurs.innerHTML = html;
+    }
+
+    const blocEncouragement = document.getElementById('bloc-encouragement');
+    const blocRecord = document.getElementById('bloc-record');
+    const blocBadges = document.getElementById('bloc-nouveaux-badges');
+    blocEncouragement.innerHTML = '';
+    blocRecord.innerHTML = '';
+    blocBadges.innerHTML = '';
+
+    if (utilisateurCourant && donnees.users[utilisateurCourant]) {
+        const resultat = enregistrerResultat(signature, tablesLabel, nbQuestions, score, questions.length, tempsSec);
+
+        const messageEnco = construireMessageEncouragement(score, questions.length, tempsSec, resultat.dernierMatchMemeConfig, resultat.nbReponsesRapides);
+        blocEncouragement.innerHTML = '<div class="message-encouragement">' + messageEnco + '</div>';
+
+        if (resultat.sansFaute) {
+            if (resultat.nouveauRecord) {
+                blocRecord.innerHTML = '<div class="message-record">🏅 Nouveau record personnel ! (ancien temps : ' + resultat.ancienRecord + ' s)</div>';
+            } else if (resultat.ancienRecord === null && resultat.meilleurTemps === tempsSec) {
+                blocRecord.innerHTML = '<div class="message-record">🎯 Premier sans-faute enregistré pour cette configuration !</div>';
+            } else {
+                blocRecord.innerHTML = '<div class="message-record">Ton meilleur temps sur cette configuration reste ' + resultat.meilleurTemps + ' s. Continue à t\'entraîner !</div>';
+            }
+        }
+
+        if (resultat.nouveauxBadges.length > 0) {
+            const libelles = resultat.nouveauxBadges.map(id => {
+                const b = BADGES.find(bb => bb.id === id);
+                return b ? (b.emoji + ' ' + b.label) : id;
+            });
+            blocBadges.innerHTML = '<div class="message-badges">Nouveau(x) badge(s) débloqué(s) :<br>' + libelles.join('<br>') + '</div>';
+        }
+    }
+}
+
+function rejouerMemeReglages() {
+    demarrerPartie();
+}
+
+function retourAccueil() {
+    const u = donnees.users[utilisateurCourant];
+    if (u) {
+        synchroniserTablesSelectionneesAvecAutorisations(u);
+        afficherSuggestionTable(u);
+        construireGrilleTables();
+    }
+    actualiserWidgetObjectif();
+    afficherEcran('ecran-accueil');
+}
+
+// ========================= MODE DÉFI PAR EMAIL (v5.0, carnet d'adresses en v6.0) =========================
+function ouvrirDefi() {
+    const select = document.getElementById('defi-destinataire');
+    const btnEnvoyer = document.getElementById('btn-envoyer-defi');
+    const noms = Object.keys(donnees.parametres.contacts);
+
+    if (noms.length === 0) {
+        select.innerHTML = '<option>Aucune adresse enregistrée</option>';
+        document.getElementById('erreur-defi').textContent = 'Demande à ton professeur d\'ajouter des adresses dans Paramètres.';
+        btnEnvoyer.disabled = true;
+    } else {
+        select.innerHTML = noms.map(n => '<option value="' + n + '">' + n + '</option>').join('');
+        document.getElementById('erreur-defi').textContent = '';
+        btnEnvoyer.disabled = false;
+    }
+
+    document.getElementById('btn-ouvrir-defi').classList.add('hidden');
+    document.getElementById('form-defi').classList.remove('hidden');
+}
+
+function fermerDefi() {
+    document.getElementById('btn-ouvrir-defi').classList.remove('hidden');
+    document.getElementById('form-defi').classList.add('hidden');
+    document.getElementById('erreur-defi').textContent = '';
+}
+
+function adresseEmailValide(valeur) {
+    // Validation simple, volontairement peu stricte (contexte scolaire, pas de vérification serveur possible)
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valeur);
+}
+
+function envoyerDefi() {
+    const select = document.getElementById('defi-destinataire');
+    const erreur = document.getElementById('erreur-defi');
+    const nomContact = select.value;
+    const email = donnees.parametres.contacts[nomContact];
+
+    if (!email) {
+        erreur.textContent = 'Aucune adresse sélectionnée.';
+        return;
+    }
+    if (!dernierResultatDefi) {
+        erreur.textContent = 'Termine d\'abord une partie pour pouvoir défier quelqu\'un.';
+        return;
+    }
+
+    const nomJoueur = utilisateurCourant || 'Un joueur';
+    const r = dernierResultatDefi;
+    const sujet = '⚽ Défi Quiz Math Foot de ' + nomJoueur + ' !';
+    const lignesCorps = [
+        'Salut ' + nomContact + ' !',
+        '',
+        'Je viens de faire ' + r.score + '/' + r.total + ' en ' + r.temps + ' secondes sur le Quiz Math Foot (' + r.tablesLabel + ').',
+        '',
+        'Tu penses pouvoir faire mieux ? Défie-toi sur le même exercice !',
+        '',
+        'À bientôt,',
+        nomJoueur
+    ];
+    const corps = lignesCorps.join('\r\n');
+    const lienMailto = 'mailto:' + email + '?subject=' + encodeURIComponent(sujet) + '&body=' + encodeURIComponent(corps);
+
+    if (utilisateurCourant && donnees.users[utilisateurCourant]) {
+        const u = donnees.users[utilisateurCourant];
+        if (!u.compteurs) u.compteurs = { recordsBattus: 0, defisEnvoyes: 0 };
+        u.compteurs.defisEnvoyes = (u.compteurs.defisEnvoyes || 0) + 1;
+        const nouveauxBadges = mettreAJourBadges(u);
+        if (nouveauxBadges.length > 0) {
+            const libelles = nouveauxBadges.map(id => { const b = BADGES.find(bb => bb.id === id); return b ? (b.emoji + ' ' + b.label) : id; });
+            erreur.style.color = '#1e8449';
+            erreur.textContent = 'Défi envoyé ! Nouveau(x) badge(s) : ' + libelles.join(', ');
+        } else {
+            erreur.textContent = '';
+        }
+    } else {
+        erreur.textContent = '';
+    }
+    window.location.href = lienMailto;
+}
+
+// ========================= ÉCRAN PROFIL =========================
+function afficherProfil() {
+    const u = donnees.users[utilisateurCourant];
+    document.getElementById('profil-nom').textContent = utilisateurCourant;
+    const nbParties = u.history.length;
+    const nbSansFaute = u.history.filter(h => h.sansFaute).length;
+    document.getElementById('profil-stats').textContent = nbParties + ' partie(s) jouée(s), dont ' + nbSansFaute + ' sans faute.';
+
+    const grilleBadges = document.getElementById('profil-badges');
+    grilleBadges.innerHTML = '';
+    BADGES.forEach(b => {
+        const obtenu = u.badges.includes(b.id);
+        const div = document.createElement('div');
+        div.className = 'badge-item ' + (obtenu ? 'gagne' : 'non-gagne');
+        div.innerHTML = '<span class="badge-emoji">' + b.emoji + '</span>' + b.label;
+        grilleBadges.appendChild(div);
+    });
+
+    const table = document.getElementById('profil-records');
+    const signatures = Object.keys(u.bestTimes);
+    if (signatures.length === 0) {
+        table.innerHTML = '<tr><td style="color:#999;">Pas encore de sans-faute enregistré.</td></tr>';
+    } else {
+        let html = '<tr><th>Configuration</th><th>Meilleur temps</th></tr>';
+        signatures.forEach(sig => {
+            const entree = u.history.find(h => h.signature === sig);
+            const label = entree ? entree.tablesLabel : sig;
+            html += '<tr><td>' + label + '</td><td>' + u.bestTimes[sig].temps + ' s</td></tr>';
+        });
+        table.innerHTML = html;
+    }
+    document.getElementById('profil-progression').innerHTML = construireGraphiquesProgression(u);
+    afficherEcran('ecran-profil');
+}
+
+// ========================= ÉCRAN CLASSEMENT =========================
+function listerToutesLesConfigurations() {
+    const configs = {};
+    Object.values(donnees.users).forEach(u => {
+        u.history.forEach(h => { configs[h.signature] = h.tablesLabel; });
+    });
+    return configs;
+}
+
+function afficherClassement() {
+    const configs = listerToutesLesConfigurations();
+    const select = document.getElementById('select-config');
+    select.innerHTML = '';
+    const signatureCourante = calculerSignature(tablesSelectionnees, nbQuestions);
+    const signatures = Object.keys(configs);
+
+    if (signatures.length === 0) {
+        select.innerHTML = '<option>Aucune configuration jouée pour l\'instant</option>';
+        document.getElementById('classement-tableau').innerHTML = '';
+        document.getElementById('classement-vide').classList.remove('hidden');
+        afficherEcran('ecran-classement');
+        return;
+    }
+
+    signatures.forEach(sig => {
+        const opt = document.createElement('option');
+        opt.value = sig;
+        opt.textContent = configs[sig];
+        select.appendChild(opt);
+    });
+    if (signatures.includes(signatureCourante)) select.value = signatureCourante;
+
+    afficherEcran('ecran-classement');
+    afficherClassementPourConfig();
+}
+
+function afficherClassementPourConfig() {
+    const sig = document.getElementById('select-config').value;
+    const lignes = [];
+    Object.keys(donnees.users).forEach(nom => {
+        const rec = donnees.users[nom].bestTimes[sig];
+        if (rec) lignes.push({ nom, temps: rec.temps });
+    });
+    lignes.sort((a, b) => a.temps - b.temps);
+
+    const table = document.getElementById('classement-tableau');
+    const videMsg = document.getElementById('classement-vide');
+    if (lignes.length === 0) {
+        table.innerHTML = '';
+        videMsg.classList.remove('hidden');
+        return;
+    }
+    videMsg.classList.add('hidden');
+    let html = '<tr><th>Rang</th><th>Joueur</th><th>Meilleur temps</th></tr>';
+    lignes.forEach((l, i) => {
+        const estCourant = l.nom === utilisateurCourant;
+        html += '<tr class="' + (estCourant ? 'ligne-utilisateur-courant' : '') + '"><td class="rang">' + (i+1) + '</td><td>' + l.nom + '</td><td>' + l.temps + ' s</td></tr>';
+    });
+    table.innerHTML = html;
+}
+
+// ========================= MODE PROF =========================
+function afficherModeProf() {
+    const liste = document.getElementById('liste-eleves-prof');
+    liste.innerHTML = '';
+    const noms = Object.keys(donnees.users);
+    if (noms.length === 0) {
+        liste.innerHTML = '<p style="color:#999;">Aucun élève enregistré pour l\'instant.</p>';
+    }
+    noms.forEach(nom => {
+        const btn = document.createElement('div');
+        btn.className = 'eleve-prof-btn';
+        btn.textContent = nom;
+        btn.onclick = () => afficherAnalyseEleve(nom);
+        liste.appendChild(btn);
+    });
+    afficherEcran('ecran-mode-prof');
+}
+
+// ========================= GESTION DE LA LISTE DES ÉLÈVES (v18.0) =========================
+function afficherGestionEleves() {
+    construireGestionEleves();
+    afficherEcran('ecran-gestion-eleves');
+}
+
+function construireGestionEleves() {
+    const liste = document.getElementById('liste-gestion-eleves');
+    if (!liste) return;
+    liste.innerHTML = '';
+    const noms = listeEleveAutorises || [];
+    if (noms.length === 0) {
+        liste.innerHTML = '<p style="color:#999;">Aucun élève dans la liste en ligne pour l\'instant.</p>';
+    }
+    noms.forEach(nom => {
+        const ligne = document.createElement('div');
+        ligne.className = 'eleve-prof-btn';
+        ligne.style.display = 'flex';
+        ligne.style.justifyContent = 'space-between';
+        ligne.style.alignItems = 'center';
+        ligne.style.cursor = 'default';
+        const span = document.createElement('span');
+        span.textContent = nom;
+        ligne.appendChild(span);
+        const btnRetirer = document.createElement('button');
+        btnRetirer.type = 'button';
+        btnRetirer.className = 'tertiaire';
+        btnRetirer.style.margin = '0';
+        btnRetirer.textContent = 'Retirer';
+        btnRetirer.onclick = () => retirerEleveDeLaGestion(nom);
+        ligne.appendChild(btnRetirer);
+        liste.appendChild(ligne);
+    });
+
+    // Élèves déjà connus sur cet appareil (parties jouées en v17 ou avant l'ajout au roster) mais
+    // pas encore dans la liste en ligne : on propose de les y ajouter en un clic.
+    const zoneMigration = document.getElementById('zone-migration-locale');
+    const localsNonListes = Object.keys(donnees.users).filter(n => !noms.includes(n));
+    if (localsNonListes.length > 0) {
+        zoneMigration.innerHTML = '';
+        const titre = document.createElement('p');
+        titre.style.marginTop = '16px';
+        titre.style.fontWeight = 'bold';
+        titre.textContent = 'Déjà connus sur cet appareil, pas encore dans la liste en ligne :';
+        zoneMigration.appendChild(titre);
+        localsNonListes.forEach(nom => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'secondary';
+            btn.style.display = 'block';
+            btn.style.width = '100%';
+            btn.style.marginBottom = '6px';
+            btn.textContent = 'Ajouter et synchroniser ' + nom;
+            btn.onclick = () => migrerEleveLocalVersLigne(nom);
+            zoneMigration.appendChild(btn);
+        });
+    } else if (zoneMigration) {
+        zoneMigration.innerHTML = '';
+    }
+}
+
+function ajouterEleveDepuisGestion() {
+    const champ = document.getElementById('nouvel-eleve-nom');
+    const nom = champ.value.trim();
+    const erreur = document.getElementById('erreur-nouvel-eleve');
+    if (nom === '') { erreur.textContent = 'Écris un prénom avant d\'ajouter.'; return; }
+    if ((listeEleveAutorises || []).includes(nom)) { erreur.textContent = 'Cet élève est déjà dans la liste.'; return; }
+    if (!donnees.users[nom]) donnees.users[nom] = creerProfilParDefaut();
+    ajouterEleveALaListeFirestore(nom);
+    sauvegarderDonnees(nom);
+    if (listeEleveAutorises === null) listeEleveAutorises = [];
+    if (!listeEleveAutorises.includes(nom)) listeEleveAutorises.push(nom);
+    champ.value = '';
+    erreur.textContent = '';
+    construireGestionEleves();
+}
+
+function retirerEleveDeLaGestion(nom) {
+    const confirmation = window.confirm('Retirer ' + nom + ' de la liste de connexion ? Ses données restent conservées, il ne sera juste plus proposé sur l\'écran de connexion.');
+    if (!confirmation) return;
+    retirerEleveDeLaListeFirestore(nom);
+    if (listeEleveAutorises) listeEleveAutorises = listeEleveAutorises.filter(n => n !== nom);
+    construireGestionEleves();
+}
+
+function migrerEleveLocalVersLigne(nom) {
+    ajouterEleveALaListeFirestore(nom);
+    sauvegarderDonnees(nom);
+    if (listeEleveAutorises === null) listeEleveAutorises = [];
+    if (!listeEleveAutorises.includes(nom)) listeEleveAutorises.push(nom);
+    construireGestionEleves();
+}
+
+// Détermine la couleur d'une opération a×b à partir des essais/erreurs enregistrés
+function statutOperation(stat) {
+    if (!stat || stat.essais === 0) return 'non-teste';
+    const taux = (stat.essais - stat.erreurs) / stat.essais;
+    if (stat.essais === 1) return taux === 1 ? 'en-cours' : 'a-travailler'; // un seul essai : prudence, jamais "acquis" d'emblée
+    if (taux >= 0.85) return 'acquis';
+    if (taux >= 0.6) return 'en-cours';
+    return 'a-travailler';
+}
+
+function construireCarteTables(u) {
+    const stats = u.factStats || {};
+    let html = '<table class="carte-tables"><tr><th></th>';
+    for (let b = 1; b <= 10; b++) html += '<th>' + b + '</th>';
+    html += '</tr>';
+    for (let a = 1; a <= 10; a++) {
+        html += '<tr><th>×' + a + '</th>';
+        for (let b = 1; b <= 10; b++) {
+            const cle = a + '_' + b;
+            const statut = statutOperation(stats[cle]);
+            const classeCss = { 'acquis': 'cellule-acquis', 'en-cours': 'cellule-en-cours', 'a-travailler': 'cellule-a-travailler', 'non-teste': 'cellule-non-teste' }[statut];
+            html += '<td class="' + classeCss + '">' + (a*b) + '</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</table>';
+    return html;
+}
+
+// Détecte les erreurs récurrentes : même mauvaise réponse donnée au moins 2 fois pour un calcul (v9.0)
+function detecterErreursRecurrentes(u) {
+    const resultat = [];
+    Object.keys(u.reponsesErronees || {}).forEach(cle => {
+        const [a, b] = cle.split('_');
+        const valeurs = u.reponsesErronees[cle];
+        Object.keys(valeurs).forEach(val => {
+            if (valeurs[val] >= 2) resultat.push({ a, b, valeurDonnee: val, nombre: valeurs[val] });
+        });
+    });
+    return resultat.sort((x, y) => y.nombre - x.nombre);
+}
+
+function listerPriorites(u) {
+    const stats = u.factStats || {};
+    const recurrentes = detecterErreursRecurrentes(u);
+    const trouverRecurrence = (a, b) => recurrentes.filter(r => r.a === String(a) && r.b === String(b)).sort((x, y) => y.nombre - x.nombre)[0];
+
+    const entrees = Object.keys(stats)
+        .map(cle => {
+            const [a, b] = cle.split('_');
+            const s = stats[cle];
+            return { a, b, essais: s.essais, erreurs: s.erreurs, taux: (s.essais - s.erreurs) / s.essais };
+        })
+        .filter(e => e.essais >= 2 && e.taux < 0.85)
+        .sort((x, y) => x.taux - y.taux)
+        .slice(0, 6);
+
+    if (entrees.length === 0) {
+        return '<p style="color:#999;">Pas de difficulté particulière identifiée pour l\'instant (ou pas encore assez de données).</p>';
+    }
+    let html = '<ul class="liste-priorites">';
+    entrees.forEach(e => {
+        const reussites = e.essais - e.erreurs;
+        const recur = trouverRecurrence(e.a, e.b);
+        html += '<li><strong>' + e.a + ' × ' + e.b + '</strong> — réussi ' + reussites + ' fois sur ' + e.essais;
+        if (recur) html += '. Confond souvent avec <strong>' + recur.valeurDonnee + '</strong> (' + recur.nombre + ' fois)';
+        html += '.</li>';
+    });
+    html += '</ul>';
+    return html;
+}
+
+// ========================= ANALYSE PÉDAGOGIQUE APPROFONDIE (v9.0) =========================
+
+// --- 1) Vitesse × exactitude : reconstruit à partir du détail par question (v6.0+) ---
+const SEUIL_TEMPS_RAPIDE_MS = 3000; // 3 secondes : seuil indicatif d'automatisation d'un fait numérique en CM1
+
+function calculerStatsTempsParFait(u) {
+    const stats = {};
+    u.history.forEach(h => {
+        (h.details || []).forEach(q => {
+            const cle = q.a + '_' + q.b;
+            if (!stats[cle]) stats[cle] = { essais: 0, erreurs: 0, sommeTempsMs: 0 };
+            stats[cle].essais++;
+            stats[cle].sommeTempsMs += q.tempsMs;
+            if (!q.correcte) stats[cle].erreurs++;
+        });
+    });
+    return stats;
+}
+
+function profilVitesseExactitude(stat) {
+    if (!stat || stat.essais < 2) return 'donnees-insuffisantes';
+    const tempsMoyen = stat.sommeTempsMs / stat.essais;
+    const taux = (stat.essais - stat.erreurs) / stat.essais;
+    const rapide = tempsMoyen < SEUIL_TEMPS_RAPIDE_MS;
+    const reussi = taux >= 0.85;
+    if (rapide && reussi) return 'automatise';
+    if (!rapide && reussi) return 'en-reconstruction';
+    if (rapide && !reussi) return 'confusion';
+    return 'non-construit';
+}
+
+function construireCarteVitesseExactitude(u) {
+    const stats = calculerStatsTempsParFait(u);
+    const classeParProfil = { 'automatise': 'cellule-acquis', 'en-reconstruction': 'cellule-en-cours', 'confusion': 'cellule-confusion', 'non-construit': 'cellule-a-travailler', 'donnees-insuffisantes': 'cellule-non-teste' };
+    let html = '<table class="carte-tables"><tr><th></th>';
+    for (let b = 1; b <= 10; b++) html += '<th>' + b + '</th>';
+    html += '</tr>';
+    for (let a = 1; a <= 10; a++) {
+        html += '<tr><th>×' + a + '</th>';
+        for (let b = 1; b <= 10; b++) {
+            const profil = profilVitesseExactitude(stats[a + '_' + b]);
+            html += '<td class="' + classeParProfil[profil] + '">' + (a * b) + '</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</table>';
+    return html;
+}
+
+// --- 2) Commutativité : compare a×b et b×a via factStats (essais/erreurs, pas besoin du temps) ---
+function detecterProblemesCommutativite(u) {
+    const stats = u.factStats || {};
+    const problemes = [];
+    for (let a = 1; a <= 10; a++) {
+        for (let b = a + 1; b <= 10; b++) {
+            const statutAB = statutOperation(stats[a + '_' + b]);
+            const statutBA = statutOperation(stats[b + '_' + a]);
+            if (statutAB === 'acquis' && statutBA === 'a-travailler') problemes.push({ maitrise: a + ' × ' + b, faible: b + ' × ' + a });
+            else if (statutBA === 'acquis' && statutAB === 'a-travailler') problemes.push({ maitrise: b + ' × ' + a, faible: a + ' × ' + b });
+        }
+    }
+    return problemes;
+}
+
+function construireListeCommutativite(u) {
+    const problemes = detecterProblemesCommutativite(u);
+    if (problemes.length === 0) {
+        return '<p style="color:#999;">Aucun écart de commutativité détecté (ou pas encore assez de données).</p>';
+    }
+    let html = '<ul class="liste-commutativite">';
+    problemes.forEach(p => {
+        html += '<li><strong>' + p.maitrise + '</strong> est maîtrisé, mais <strong>' + p.faible + '</strong> ne l\'est pas encore : la commutativité n\'est pas automatique pour cette paire.</li>';
+    });
+    html += '</ul>';
+    return html;
+}
+
+// --- 3) Repères du programme CM1 : 4 paliers pédagogiques ---
+const PALIERS_CM1 = [
+    { nom: 'Palier 1 — Repères immédiats', tables: [1, 2, 5, 10] },
+    { nom: 'Palier 2 — Doubles', tables: [4, 8] },
+    { nom: 'Palier 3 — Tables intermédiaires', tables: [3, 6, 9] },
+    { nom: 'Palier 4 — Table la plus complexe', tables: [7] }
+];
+
+function calculerStatutPalier(u, tables) {
+    const stats = u.factStats || {};
+    let totalEssais = 0, totalErreurs = 0, testes = 0, total = 0;
+    tables.forEach(a => {
+        for (let b = 1; b <= 10; b++) {
+            total++;
+            const s = stats[a + '_' + b];
+            if (s && s.essais > 0) { testes++; totalEssais += s.essais; totalErreurs += s.erreurs; }
+        }
+    });
+    if (testes === 0) return { statut: 'non-teste', taux: null, couverture: 0 };
+    const taux = (totalEssais - totalErreurs) / totalEssais;
+    let statut = taux >= 0.85 ? 'acquis' : (taux >= 0.6 ? 'en-cours' : 'a-travailler');
+    return { statut, taux: Math.round(taux * 100), couverture: Math.round(100 * testes / total) };
+}
+
+function construireProgressionPaliers(u) {
+    const libelleStatut = { 'acquis': 'Acquis ✅', 'en-cours': 'En cours 🟠', 'a-travailler': 'À travailler 🔴', 'non-teste': 'Non testé ⚪' };
+    let html = '<ul class="liste-paliers">';
+    PALIERS_CM1.forEach(palier => {
+        const etat = calculerStatutPalier(u, palier.tables);
+        html += '<li><strong>' + palier.nom + '</strong> (tables ' + palier.tables.join(', ') + ') — ' + libelleStatut[etat.statut];
+        if (etat.taux !== null) html += ' — ' + etat.taux + '% de réussite (' + etat.couverture + '% des calculs déjà testés)';
+        html += '</li>';
+    });
+    html += '</ul>';
+    return html;
+}
+
+// ========================= ÉVALUATION DES BADGES (v11.0) =========================
+// Chaque fonction relit l'état complet du profil (historique, factStats...) plutôt que de suivre
+// un compteur incrémental séparé : plus robuste (même logique que les autres analyses dérivées).
+
+function calculerSerieMaximale(u) {
+    if (u.history.length === 0) return 0;
+    const joursUniques = Array.from(new Set(u.history.map(h => dateStrLocale(new Date(h.date))))).sort();
+    let maxSerie = 1, serieActuelle = 1;
+    for (let i = 1; i < joursUniques.length; i++) {
+        const precedent = new Date(joursUniques[i - 1] + 'T00:00:00');
+        const courant = new Date(joursUniques[i] + 'T00:00:00');
+        const diffJours = Math.round((courant - precedent) / 86400000);
+        if (diffJours === 1) { serieActuelle++; maxSerie = Math.max(maxSerie, serieActuelle); }
+        else { serieActuelle = 1; }
+    }
+    return maxSerie;
+}
+
+// v12.0 : un jour "objectif atteint" est un jour où le nombre de parties jouées a atteint le
+// nombre de tentatives requises tel qu'il était fixé ce jour-là (champ objectifDuJour, capturé par
+// partie depuis la v12.0 ; les parties plus anciennes, sans ce champ, comptent sur la base de 7).
+function compterJoursObjectifAtteint(u) {
+    const parJour = {};
+    u.history.forEach(h => {
+        const j = dateStrLocale(new Date(h.date));
+        if (!parJour[j]) parJour[j] = { nbParties: 0, dernierObjectif: TENTATIVES_INITIAL };
+        parJour[j].nbParties++;
+        parJour[j].dernierObjectif = (h.objectifDuJour !== undefined) ? h.objectifDuJour : parJour[j].dernierObjectif;
+    });
+    return Object.values(parJour).filter(j => j.nbParties >= j.dernierObjectif).length;
+}
+
+// Amélioration de 30%+ du temps par rapport à la moyenne des parties sans-faute précédentes de même configuration
+function detecterGrandBond(u) {
+    for (let i = 0; i < u.history.length; i++) {
+        const h = u.history[i];
+        if (!h.sansFaute) continue;
+        const precedentes = u.history.slice(0, i).filter(x => x.signature === h.signature && x.sansFaute);
+        if (precedentes.length < 2) continue;
+        const moyenne = precedentes.reduce((s, x) => s + x.temps, 0) / precedentes.length;
+        if (moyenne > 0 && (moyenne - h.temps) / moyenne >= 0.30) return true;
+    }
+    return false;
+}
+
+// Sans-faute après une pause d'au moins 7 jours depuis la partie précédente
+function detecterRetourGagnant(u) {
+    for (let i = 1; i < u.history.length; i++) {
+        const h = u.history[i];
+        if (!h.sansFaute) continue;
+        const ecartJours = (new Date(h.date) - new Date(u.history[i - 1].date)) / 86400000;
+        if (ecartJours >= 7) return true;
+    }
+    return false;
+}
+
+function toutesTablesAcquises(u) {
+    const stats = u.factStats || {};
+    for (let a = 1; a <= 10; a++) for (let b = 1; b <= 10; b++) {
+        if (statutOperation(stats[a + '_' + b]) !== 'acquis') return false;
+    }
+    return true;
+}
+
+function automatisationTotale(u) {
+    const stats = calculerStatsTempsParFait(u);
+    for (let a = 1; a <= 10; a++) for (let b = 1; b <= 10; b++) {
+        if (profilVitesseExactitude(stats[a + '_' + b]) !== 'automatise') return false;
+    }
+    return true;
+}
+
+// Exige un minimum de calculs testés pour éviter un déblocage trivial faute de données
+function maitriseCommutativite(u) {
+    const stats = u.factStats || {};
+    let nbTestes = 0;
+    for (let a = 1; a <= 10; a++) for (let b = 1; b <= 10; b++) { if (stats[a + '_' + b] && stats[a + '_' + b].essais > 0) nbTestes++; }
+    if (nbTestes < 60) return false;
+    return detecterProblemesCommutativite(u).length === 0;
+}
+
+// Un fait a déjà eu une confusion récurrente (même erreur ≥ 2 fois) ET est maintenant acquis
+function detecterConfusionsCorrigees(u) {
+    const resultat = [];
+    Object.keys(u.reponsesErronees || {}).forEach(cle => {
+        const eutRecurrence = Object.values(u.reponsesErronees[cle]).some(n => n >= 2);
+        if (eutRecurrence && statutOperation((u.factStats || {})[cle]) === 'acquis') resultat.push(cle);
+    });
+    return resultat;
+}
+
+// Rejoue dans les 30 minutes après un échec (score imparfait) et fait mieux
+function detecterPerseverance(u) {
+    for (let i = 1; i < u.history.length; i++) {
+        const prev = u.history[i - 1], cur = u.history[i];
+        if (prev.score < prev.total && cur.score > prev.score) {
+            const ecartMs = new Date(cur.date) - new Date(prev.date);
+            if (ecartMs <= 30 * 60 * 1000) return true;
+        }
+    }
+    return false;
+}
+
+function aTesteToutesLesTables(u) {
+    const stats = u.factStats || {};
+    for (let a = 1; a <= 10; a++) {
+        let testee = false;
+        for (let b = 1; b <= 10; b++) { if (stats[a + '_' + b] && stats[a + '_' + b].essais > 0) { testee = true; break; } }
+        if (!testee) return false;
+    }
+    return true;
+}
+
+function detecterHatTrick(u) {
+    const parJour = {};
+    u.history.forEach(h => {
+        if (!h.sansFaute) return;
+        const j = dateStrLocale(new Date(h.date));
+        parJour[j] = (parJour[j] || 0) + 1;
+    });
+    return Object.values(parJour).some(n => n >= 3);
+}
+
+// Évalue l'ensemble des 34 badges à partir de l'état courant du profil (source de vérité unique)
+function evaluerBadgesDebloques(u) {
+    const d = new Set();
+    const nbParties = u.history.length;
+    const nbSansFauteTotal = u.history.filter(h => h.sansFaute).length;
+
+    if (nbParties >= 1) d.add('premier_match');
+    if (nbSansFauteTotal >= 1) d.add('sans_faute');
+    if ((u.compteurs.recordsBattus || 0) >= 1) d.add('record_battu');
+    if (nbSansFauteTotal >= 5) d.add('cinq_sans_faute');
+    if (u.history.some(h => h.sansFaute && h.toutRapide)) d.add('rapide_et_juste');
+
+    const serieMax = calculerSerieMaximale(u);
+    if (serieMax >= 3) d.add('serie_3');
+    if (serieMax >= 7) d.add('serie_7');
+    if (serieMax >= 30) d.add('serie_30');
+
+    const nbJoursObjectif = compterJoursObjectifAtteint(u);
+    if (nbJoursObjectif >= 5) d.add('objectif_5x');
+    if (nbJoursObjectif >= 20) d.add('objectif_20x');
+
+    if (detecterGrandBond(u)) d.add('grand_bond');
+    if (detecterRetourGagnant(u)) d.add('retour_gagnant');
+    if ((u.compteurs.recordsBattus || 0) >= 3) d.add('trois_records');
+
+    PALIERS_CM1.forEach((palier, i) => {
+        const etat = calculerStatutPalier(u, palier.tables);
+        if (etat.statut === 'acquis' && etat.couverture >= 80) d.add('palier' + (i + 1) + '_maitrise');
+    });
+    if (toutesTablesAcquises(u)) d.add('toutes_tables');
+    if (automatisationTotale(u)) d.add('automatisation_totale');
+    if (maitriseCommutativite(u)) d.add('maitre_commutativite');
+
+    if (u.history.filter(h => h.sansFaute && h.toutRapide).length >= 5) d.add('cinq_rapide_juste');
+    if (u.history.some(h => h.sansFaute && h.total > 0 && (h.temps / h.total) < 2)) d.add('ultra_rapide');
+
+    if (detecterConfusionsCorrigees(u).length > 0) d.add('confusion_corrigee');
+    if (detecterPerseverance(u)) d.add('perseverant');
+
+    const totalCalculs = u.history.reduce((s, h) => s + h.total, 0);
+    if (totalCalculs >= 100) d.add('cent_calculs');
+    if (totalCalculs >= 500) d.add('cinq_cents_calculs');
+    if (totalCalculs >= 1000) d.add('mille_calculs');
+    if (aTesteToutesLesTables(u)) d.add('explorateur');
+    if (nbParties >= 50) d.add('cinquante_parties');
+    if (nbParties >= 100) d.add('cent_parties');
+
+    if ((u.compteurs.defisEnvoyes || 0) >= 1) d.add('premier_defi');
+    if ((u.compteurs.defisEnvoyes || 0) >= 5) d.add('cinq_defis');
+
+    if (detecterHatTrick(u)) d.add('hat_trick');
+
+    return d;
+}
+
+// Fusionne les badges nouvellement débloqués dans le profil, vérifie le badge "méta" Capitaine en
+// dernier (dépend du nombre d'autres badges déjà obtenus), sauvegarde, et retourne les nouveautés.
+function mettreAJourBadges(u) {
+    const badgesAvant = new Set(u.badges);
+    evaluerBadgesDebloques(u).forEach(id => { if (!u.badges.includes(id)) u.badges.push(id); });
+    if (u.badges.length >= 10 && !u.badges.includes('capitaine')) u.badges.push('capitaine');
+    u.badges = Array.from(new Set(u.badges));
+    sauvegarderDonnees();
+    return u.badges.filter(id => !badgesAvant.has(id));
+}
+
+// --- 4) Courbe de progression : agrégation hebdomadaire + graphique SVG (aucune dépendance externe) ---
+function lundiDeLaSemaine(date) {
+    const d = new Date(date);
+    const jour = d.getDay();
+    const diff = (jour === 0 ? -6 : 1 - jour);
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function calculerProgressionHebdo(u) {
+    const semaines = {};
+    u.history.forEach(h => {
+        const cle = dateStrLocale(lundiDeLaSemaine(new Date(h.date)));
+        if (!semaines[cle]) semaines[cle] = { sommeTaux: 0, sommeTemps: 0, nb: 0 };
+        semaines[cle].sommeTaux += (h.score / h.total);
+        semaines[cle].sommeTemps += h.temps;
+        semaines[cle].nb++;
+    });
+    return Object.keys(semaines).sort().map(cle => ({
+        semaine: cle,
+        tauxMoyen: Math.round(100 * semaines[cle].sommeTaux / semaines[cle].nb),
+        tempsMoyen: Math.round(semaines[cle].sommeTemps / semaines[cle].nb)
+    }));
+}
+
+function construireGraphiqueLigneSVG(points, cleValeur, options) {
+    if (points.length === 0) return '<p style="color:#999;">Pas encore de données pour un graphique.</p>';
+    if (points.length === 1) return '<p style="color:#999;">Une seule semaine de données pour l\'instant — reviens plus tard pour voir la courbe.</p>';
+
+    const largeur = 500, hauteur = 160, marge = 32;
+    const valeurs = points.map(p => p[cleValeur]);
+    const maxValeur = options.max || Math.max(...valeurs) * 1.15 || 1;
+    const largeurUtile = largeur - 2 * marge, hauteurUtile = hauteur - 2 * marge;
+    const coordX = i => marge + (i / (points.length - 1)) * largeurUtile;
+    const coordY = v => marge + hauteurUtile - (v / maxValeur) * hauteurUtile;
+    const chemin = points.map((p, i) => coordX(i) + ',' + coordY(p[cleValeur])).join(' ');
+    const couleur = options.couleur || '#1e8449';
+
+    let svg = '<svg viewBox="0 0 ' + largeur + ' ' + hauteur + '" style="width:100%; max-width:' + largeur + 'px; height:auto;">';
+    svg += '<line x1="' + marge + '" y1="' + (hauteur - marge) + '" x2="' + (largeur - marge) + '" y2="' + (hauteur - marge) + '" stroke="#ccc" stroke-width="1"/>';
+    svg += '<polyline points="' + chemin + '" fill="none" stroke="' + couleur + '" stroke-width="3"/>';
+    points.forEach((p, i) => {
+        const x = coordX(i), y = coordY(p[cleValeur]);
+        svg += '<circle cx="' + x + '" cy="' + y + '" r="4" fill="' + couleur + '"/>';
+        svg += '<text x="' + x + '" y="' + (y - 8) + '" font-size="11" text-anchor="middle" fill="#333">' + p[cleValeur] + (options.unite || '') + '</text>';
+        const dateAffichee = new Date(p.semaine + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        svg += '<text x="' + x + '" y="' + (hauteur - marge + 16) + '" font-size="10" text-anchor="middle" fill="#777">' + dateAffichee + '</text>';
+    });
+    svg += '</svg>';
+    return svg;
+}
+
+function construireGraphiquesProgression(u) {
+    const points = calculerProgressionHebdo(u);
+    let html = '<div class="zone-graphique"><p class="legende-graphique">Taux de réussite moyen par semaine (%)</p>';
+    html += construireGraphiqueLigneSVG(points, 'tauxMoyen', { max: 100, unite: '%', couleur: '#1e8449' });
+    html += '</div>';
+    html += '<div class="zone-graphique"><p class="legende-graphique">Temps moyen par partie (secondes)</p>';
+    html += construireGraphiqueLigneSVG(points, 'tempsMoyen', { unite: 's', couleur: '#3498db' });
+    html += '</div>';
+    return html;
+}
+
+function afficherAnalyseEleve(nom) {
+    const u = donnees.users[nom];
+    document.getElementById('analyse-nom').textContent = nom;
+
+    const etatObjectif = calculerEtatObjectif(u);
+    const serie = u.serieSansFauteQualifiants || 0;
+    document.getElementById('analyse-objectif-texte').textContent =
+        emojiObjectif(etatObjectif) + ' Aujourd\'hui : ' + etatObjectif.faites + ' / ' + etatObjectif.n + ' parties. ' +
+        'Série de sans-faute qualifiants en cours : ' + serie + ' / ' + SERIE_REQUISE_POUR_BAISSE +
+        ' (à ' + SERIE_REQUISE_POUR_BAISSE + ', l\'objectif baisse d\'une tentative, plancher ' + TENTATIVES_MIN + ').';
+
+    construireGrilleTablesAutorisees(nom);
+
+    const nbParties = u.history.length;
+    const nbSansFaute = u.history.filter(h => h.sansFaute).length;
+    let totalEssais = 0, totalErreurs = 0;
+    Object.values(u.factStats || {}).forEach(s => { totalEssais += s.essais; totalErreurs += s.erreurs; });
+    const tauxGlobal = totalEssais > 0 ? Math.round(100 * (totalEssais - totalErreurs) / totalEssais) : null;
+    document.getElementById('analyse-stats-globales').textContent =
+        nbParties + ' partie(s) jouée(s), dont ' + nbSansFaute + ' sans faute.' +
+        (tauxGlobal !== null ? ' Taux de réussite global : ' + tauxGlobal + '%.' : '');
+
+    document.getElementById('analyse-carte-tables').innerHTML = construireCarteTables(u);
+    document.getElementById('analyse-paliers').innerHTML = construireProgressionPaliers(u);
+    document.getElementById('analyse-carte-vitesse').innerHTML = construireCarteVitesseExactitude(u);
+    document.getElementById('analyse-commutativite').innerHTML = construireListeCommutativite(u);
+    document.getElementById('analyse-progression').innerHTML = construireGraphiquesProgression(u);
+    document.getElementById('analyse-priorites').innerHTML = listerPriorites(u);
+
+    const zoneHistorique = document.getElementById('analyse-historique');
+    if (nbParties === 0) {
+        zoneHistorique.innerHTML = '<p style="color:#999;">Aucune partie jouée.</p>';
+    } else {
+        let html = '';
+        u.history.slice(-8).reverse().forEach(h => {
+            const d = new Date(h.date);
+            const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            html += '<details class="detail-partie"><summary>' + dateStr + ' — ' + h.tablesLabel + ' — Score ' + h.score + '/' + h.total + ' — ' + h.temps + ' s</summary>';
+            const details = h.details || [];
+            if (details.length === 0) {
+                html += '<p style="color:#999; padding:8px;">Détail par question non disponible pour cette partie (jouée avant la v6.0).</p>';
+            } else {
+                html += '<table class="records petit"><tr><th>Calcul</th><th>Résultat</th><th>Temps de réponse</th></tr>';
+                details.forEach(q => {
+                    const secondes = (q.tempsMs / 1000).toFixed(1);
+                    html += '<tr><td>' + q.a + ' × ' + q.b + '</td><td>' + (q.correcte ? '✅' : '❌') + '</td><td>' + secondes + ' s</td></tr>';
+                });
+                html += '</table>';
+            }
+            html += '</details>';
+        });
+        zoneHistorique.innerHTML = html;
+    }
+
+    afficherEcran('ecran-analyse-eleve');
+}
+
+// ========================= RAPPORTS (v6.0) =========================
+function genererRapportTexte(nom) {
+    const u = donnees.users[nom];
+    const lignes = [];
+    lignes.push('=== Rapport Quiz Math Foot — ' + nom + ' ===');
+    lignes.push('Généré le ' + new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+    lignes.push('');
+
+    const nbParties = u.history.length;
+    const nbSansFaute = u.history.filter(h => h.sansFaute).length;
+    let totalEssais = 0, totalErreurs = 0;
+    Object.values(u.factStats || {}).forEach(s => { totalEssais += s.essais; totalErreurs += s.erreurs; });
+    const tauxGlobal = totalEssais > 0 ? Math.round(100 * (totalEssais - totalErreurs) / totalEssais) : null;
+    lignes.push('Parties jouées : ' + nbParties + ' (dont ' + nbSansFaute + ' sans faute)');
+    if (tauxGlobal !== null) lignes.push('Taux de réussite global : ' + tauxGlobal + '%');
+    lignes.push('');
+
+    const stats = u.factStats || {};
+    const parStatut = { 'acquis': [], 'en-cours': [], 'a-travailler': [] };
+    Object.keys(stats).forEach(cle => {
+        const statut = statutOperation(stats[cle]);
+        if (parStatut[statut]) {
+            const [a, b] = cle.split('_');
+            parStatut[statut].push(a + '×' + b);
+        }
+    });
+    lignes.push('Calculs acquis (' + parStatut['acquis'].length + ') : ' + (parStatut['acquis'].join(', ') || '—'));
+    lignes.push('Calculs en cours d\'acquisition (' + parStatut['en-cours'].length + ') : ' + (parStatut['en-cours'].join(', ') || '—'));
+    lignes.push('Calculs à travailler en priorité (' + parStatut['a-travailler'].length + ') : ' + (parStatut['a-travailler'].join(', ') || '—'));
+    lignes.push('');
+
+    lignes.push('--- Repères du programme CM1 ---');
+    const libelleStatutTexte = { 'acquis': 'Acquis', 'en-cours': 'En cours', 'a-travailler': 'À travailler', 'non-teste': 'Non testé' };
+    PALIERS_CM1.forEach(palier => {
+        const etat = calculerStatutPalier(u, palier.tables);
+        let ligne = palier.nom + ' (tables ' + palier.tables.join(', ') + ') : ' + libelleStatutTexte[etat.statut];
+        if (etat.taux !== null) ligne += ' — ' + etat.taux + '% de réussite (' + etat.couverture + '% testé)';
+        lignes.push(ligne);
+    });
+    lignes.push('');
+
+    lignes.push('--- Vitesse × exactitude ---');
+    const statsTemps = calculerStatsTempsParFait(u);
+    const compteurProfils = { 'automatise': 0, 'en-reconstruction': 0, 'confusion': 0, 'non-construit': 0, 'donnees-insuffisantes': 0 };
+    Object.values(statsTemps).forEach(s => { compteurProfils[profilVitesseExactitude(s)]++; });
+    lignes.push('Automatisés : ' + compteurProfils['automatise'] + ' | En reconstruction : ' + compteurProfils['en-reconstruction'] +
+        ' | Confusions mémorisées : ' + compteurProfils['confusion'] + ' | Non construits : ' + compteurProfils['non-construit']);
+    lignes.push('');
+
+    lignes.push('--- Commutativité ---');
+    const problemesCommutativite = detecterProblemesCommutativite(u);
+    if (problemesCommutativite.length === 0) {
+        lignes.push('Aucun écart détecté.');
+    } else {
+        problemesCommutativite.forEach(p => lignes.push(p.maitrise + ' maîtrisé, mais ' + p.faible + ' pas encore.'));
+    }
+    lignes.push('');
+
+    lignes.push('--- Progression hebdomadaire ---');
+    const semaines = calculerProgressionHebdo(u);
+    if (semaines.length === 0) {
+        lignes.push('Pas encore de données.');
+    } else {
+        semaines.forEach(s => {
+            const dateAffichee = new Date(s.semaine + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+            lignes.push('Semaine du ' + dateAffichee + ' : ' + s.tauxMoyen + '% de réussite, ' + s.tempsMoyen + ' s en moyenne par partie');
+        });
+    }
+    lignes.push('');
+
+    lignes.push('--- Historique des parties ---');
+    if (nbParties === 0) {
+        lignes.push('Aucune partie jouée.');
+    } else {
+        u.history.forEach(h => {
+            const d = new Date(h.date);
+            const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            lignes.push(dateStr + ' | ' + h.tablesLabel + ' | Score ' + h.score + '/' + h.total + ' | Temps total ' + h.temps + ' s');
+        });
+    }
+
+    return lignes.join('\n');
+}
+
+function genererRapportTousLesEleves() {
+    const noms = Object.keys(donnees.users);
+    if (noms.length === 0) return 'Aucun élève enregistré.';
+    return noms.map(n => genererRapportTexte(n)).join('\n\n========================================\n\n');
+}
+
+// Version structurée en HTML du même rapport (v7.0), pour lecture à l'écran et impression/PDF
+function construireContenuRapportHTML(nom) {
+    const u = donnees.users[nom];
+    const nbParties = u.history.length;
+    const nbSansFaute = u.history.filter(h => h.sansFaute).length;
+    let totalEssais = 0, totalErreurs = 0;
+    Object.values(u.factStats || {}).forEach(s => { totalEssais += s.essais; totalErreurs += s.erreurs; });
+    const tauxGlobal = totalEssais > 0 ? Math.round(100 * (totalEssais - totalErreurs) / totalEssais) : null;
+
+    let html = '<div class="bloc-rapport-eleve">';
+    html += '<h2>' + nom + '</h2>';
+    html += '<p>' + nbParties + ' partie(s) jouée(s), dont ' + nbSansFaute + ' sans faute.' +
+        (tauxGlobal !== null ? ' Taux de réussite global : ' + tauxGlobal + '%.' : '') + '</p>';
+
+    html += '<h3>Repères du programme CM1</h3>' + construireProgressionPaliers(u);
+
+    html += '<h3>Carte des tables</h3>';
+    html += '<div class="legende-carte">' +
+        '<span class="legende-item"><span class="legende-puce cellule-acquis"></span>Acquis</span>' +
+        '<span class="legende-item"><span class="legende-puce cellule-en-cours"></span>En cours</span>' +
+        '<span class="legende-item"><span class="legende-puce cellule-a-travailler"></span>À travailler</span>' +
+        '<span class="legende-item"><span class="legende-puce cellule-non-teste"></span>Non testé</span></div>';
+    html += '<div style="text-align:center;">' + construireCarteTables(u) + '</div>';
+
+    html += '<h3>Vitesse × exactitude</h3>';
+    html += '<div class="legende-carte">' +
+        '<span class="legende-item"><span class="legende-puce cellule-acquis"></span>Automatisé</span>' +
+        '<span class="legende-item"><span class="legende-puce cellule-en-cours"></span>En reconstruction</span>' +
+        '<span class="legende-item"><span class="legende-puce cellule-confusion"></span>Confusion mémorisée</span>' +
+        '<span class="legende-item"><span class="legende-puce cellule-a-travailler"></span>Non construit</span></div>';
+    html += '<div style="text-align:center;">' + construireCarteVitesseExactitude(u) + '</div>';
+
+    html += '<h3>Commutativité</h3>' + construireListeCommutativite(u);
+
+    html += '<h3>Priorités de travail</h3>' + listerPriorites(u);
+
+    html += '<h3>Progression dans le temps</h3>' + construireGraphiquesProgression(u);
+
+    html += '<h3>Historique des parties</h3>';
+    if (nbParties === 0) {
+        html += '<p style="color:#999;">Aucune partie jouée.</p>';
+    } else {
+        html += '<table class="records"><tr><th>Date</th><th>Configuration</th><th>Score</th><th>Temps</th></tr>';
+        u.history.forEach(h => {
+            const d = new Date(h.date);
+            const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            html += '<tr><td>' + dateStr + '</td><td>' + h.tablesLabel + '</td><td>' + h.score + '/' + h.total + '</td><td>' + h.temps + ' s</td></tr>';
+        });
+        html += '</table>';
+    }
+    html += '</div>';
+    return html;
+}
+
+function enTeteGeneration() {
+    return '<p style="text-align:center; color:#999; font-size:0.85em;">Généré le ' + new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</p>';
+}
+
+function afficherLectureRapportEleve() {
+    const nom = document.getElementById('analyse-nom').textContent;
+    document.getElementById('titre-lecture-rapport').textContent = '📄 Rapport — ' + nom;
+    document.getElementById('zone-impression-rapport').innerHTML = enTeteGeneration() + construireContenuRapportHTML(nom);
+    afficherEcran('ecran-lecture-rapport');
+}
+
+function afficherLectureRapportTous() {
+    const noms = Object.keys(donnees.users);
+    document.getElementById('titre-lecture-rapport').textContent = '📄 Rapport — Tous les élèves';
+    let html = enTeteGeneration();
+    if (noms.length === 0) {
+        html += '<p style="color:#999;">Aucun élève enregistré.</p>';
+    } else {
+        noms.forEach(n => { html += '<div class="saut-page-eleve">' + construireContenuRapportHTML(n) + '</div>'; });
+    }
+    document.getElementById('zone-impression-rapport').innerHTML = html;
+    afficherEcran('ecran-lecture-rapport');
+}
+
+function imprimerRapport() {
+    window.print();
+}
+
+function telechargerFichier(contenu, nomFichier, typeMime) {
+    const blob = new Blob([contenu], { type: typeMime + ';charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = nomFichier;
+    document.body.appendChild(lien);
+    lien.click();
+    document.body.removeChild(lien);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function telechargerRapport(texte, nomFichier) {
+    telechargerFichier(texte, nomFichier, 'text/plain');
+}
+
+const LIMITE_CARACTERES_EMAIL = 1500; // au-delà, certains clients mail tronquent le lien mailto
+
+function envoyerRapportParEmailGenerique(texte, sujet, idMessage) {
+    const zoneMessage = document.getElementById(idMessage);
+    const emailProf = donnees.parametres.emailProf.trim();
+    if (!emailProf) {
+        zoneMessage.textContent = 'Configure d\'abord ton adresse email dans Paramètres (écran de sélection du joueur).';
+        zoneMessage.style.color = '#c0392b';
+        return;
+    }
+    let texteEnvoye = texte;
+    if (texte.length > LIMITE_CARACTERES_EMAIL) {
+        texteEnvoye = texte.slice(0, LIMITE_CARACTERES_EMAIL) + '\n\n[... rapport tronqué : trop long pour un email. Utilise plutôt le téléchargement pour la version complète.]';
+        zoneMessage.textContent = 'Rapport long : la version envoyée par email est tronquée. Utilise le téléchargement pour la version complète.';
+        zoneMessage.style.color = '#d68910';
+    } else {
+        zoneMessage.textContent = 'Brouillon ouvert dans ton application mail.';
+        zoneMessage.style.color = '#1e8449';
+    }
+    const lien = 'mailto:' + emailProf + '?subject=' + encodeURIComponent(sujet) + '&body=' + encodeURIComponent(texteEnvoye);
+    window.location.href = lien;
+}
+
+function telechargerRapportEleve() {
+    const nom = document.getElementById('analyse-nom').textContent;
+    const texte = genererRapportTexte(nom);
+    telechargerRapport(texte, 'rapport_quiz_math_foot_' + nom + '.txt');
+}
+
+function envoyerRapportEleveParEmail() {
+    const nom = document.getElementById('analyse-nom').textContent;
+    const texte = genererRapportTexte(nom);
+    envoyerRapportParEmailGenerique(texte, 'Rapport Quiz Math Foot — ' + nom, 'message-rapport');
+}
+
+function telechargerRapportTousLesEleves() {
+    const texte = genererRapportTousLesEleves();
+    telechargerRapport(texte, 'rapport_quiz_math_foot_tous_les_eleves.txt');
+}
+
+// ========================= PARAMÈTRES (v6.0) =========================
+function afficherParametres() {
+    document.getElementById('param-email-prof').value = donnees.parametres.emailProf || '';
+    document.getElementById('confirmation-email-prof').textContent = '';
+    document.getElementById('contact-nom').value = '';
+    document.getElementById('contact-email').value = '';
+    document.getElementById('erreur-contact').textContent = '';
+    construireListeContacts();
+    afficherEcran('ecran-parametres');
+}
+
+function enregistrerEmailProf() {
+    const champ = document.getElementById('param-email-prof');
+    const confirmation = document.getElementById('confirmation-email-prof');
+    const valeur = champ.value.trim();
+    if (valeur !== '' && !adresseEmailValide(valeur)) {
+        confirmation.textContent = 'Cette adresse ne semble pas valide.';
+        confirmation.style.color = '#c0392b';
+        return;
+    }
+    donnees.parametres.emailProf = valeur;
+    sauvegarderDonnees();
+    confirmation.textContent = 'Adresse enregistrée.';
+    confirmation.style.color = '#1e8449';
+}
+
+function construireListeContacts() {
+    const zone = document.getElementById('liste-contacts');
+    const contacts = donnees.parametres.contacts;
+    const noms = Object.keys(contacts);
+    if (noms.length === 0) {
+        zone.innerHTML = '<p style="color:#999;">Aucun contact enregistré pour l\'instant.</p>';
+        return;
+    }
+    let html = '';
+    noms.forEach(nom => {
+        html += '<div class="ligne-contact"><span>' + nom + ' — ' + contacts[nom] + '</span><button onclick="supprimerContact(\'' + nom.replace(/'/g, "\\'") + '\')">Supprimer</button></div>';
+    });
+    zone.innerHTML = html;
+}
+
+function ajouterContact() {
+    const champNom = document.getElementById('contact-nom');
+    const champEmail = document.getElementById('contact-email');
+    const erreur = document.getElementById('erreur-contact');
+    const nom = champNom.value.trim();
+    const email = champEmail.value.trim();
+
+    if (nom === '') { erreur.textContent = 'Donne un nom à afficher pour ce contact.'; return; }
+    if (!adresseEmailValide(email)) { erreur.textContent = 'Entre une adresse email valide.'; return; }
+    if (donnees.parametres.contacts[nom]) { erreur.textContent = 'Ce nom existe déjà dans le carnet d\'adresses.'; return; }
+
+    donnees.parametres.contacts[nom] = email;
+    sauvegarderDonnees();
+    champNom.value = '';
+    champEmail.value = '';
+    erreur.textContent = '';
+    construireListeContacts();
+}
+
+function supprimerContact(nom) {
+    delete donnees.parametres.contacts[nom];
+    sauvegarderDonnees();
+    construireListeContacts();
+}
+
+// ========================= GESTION DU PROFIL (v8.0) =========================
+function reinitialiserObjectif() {
+    const nom = document.getElementById('analyse-nom').textContent;
+    const confirmation = window.confirm('Réinitialiser l\'objectif de ' + nom + ' à 7 tentatives par jour et remettre la série à 0 ? (les parties jouées restent conservées).');
+    if (!confirmation) return;
+    donnees.users[nom].tentativesRequises = TENTATIVES_INITIAL;
+    donnees.users[nom].serieSansFauteQualifiants = 0;
+    donnees.users[nom].dernierJourVerifie = dateStrLocale();
+    sauvegarderDonnees(nom);
+    afficherAnalyseEleve(nom);
+}
+
+// ========================= TABLES AUTORISÉES (v15.0) =========================
+function construireGrilleTablesAutorisees(nom) {
+    const u = donnees.users[nom];
+    if (!u.tablesAutorisees) u.tablesAutorisees = [1,2,3,4,5,6,7,8,9,10];
+    const autorisees = new Set(u.tablesAutorisees);
+    const grille = document.getElementById('analyse-tables-autorisees');
+    grille.innerHTML = '';
+    for (let t = 1; t <= 10; t++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = t;
+        btn.className = 'table-choice' + (autorisees.has(t) ? ' selected' : ' verrouillee');
+        btn.title = autorisees.has(t) ? 'Cliquer pour verrouiller' : 'Cliquer pour autoriser';
+        btn.onclick = () => toggleTableAutorisee(nom, t);
+        grille.appendChild(btn);
+    }
+}
+
+function toggleTableAutorisee(nom, t) {
+    const u = donnees.users[nom];
+    if (!u.tablesAutorisees) u.tablesAutorisees = [1,2,3,4,5,6,7,8,9,10];
+    const autorisees = new Set(u.tablesAutorisees);
+    if (autorisees.has(t)) autorisees.delete(t); else autorisees.add(t);
+    u.tablesAutorisees = Array.from(autorisees).sort((a,b) => a - b);
+    sauvegarderDonnees(nom);
+    construireGrilleTablesAutorisees(nom);
+}
+
+function exporterEleve() {
+    const nom = document.getElementById('analyse-nom').textContent;
+    const paquet = { nom: nom, profil: donnees.users[nom], exporteLe: new Date().toISOString(), format: 'quizMathFoot_eleve_v1' };
+    telechargerFichier(JSON.stringify(paquet, null, 2), 'eleve_' + nom + '.json', 'application/json');
+}
+
+function supprimerEleve() {
+    const nom = document.getElementById('analyse-nom').textContent;
+    const confirmation = window.confirm('Supprimer définitivement le profil de ' + nom + ' ? Parties, records et badges seront perdus. Cette action est irréversible. Pense à exporter une sauvegarde avant si besoin.');
+    if (!confirmation) return;
+    delete donnees.users[nom];
+    supprimerEleveDeFirestore(nom);
+    retirerEleveDeLaListeFirestore(nom);
+    if (listeEleveAutorises) listeEleveAutorises = listeEleveAutorises.filter(n => n !== nom);
+    sauvegarderDonnees();
+    afficherModeProf();
+}
+
+function importerEleve(event) {
+    const fichier = event.target.files[0];
+    const zoneMessage = document.getElementById('message-import');
+    if (!fichier) return;
+
+    const lecteur = new FileReader();
+    lecteur.onload = function (e) {
+        try {
+            const paquet = JSON.parse(e.target.result);
+            if (!paquet.profil || !paquet.nom) throw new Error('Format de fichier invalide.');
+
+            let nomFinal = paquet.nom;
+            if (donnees.users[nomFinal]) {
+                let i = 2;
+                nomFinal = paquet.nom + ' (import)';
+                while (donnees.users[nomFinal]) { nomFinal = paquet.nom + ' (import ' + i + ')'; i++; }
+            }
+            donnees.users[nomFinal] = paquet.profil;
+            if (!donnees.users[nomFinal].dateCreation) donnees.users[nomFinal].dateCreation = dateStrLocale();
+            if (!donnees.users[nomFinal].history) donnees.users[nomFinal].history = [];
+            if (!donnees.users[nomFinal].badges) donnees.users[nomFinal].badges = [];
+            if (!donnees.users[nomFinal].bestTimes) donnees.users[nomFinal].bestTimes = {};
+            if (!donnees.users[nomFinal].factStats) donnees.users[nomFinal].factStats = {};
+            if (!donnees.users[nomFinal].reponsesErronees) donnees.users[nomFinal].reponsesErronees = {};
+            if (!donnees.users[nomFinal].compteurs) donnees.users[nomFinal].compteurs = { recordsBattus: 0, defisEnvoyes: 0 };
+            if (donnees.users[nomFinal].tentativesRequises === undefined) donnees.users[nomFinal].tentativesRequises = TENTATIVES_INITIAL;
+            if (donnees.users[nomFinal].serieSansFauteQualifiants === undefined) donnees.users[nomFinal].serieSansFauteQualifiants = 0;
+            if (!donnees.users[nomFinal].dernierJourVerifie) donnees.users[nomFinal].dernierJourVerifie = dateStrLocale();
+            if (donnees.users[nomFinal].compteurAnnonceMAJ === undefined) donnees.users[nomFinal].compteurAnnonceMAJ = 0;
+            if (!donnees.users[nomFinal].tablesAutorisees) donnees.users[nomFinal].tablesAutorisees = [1,2,3,4,5,6,7,8,9,10];
+
+            sauvegarderDonnees(nomFinal);
+            ajouterEleveALaListeFirestore(nomFinal);
+            if (listeEleveAutorises === null) listeEleveAutorises = [];
+            if (!listeEleveAutorises.includes(nomFinal)) listeEleveAutorises.push(nomFinal);
+            zoneMessage.style.color = '#1e8449';
+            zoneMessage.textContent = 'Élève importé sous le nom "' + nomFinal + '".';
+            afficherModeProf();
+        } catch (erreur) {
+            zoneMessage.style.color = '#c0392b';
+            zoneMessage.textContent = 'Fichier invalide, impossible d\'importer.';
+        }
+    };
+    lecteur.readAsText(fichier);
+    event.target.value = '';
+}
+
+// ========================= INITIALISATION =========================
+construireListeJoueurs();
+if (db) {
+    firebase.auth().signInAnonymously()
+        .then(() => {
+            firebaseOK = true;
+            majStatutConnexion('🟢 en ligne');
+            demarrerEcouteListeClasse();
+            demarrerEcouteElevesDistants();
+        })
+        .catch(e => {
+            firebaseOK = false;
+            majStatutConnexion('🔴 hors ligne');
+            console.warn('Connexion anonyme impossible, fonctionnement hors-ligne uniquement.', e);
+        });
+} else {
+    majStatutConnexion('🔴 hors ligne');
+}
+</script>
+
+</body>
+</html>
