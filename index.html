@@ -1,6 +1,11 @@
 <!DOCTYPE html>
-<!-- Quiz Math Foot - Version 18.5 (email enseignant retiré du code source) - 10/08/2026
-     Base : version 18.4 (Paramètres protégé aussi).
+<!-- Quiz Math Foot - Version 18.6 (correctif plantage import fichier sur tablette) - 10/08/2026
+     Base : version 18.5 (email enseignant retiré du code source).
+     Correctif v18.6 : le bouton "IMPORTER UN ÉLÈVE" faisait planter le navigateur sur tablette dès
+     le clic (avant même le choix d'un fichier), remontant l'utilisateur à l'écran d'accueil de la
+     tablette. Cause probable : bug connu de certaines WebView Android/Chrome avec le filtre de type
+     de fichier accept="application/json" (MIME strict). Remplacé par accept=".json,application/json"
+     (filtre par extension, plus largement compatible). À confirmer sur la tablette de Fred.
      Ajout v18.5 : l'adresse email du compte enseignant était écrite en clair dans le code (constante
      TEACHER_EMAIL + pré-remplissage du champ de connexion), donc visible par quiconque affichait le
      code source de la page — y compris via le dépôt GitHub public. Elle est retirée : côté client,
@@ -474,7 +479,7 @@
         <button class="secondary" onclick="afficherLectureRapportTous()">LIRE / IMPRIMER LE RAPPORT DE TOUS LES ÉLÈVES 🖨️</button>
         <button class="secondary" onclick="telechargerRapportTousLesEleves()">TÉLÉCHARGER LE RAPPORT DE TOUS LES ÉLÈVES 📄</button>
         <label for="fichier-import-eleve" class="bouton-fichier-label">IMPORTER UN ÉLÈVE (fichier .json) 📂</label>
-        <input type="file" id="fichier-import-eleve" accept="application/json" onchange="importerEleve(event)" style="display:none;">
+        <input type="file" id="fichier-import-eleve" accept=".json,application/json" onchange="importerEleve(event)" style="display:none;">
         <div id="message-import" style="min-height:20px; font-weight:bold; margin-top:6px;"></div>
         <button class="secondary" onclick="changerDeJoueur()">RETOUR À L'ACCUEIL</button>
     </div>
@@ -617,7 +622,7 @@
         <button class="secondary no-print" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
-    <div class="footer-version">Quiz Math Foot — v18.5 <span id="statut-connexion">🔄 connexion…</span></div>
+    <div class="footer-version">Quiz Math Foot — v18.6 <span id="statut-connexion">🔄 connexion…</span></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
