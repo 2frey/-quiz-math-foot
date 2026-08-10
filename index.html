@@ -1,6 +1,27 @@
 <!DOCTYPE html>
-<!-- Quiz Math Foot - Version 18.1 (authentification anonyme Firebase) - 10/08/2026
-     Base : version 18.0 (accès en ligne Firebase + liste d'élèves gérée par le prof).
+<!-- Quiz Math Foot - Version 18.5 (email enseignant retiré du code source) - 10/08/2026
+     Base : version 18.4 (Paramètres protégé aussi).
+     Ajout v18.5 : l'adresse email du compte enseignant était écrite en clair dans le code (constante
+     TEACHER_EMAIL + pré-remplissage du champ de connexion), donc visible par quiconque affichait le
+     code source de la page — y compris via le dépôt GitHub public. Elle est retirée : côté client,
+     estConnecteCommeProf() vérifie seulement "connecté avec un compte nommé, pas anonyme" ; la
+     vérification de LA bonne adresse se fait uniquement côté serveur, dans les règles Firestore
+     (non publiques, gérées depuis la console Firebase — voir échange avec Fred du 10/08/2026).
+     Ajout v18.4 : l'écran Paramètres (adresse email du prof + carnet d'adresses en clair) était
+     accessible à tout élève depuis l'écran de connexion, sans protection. Il exige désormais la
+     même connexion prof que Mode Prof (variable ecranProfDemande pour router vers le bon écran
+     après connexion réussie).
+     Ajout v18.3 : nouvel écran "Parties par date" (bouton dans Mode Prof) — remplace l'idée d'un
+     email de notification à chaque connexion (nécessitait un service tiers ou une Cloud Function
+     payante) par une vue agrégeant l'historique (u.history) de tous les élèves connus sur cet
+     appareil, filtrable par jour, triée de la partie la plus récente à la plus ancienne. S'appuie
+     sur les données déjà synchronisées en temps réel par Firestore (v18.0), aucune infrastructure
+     supplémentaire nécessaire.
+     Ajout v18.2 : Mode Prof exige désormais une connexion Firebase Auth email/mot de passe avec le
+     compte enseignant — écran ecran-connexion-prof, gate dans afficherModeProf() via
+     estConnecteCommeProf(). En sortant du Mode Prof (changerDeJoueur), l'appareil repasse
+     automatiquement en session anonyme (revenirEnModeEleve) pour redevenir utilisable normalement
+     par le prochain élève.
      Ajout v18.1 : chaque appareil se connecte silencieusement en anonyme (firebase.auth()) avant
      toute lecture/écriture Firestore — aucun mot de passe côté élève, mais les règles Firestore
      peuvent désormais exiger request.auth != null, ce qui bloque les robots/scripts qui scannent le
@@ -431,10 +452,24 @@
         <button class="secondary" onclick="retourAccueil()">RETOUR</button>
     </div>
 
+    <!-- ================= ÉCRAN CONNEXION PROF (v18.2) ================= -->
+    <div id="ecran-connexion-prof" class="hidden">
+        <h2>🔒 Connexion Mode Prof</h2>
+        <p style="color:#555; font-size:0.9em;">Réservé à l'enseignant.</p>
+        <label for="prof-email">Adresse email</label>
+        <input type="email" id="prof-email" placeholder="ton-email@exemple.fr">
+        <label for="prof-mdp">Mot de passe</label>
+        <input type="password" id="prof-mdp" placeholder="Mot de passe">
+        <div id="erreur-connexion-prof"></div>
+        <button class="main" onclick="connecterProf()">SE CONNECTER</button>
+        <button class="secondary" onclick="changerDeJoueur()">ANNULER</button>
+    </div>
+
     <!-- ================= ÉCRAN MODE PROF : LISTE DES ÉLÈVES ================= -->
     <div id="ecran-mode-prof" class="hidden">
         <h2>📊 Mode Prof — Choisir un élève</h2>
         <div class="liste-eleves-prof" id="liste-eleves-prof"></div>
+        <button class="secondary" onclick="afficherPartiesParDate()">VOIR LES PARTIES PAR DATE 📅</button>
         <button class="secondary" onclick="afficherGestionEleves()">GÉRER LA LISTE DES ÉLÈVES 👥</button>
         <button class="secondary" onclick="afficherLectureRapportTous()">LIRE / IMPRIMER LE RAPPORT DE TOUS LES ÉLÈVES 🖨️</button>
         <button class="secondary" onclick="telechargerRapportTousLesEleves()">TÉLÉCHARGER LE RAPPORT DE TOUS LES ÉLÈVES 📄</button>
@@ -454,6 +489,16 @@
         <div id="erreur-nouvel-eleve"></div>
         <button class="main" onclick="ajouterEleveDepuisGestion()">AJOUTER À LA LISTE</button>
         <div id="zone-migration-locale"></div>
+        <button class="secondary" onclick="afficherModeProf()">RETOUR</button>
+    </div>
+
+    <!-- ================= ÉCRAN PARTIES PAR DATE (v18.3) ================= -->
+    <div id="ecran-parties-par-date" class="hidden">
+        <h2>📅 Parties jouées</h2>
+        <label for="filtre-date-parties">Jour à afficher :</label>
+        <input type="date" id="filtre-date-parties" onchange="construirePartiesParDate()">
+        <p id="total-parties-jour" style="color:#555; font-size:0.9em;"></p>
+        <div id="liste-parties-par-date"></div>
         <button class="secondary" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
@@ -572,7 +617,7 @@
         <button class="secondary no-print" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
-    <div class="footer-version">Quiz Math Foot — v18.1 <span id="statut-connexion">🔄 connexion…</span></div>
+    <div class="footer-version">Quiz Math Foot — v18.5 <span id="statut-connexion">🔄 connexion…</span></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -604,6 +649,13 @@ try {
 
 const REF_LISTE_CLASSE = db ? db.collection('classe').doc('liste') : null;
 const REF_ELEVES = db ? db.collection('eleves') : null;
+
+// Aucune adresse email n'est écrite ici (v18.5) : elle serait visible par quiconque affiche le
+// code source de la page, y compris sur le dépôt GitHub public. La vraie autorisation se fait
+// côté serveur, dans les règles Firestore (non visibles publiquement) — voir la note du 10/08/2026.
+// Ici, côté client, on se contente de vérifier qu'il s'agit d'une session authentifiée "nommée"
+// (email/mot de passe) et non d'une session anonyme élève ; les règles Firestore, elles, vérifient
+// la véritable adresse et refusent toute écriture sur classe/liste venant d'un autre compte.
 
 // null tant que la liste n'a pas encore été reçue de Firestore (permet de savoir s'il faut retomber
 // sur les élèves déjà connus localement, pour un fonctionnement hors-ligne ou au tout premier essai).
@@ -806,7 +858,7 @@ let dernierResultatDefi = null; // {score, total, temps, tablesLabel} pour le mo
 
 // ========================= UTILITAIRES =========================
 function afficherEcran(id) {
-    ['ecran-utilisateur','ecran-accueil','ecran-jeu','ecran-resultat','ecran-profil','ecran-classement','ecran-mode-prof','ecran-gestion-eleves','ecran-analyse-eleve','ecran-parametres','ecran-lecture-rapport','ecran-annonce-maj','ecran-popup-suggestion']
+    ['ecran-utilisateur','ecran-accueil','ecran-jeu','ecran-resultat','ecran-profil','ecran-classement','ecran-connexion-prof','ecran-mode-prof','ecran-gestion-eleves','ecran-parties-par-date','ecran-analyse-eleve','ecran-parametres','ecran-lecture-rapport','ecran-annonce-maj','ecran-popup-suggestion']
         .forEach(e => document.getElementById(e).classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
 }
@@ -1016,6 +1068,7 @@ function synchroniserTablesSelectionneesAvecAutorisations(u) {
 }
 
 function changerDeJoueur() {
+    revenirEnModeEleve();
     utilisateurCourant = null;
     construireListeJoueurs();
     afficherEcran('ecran-utilisateur');
@@ -1634,8 +1687,26 @@ function afficherClassementPourConfig() {
     table.innerHTML = html;
 }
 
-// ========================= MODE PROF =========================
+// ========================= MODE PROF (protégé par mot de passe depuis la v18.2) =========================
+// Mémorise quel écran protégé a été demandé (Mode Prof ou Paramètres), pour y renvoyer une fois la
+// connexion réussie (v18.4 : Paramètres protégé aussi, car il affiche des adresses email en clair).
+let ecranProfDemande = 'mode-prof';
+
+function estConnecteCommeProf() {
+    // Vérifie seulement "connecté avec un vrai compte" (pas anonyme). Le vrai contrôle de QUEL
+    // compte a le droit d'écrire se fait dans les règles Firestore, côté serveur (v18.5).
+    return firebaseOK && firebase.auth().currentUser && !firebase.auth().currentUser.isAnonymous;
+}
+
 function afficherModeProf() {
+    // Hors ligne (pas de Firebase joignable) : impossible de vérifier le mot de passe, on laisse
+    // passer plutôt que de bloquer complètement l'enseignant sur un appareil sans réseau — c'est le
+    // même compromis que le reste de l'outil (hors-ligne = confiance locale).
+    if (firebaseOK && !estConnecteCommeProf()) {
+        ecranProfDemande = 'mode-prof';
+        afficherEcranConnexionProf();
+        return;
+    }
     const liste = document.getElementById('liste-eleves-prof');
     liste.innerHTML = '';
     const noms = Object.keys(donnees.users);
@@ -1650,6 +1721,37 @@ function afficherModeProf() {
         liste.appendChild(btn);
     });
     afficherEcran('ecran-mode-prof');
+}
+
+function afficherEcranConnexionProf() {
+    document.getElementById('prof-email').value = '';
+    document.getElementById('prof-mdp').value = '';
+    document.getElementById('erreur-connexion-prof').textContent = '';
+    afficherEcran('ecran-connexion-prof');
+}
+
+function connecterProf() {
+    const erreur = document.getElementById('erreur-connexion-prof');
+    if (!firebaseOK) { erreur.textContent = 'Pas de connexion internet : impossible de vérifier le mot de passe pour le moment.'; return; }
+    const email = document.getElementById('prof-email').value.trim();
+    const mdp = document.getElementById('prof-mdp').value;
+    if (!email || !mdp) { erreur.textContent = 'Renseigne l\'email et le mot de passe.'; return; }
+    erreur.textContent = 'Connexion…';
+    firebase.auth().signInWithEmailAndPassword(email, mdp)
+        .then(() => { erreur.textContent = ''; if (ecranProfDemande === 'parametres') afficherParametres(); else afficherModeProf(); })
+        .catch(e => {
+            erreur.textContent = (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found')
+                ? 'Email ou mot de passe incorrect.' : 'Connexion impossible (' + e.code + ').';
+        });
+}
+
+// Repasse l'appareil en session anonyme (accès élève) en quittant le Mode Prof, pour que l'appareil
+// redevienne utilisable normalement par le prochain élève.
+function revenirEnModeEleve() {
+    if (firebaseOK && firebase.auth().currentUser && !firebase.auth().currentUser.isAnonymous) {
+        firebase.auth().signOut().then(() => firebase.auth().signInAnonymously())
+            .catch(e => console.warn('Repassage en session anonyme impossible.', e));
+    }
 }
 
 // ========================= GESTION DE LA LISTE DES ÉLÈVES (v18.0) =========================
@@ -1743,6 +1845,51 @@ function migrerEleveLocalVersLigne(nom) {
     if (listeEleveAutorises === null) listeEleveAutorises = [];
     if (!listeEleveAutorises.includes(nom)) listeEleveAutorises.push(nom);
     construireGestionEleves();
+}
+
+// ========================= PARTIES PAR DATE (v18.3) =========================
+function afficherPartiesParDate() {
+    const champDate = document.getElementById('filtre-date-parties');
+    if (!champDate.value) champDate.value = dateStrLocale();
+    construirePartiesParDate();
+    afficherEcran('ecran-parties-par-date');
+}
+
+function construirePartiesParDate() {
+    const jour = document.getElementById('filtre-date-parties').value || dateStrLocale();
+    const conteneur = document.getElementById('liste-parties-par-date');
+    const totalTexte = document.getElementById('total-parties-jour');
+    conteneur.innerHTML = '';
+
+    // Rassemble toutes les parties de tous les élèves connus sur cet appareil (donnees.users, tenu
+    // à jour en temps réel par Firestore) jouées ce jour-là, triées de la plus récente à la plus
+    // ancienne.
+    let parties = [];
+    Object.keys(donnees.users).forEach(nom => {
+        const u = donnees.users[nom];
+        (u.history || []).forEach(h => {
+            if (dateStrLocale(new Date(h.date)) === jour) parties.push(Object.assign({ nom }, h));
+        });
+    });
+    parties.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    totalTexte.textContent = parties.length + ' partie' + (parties.length > 1 ? 's' : '') + ' ce jour-là.';
+    if (parties.length === 0) {
+        conteneur.innerHTML = '<p style="color:#999;">Aucune partie enregistrée pour cette date.</p>';
+        return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'records';
+    let html = '<tr><th>Heure</th><th>Élève</th><th>Score</th><th>Tables</th><th>Temps</th></tr>';
+    parties.forEach(p => {
+        const heure = new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const puce = p.sansFaute ? ' 🎯' : '';
+        html += '<tr><td>' + heure + '</td><td>' + p.nom + '</td><td>' + p.score + ' / ' + p.total + puce + '</td><td>' +
+            (p.tablesLabel || '—') + '</td><td>' + (p.temps ? p.temps + ' s' : '—') + '</td></tr>';
+    });
+    table.innerHTML = html;
+    conteneur.appendChild(table);
 }
 
 // Détermine la couleur d'une opération a×b à partir des essais/erreurs enregistrés
@@ -2471,6 +2618,11 @@ function telechargerRapportTousLesEleves() {
 
 // ========================= PARAMÈTRES (v6.0) =========================
 function afficherParametres() {
+    if (firebaseOK && !estConnecteCommeProf()) {
+        ecranProfDemande = 'parametres';
+        afficherEcranConnexionProf();
+        return;
+    }
     document.getElementById('param-email-prof').value = donnees.parametres.emailProf || '';
     document.getElementById('confirmation-email-prof').textContent = '';
     document.getElementById('contact-nom').value = '';
