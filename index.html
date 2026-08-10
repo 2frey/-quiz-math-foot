@@ -1,6 +1,13 @@
 <!DOCTYPE html>
-<!-- Quiz Math Foot - Version 18.9 (icône afficher/masquer le mot de passe) - 10/08/2026
-     Base : version 18.8 (renommer un élève + correctif suppression).
+<!-- Quiz Math Foot - Version 18.10 (mise en page renommage corrigée) - 10/08/2026
+     Base : version 18.9 (icône afficher/masquer le mot de passe).
+     Correctif v18.10 : la ligne d'édition du renommage (v18.8) était illisible sur mobile — le
+     champ texte se réduisait à une largeur quasi nulle à cause d'un flex mal dimensionné, et rien
+     n'indiquait quel élève était en cours de renommage. Refonte en mise en page verticale : nom de
+     l'élève affiché en titre ("Renommer « X » :"), champ plein largeur, boutons Valider/Annuler
+     en dessous à parts égales. Ajout aussi d'une séparation visuelle claire (ligne pointillée + titre
+     "➕ Ajouter un nouvel élève") entre la liste des élèves et le formulaire d'ajout, qui pouvaient
+     être confondus.
      Ajout v18.9 : icône 👁️ dans le champ mot de passe de l'écran Connexion Mode Prof, pour basculer
      entre saisie masquée et texte en clair (basculerAffichageMdp) — utile sur clavier tactile.
      Ajout v18.8 : bouton "Renommer" par élève dans l'écran Gérer les élèves (édition inline,
@@ -506,7 +513,9 @@
         <h2>👥 Gérer la liste des élèves</h2>
         <p style="color:#555; font-size:0.9em;">Cette liste est celle proposée aux élèves sur l'écran de connexion, sur tous les appareils connectés. Retirer un élève ne supprime pas ses données, juste son accès à la liste.</p>
         <div class="liste-eleves-prof" id="liste-gestion-eleves"></div>
-        <label for="nouvel-eleve-nom">Ajouter un élève :</label>
+        <hr style="border:none; border-top:2px dashed #ccc; margin:20px 0;">
+        <h3 style="margin:0 0 10px; color:#640064;">➕ Ajouter un nouvel élève</h3>
+        <label for="nouvel-eleve-nom">Prénom :</label>
         <input type="text" id="nouvel-eleve-nom" placeholder="Prénom">
         <div id="erreur-nouvel-eleve"></div>
         <button class="main" onclick="ajouterEleveDepuisGestion()">AJOUTER À LA LISTE</button>
@@ -639,7 +648,7 @@
         <button class="secondary no-print" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
-    <div class="footer-version">Quiz Math Foot — v18.9 <span id="statut-connexion">🔄 connexion…</span></div>
+    <div class="footer-version">Quiz Math Foot — v18.10 <span id="statut-connexion">🔄 connexion…</span></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1810,35 +1819,48 @@ function construireGestionEleves() {
 
         if (nomEnRenommage === nom) {
             ligne.style.display = 'block';
-            const rangeeEdition = document.createElement('div');
-            rangeeEdition.style.display = 'flex';
-            rangeeEdition.style.gap = '6px';
+            ligne.style.cursor = 'default';
+            const titre = document.createElement('div');
+            titre.style.fontWeight = 'bold';
+            titre.style.marginBottom = '8px';
+            titre.textContent = 'Renommer « ' + nom + ' » :';
+            ligne.appendChild(titre);
             const input = document.createElement('input');
             input.type = 'text';
             input.value = nom;
-            input.style.flex = '1';
-            input.style.minWidth = '0';
-            rangeeEdition.appendChild(input);
+            input.style.width = '100%';
+            input.style.boxSizing = 'border-box';
+            input.style.padding = '10px';
+            input.style.fontSize = '1em';
+            input.style.border = '2px solid #640064';
+            input.style.borderRadius = '8px';
+            input.style.marginBottom = '10px';
+            ligne.appendChild(input);
+            const rangeeBoutons = document.createElement('div');
+            rangeeBoutons.style.display = 'flex';
+            rangeeBoutons.style.gap = '8px';
             const btnValider = document.createElement('button');
             btnValider.type = 'button';
-            btnValider.className = 'tertiaire';
+            btnValider.className = 'main';
             btnValider.style.margin = '0';
+            btnValider.style.flex = '1';
             btnValider.textContent = 'Valider';
             btnValider.onclick = () => validerRenommageEleve(nom, input.value);
-            rangeeEdition.appendChild(btnValider);
+            rangeeBoutons.appendChild(btnValider);
             const btnAnnuler = document.createElement('button');
             btnAnnuler.type = 'button';
-            btnAnnuler.className = 'tertiaire';
+            btnAnnuler.className = 'secondary';
             btnAnnuler.style.margin = '0';
+            btnAnnuler.style.flex = '1';
             btnAnnuler.textContent = 'Annuler';
             btnAnnuler.onclick = () => { nomEnRenommage = null; construireGestionEleves(); };
-            rangeeEdition.appendChild(btnAnnuler);
-            ligne.appendChild(rangeeEdition);
+            rangeeBoutons.appendChild(btnAnnuler);
+            ligne.appendChild(rangeeBoutons);
             const erreurDiv = document.createElement('div');
             erreurDiv.id = 'erreur-renommage';
             erreurDiv.style.color = '#c0392b';
             erreurDiv.style.fontSize = '0.85em';
-            erreurDiv.style.marginTop = '4px';
+            erreurDiv.style.marginTop = '8px';
             ligne.appendChild(erreurDiv);
         } else {
             ligne.style.display = 'flex';
