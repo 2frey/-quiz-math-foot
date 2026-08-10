@@ -1,21 +1,30 @@
 <!DOCTYPE html>
-<!-- Quiz Math Foot - Version 18.10 (mise en page renommage corrigée) - 10/08/2026
-     Base : version 18.9 (icône afficher/masquer le mot de passe).
+<!-- Quiz Math Foot - Version 18.11 (vocabulaire "parent/joueur" au lieu de "prof/élève") - 10/08/2026
+     Base : version 18.10 (mise en page renommage corrigée).
+     Ajout v18.11 : Fred n'est pas enseignant mais un père de famille qui aide ses propres enfants —
+     tout le texte visible à l'écran est corrigé en conséquence : "Mode Prof" → "Mode Parent",
+     "élève(s)" → "joueur(s)", "Réservé à l'enseignant" → "Réservé au parent", les messages
+     s'adressant à l'enfant ("Demande à ton professeur...") deviennent "Demande à tes parents...".
+     Portée du changement : uniquement le texte affiché à l'écran (labels, boutons, messages) et les
+     commentaires de code. Les noms techniques internes (fonctions comme afficherModeProf, ids HTML
+     comme ecran-mode-prof, prof-email) restent inchangés — invisibles à l'usage, les renommer
+     entièrement aurait représenté un risque de régression disproportionné pour un simple confort de
+     lecture du code source.
      Correctif v18.10 : la ligne d'édition du renommage (v18.8) était illisible sur mobile — le
      champ texte se réduisait à une largeur quasi nulle à cause d'un flex mal dimensionné, et rien
-     n'indiquait quel élève était en cours de renommage. Refonte en mise en page verticale : nom de
-     l'élève affiché en titre ("Renommer « X » :"), champ plein largeur, boutons Valider/Annuler
+     n'indiquait quel joueur était en cours de renommage. Refonte en mise en page verticale : nom de
+     le joueur affiché en titre ("Renommer « X » :"), champ plein largeur, boutons Valider/Annuler
      en dessous à parts égales. Ajout aussi d'une séparation visuelle claire (ligne pointillée + titre
-     "➕ Ajouter un nouvel élève") entre la liste des élèves et le formulaire d'ajout, qui pouvaient
+     "➕ Ajouter un nouveau joueur") entre la liste des joueurs et le formulaire d'ajout, qui pouvaient
      être confondus.
-     Ajout v18.9 : icône 👁️ dans le champ mot de passe de l'écran Connexion Mode Prof, pour basculer
+     Ajout v18.9 : icône 👁️ dans le champ mot de passe de l'écran Connexion Mode Parent, pour basculer
      entre saisie masquée et texte en clair (basculerAffichageMdp) — utile sur clavier tactile.
-     Ajout v18.8 : bouton "Renommer" par élève dans l'écran Gérer les élèves (édition inline,
+     Ajout v18.8 : bouton "Renommer" par joueur dans l'écran Gérer les joueurs (édition inline,
      détection de collision de nom, déplace le profil vers la nouvelle clé et recrée le document
      Firestore sous le nouveau nom). Corrige aussi le bug de suppression qui ne "prenait" pas : les
      règles Firestore données précédemment référençaient request.resource.size() pour TOUTE écriture
      y compris la suppression, alors que request.resource n'existe pas pour une opération delete —
-     ce qui bloquait silencieusement toute suppression côté serveur (l'élève réapparaissait). Les
+     ce qui bloquait silencieusement toute suppression côté serveur (le joueur réapparaissait). Les
      règles à jour séparent désormais create/update (avec la vérification de taille) de delete (sans
      cette vérification) — voir échange avec Fred du 10/08/2026 pour le texte exact à recoller dans
      la console Firebase.
@@ -26,38 +35,38 @@
      1x1px, clip) plutôt que display:none, car display:none sur un input file a des bugs documentés
      sur certaines versions de WebView Android lors du déclenchement via <label for>. À confirmer
      sur la tablette de Fred.
-     Ajout v18.5 : l'adresse email du compte enseignant était écrite en clair dans le code (constante
+     Ajout v18.5 : l'adresse email du compte parent était écrite en clair dans le code (constante
      TEACHER_EMAIL + pré-remplissage du champ de connexion), donc visible par quiconque affichait le
      code source de la page — y compris via le dépôt GitHub public. Elle est retirée : côté client,
      estConnecteCommeProf() vérifie seulement "connecté avec un compte nommé, pas anonyme" ; la
      vérification de LA bonne adresse se fait uniquement côté serveur, dans les règles Firestore
      (non publiques, gérées depuis la console Firebase — voir échange avec Fred du 10/08/2026).
      Ajout v18.4 : l'écran Paramètres (adresse email du prof + carnet d'adresses en clair) était
-     accessible à tout élève depuis l'écran de connexion, sans protection. Il exige désormais la
-     même connexion prof que Mode Prof (variable ecranProfDemande pour router vers le bon écran
+     accessible à tout joueur depuis l'écran de connexion, sans protection. Il exige désormais la
+     même connexion prof que Mode Parent (variable ecranProfDemande pour router vers le bon écran
      après connexion réussie).
-     Ajout v18.3 : nouvel écran "Parties par date" (bouton dans Mode Prof) — remplace l'idée d'un
+     Ajout v18.3 : nouvel écran "Parties par date" (bouton dans Mode Parent) — remplace l'idée d'un
      email de notification à chaque connexion (nécessitait un service tiers ou une Cloud Function
-     payante) par une vue agrégeant l'historique (u.history) de tous les élèves connus sur cet
+     payante) par une vue agrégeant l'historique (u.history) de tous les joueurs connus sur cet
      appareil, filtrable par jour, triée de la partie la plus récente à la plus ancienne. S'appuie
      sur les données déjà synchronisées en temps réel par Firestore (v18.0), aucune infrastructure
      supplémentaire nécessaire.
-     Ajout v18.2 : Mode Prof exige désormais une connexion Firebase Auth email/mot de passe avec le
-     compte enseignant — écran ecran-connexion-prof, gate dans afficherModeProf() via
-     estConnecteCommeProf(). En sortant du Mode Prof (changerDeJoueur), l'appareil repasse
+     Ajout v18.2 : Mode Parent exige désormais une connexion Firebase Auth email/mot de passe avec le
+     compte parent — écran ecran-connexion-prof, gate dans afficherModeProf() via
+     estConnecteCommeProf(). En sortant du Mode Parent (changerDeJoueur), l'appareil repasse
      automatiquement en session anonyme (revenirEnModeEleve) pour redevenir utilisable normalement
-     par le prochain élève.
+     par le prochain joueur.
      Ajout v18.1 : chaque appareil se connecte silencieusement en anonyme (firebase.auth()) avant
-     toute lecture/écriture Firestore — aucun mot de passe côté élève, mais les règles Firestore
+     toute lecture/écriture Firestore — aucun mot de passe côté joueur, mais les règles Firestore
      peuvent désormais exiger request.auth != null, ce qui bloque les robots/scripts qui scannent le
      web à la recherche de bases mal protégées. firebaseOK ne passe à vrai qu'après confirmation de
      cette connexion anonyme (voir INITIALISATION en fin de script).
      Ajout v18.0 : intégration Firebase/Firestore (SDK compat via CDN, pas de bundler). Deux
      collections : classe/liste (roster géré par le prof, écouté en temps réel sur l'écran de
-     connexion) et eleves/{nom} (un document par profil élève, poussé à chaque sauvegarde locale).
-     Les élèves ne créent plus leur profil librement : seul le prof ajoute/retire un nom via le
-     nouvel écran "Gérer les élèves" (accessible depuis Mode Prof). Le Mode Prof reçoit les
-     mises à jour des profils élèves en temps réel depuis n'importe quel appareil connecté au même
+     connexion) et eleves/{nom} (un document par profil joueur, poussé à chaque sauvegarde locale).
+     Les joueurs ne créent plus leur profil librement : seul le prof ajoute/retire un nom via le
+     nouvel écran "Gérer les joueurs" (accessible depuis Mode Parent). Le Mode Parent reçoit les
+     mises à jour des profils joueurs en temps réel depuis n'importe quel appareil connecté au même
      projet Firebase. localStorage reste la sauvegarde immédiate sur chaque appareil (fonctionnement
      hors-ligne conservé) ; Firestore est une synchronisation en plus, pas un remplacement — si le
      réseau est coupé, l'appli continue de fonctionner normalement en local. -->
@@ -260,7 +269,7 @@
         padding: 12px; margin: 10px 0; color: #1a5276; font-weight: bold; text-align: left;
     }
 
-    /* Mode Prof : liste des élèves */
+    /* Mode Parent : liste des joueurs */
     .liste-eleves-prof { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
     .eleve-prof-btn {
         text-align: left; padding: 12px 16px; border: 2px solid #640064; border-radius: 10px;
@@ -299,7 +308,7 @@
     }
     #erreur-defi { color: #c0392b; font-weight: bold; min-height: 20px; margin: 4px 0; }
 
-    /* Détail des parties (Mode Prof, v6.0) */
+    /* Détail des parties (Mode Parent, v6.0) */
     .detail-partie {
         border: 2px solid #ddd; border-radius: 8px; margin-bottom: 8px; padding: 8px 12px; background: #fafafa;
     }
@@ -363,8 +372,8 @@
             La sauvegarde n'est pas disponible sur cet appareil (navigation privée ?). Le jeu fonctionne, mais les scores et badges ne seront pas conservés.
         </div>
         <div class="liste-joueurs" id="liste-joueurs"></div>
-        <p style="color:#999; font-size:0.85em;">Ton prénom n'est pas dans la liste ? Demande à ton professeur de t'ajouter (Mode Prof → Gérer les élèves).</p>
-        <button class="tertiaire" onclick="afficherModeProf()">MODE PROF 📊</button>
+        <p style="color:#999; font-size:0.85em;">Ton prénom n'est pas dans la liste ? Demande à tes parents de t'ajouter (Mode Parent → Gérer les joueurs).</p>
+        <button class="tertiaire" onclick="afficherModeProf()">MODE PARENT 📊</button>
         <button class="tertiaire" onclick="afficherParametres()">PARAMÈTRES ⚙️</button>
     </div>
 
@@ -479,8 +488,8 @@
 
     <!-- ================= ÉCRAN CONNEXION PROF (v18.2) ================= -->
     <div id="ecran-connexion-prof" class="hidden">
-        <h2>🔒 Connexion Mode Prof</h2>
-        <p style="color:#555; font-size:0.9em;">Réservé à l'enseignant.</p>
+        <h2>🔒 Connexion Mode Parent</h2>
+        <p style="color:#555; font-size:0.9em;">Réservé au parent.</p>
         <label for="prof-email">Adresse email</label>
         <input type="email" id="prof-email" placeholder="ton-email@exemple.fr">
         <label for="prof-mdp">Mot de passe</label>
@@ -494,27 +503,27 @@
         <button class="secondary" onclick="changerDeJoueur()">ANNULER</button>
     </div>
 
-    <!-- ================= ÉCRAN MODE PROF : LISTE DES ÉLÈVES ================= -->
+    <!-- ================= ÉCRAN MODE PARENT : LISTE DES JOUEURS ================= -->
     <div id="ecran-mode-prof" class="hidden">
-        <h2>📊 Mode Prof — Choisir un élève</h2>
+        <h2>📊 Mode Parent — Choisir un joueur</h2>
         <div class="liste-eleves-prof" id="liste-eleves-prof"></div>
         <button class="secondary" onclick="afficherPartiesParDate()">VOIR LES PARTIES PAR DATE 📅</button>
-        <button class="secondary" onclick="afficherGestionEleves()">GÉRER LA LISTE DES ÉLÈVES 👥</button>
-        <button class="secondary" onclick="afficherLectureRapportTous()">LIRE / IMPRIMER LE RAPPORT DE TOUS LES ÉLÈVES 🖨️</button>
-        <button class="secondary" onclick="telechargerRapportTousLesEleves()">TÉLÉCHARGER LE RAPPORT DE TOUS LES ÉLÈVES 📄</button>
-        <button type="button" class="bouton-fichier-label" onclick="declencherImportEleve()">IMPORTER UN ÉLÈVE (fichier .json) 📂</button>
+        <button class="secondary" onclick="afficherGestionEleves()">GÉRER LA LISTE DES JOUEURS 👥</button>
+        <button class="secondary" onclick="afficherLectureRapportTous()">LIRE / IMPRIMER LE RAPPORT DE TOUS LES JOUEURS 🖨️</button>
+        <button class="secondary" onclick="telechargerRapportTousLesEleves()">TÉLÉCHARGER LE RAPPORT DE TOUS LES JOUEURS 📄</button>
+        <button type="button" class="bouton-fichier-label" onclick="declencherImportEleve()">IMPORTER UN JOUEUR (fichier .json) 📂</button>
         <input type="file" id="fichier-import-eleve" accept=".json,application/json" onchange="importerEleve(event)" style="position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;">
         <div id="message-import" style="min-height:20px; font-weight:bold; margin-top:6px;"></div>
         <button class="secondary" onclick="changerDeJoueur()">RETOUR À L'ACCUEIL</button>
     </div>
 
-    <!-- ================= ÉCRAN GESTION DES ÉLÈVES (v18.0) ================= -->
+    <!-- ================= ÉCRAN GESTION DES JOUEURS (v18.0) ================= -->
     <div id="ecran-gestion-eleves" class="hidden">
-        <h2>👥 Gérer la liste des élèves</h2>
-        <p style="color:#555; font-size:0.9em;">Cette liste est celle proposée aux élèves sur l'écran de connexion, sur tous les appareils connectés. Retirer un élève ne supprime pas ses données, juste son accès à la liste.</p>
+        <h2>👥 Gérer la liste des joueurs</h2>
+        <p style="color:#555; font-size:0.9em;">Cette liste est celle proposée aux joueurs sur l'écran de connexion, sur tous les appareils connectés. Retirer un joueur ne supprime pas ses données, juste son accès à la liste.</p>
         <div class="liste-eleves-prof" id="liste-gestion-eleves"></div>
         <hr style="border:none; border-top:2px dashed #ccc; margin:20px 0;">
-        <h3 style="margin:0 0 10px; color:#640064;">➕ Ajouter un nouvel élève</h3>
+        <h3 style="margin:0 0 10px; color:#640064;">➕ Ajouter un nouveau joueur</h3>
         <label for="nouvel-eleve-nom">Prénom :</label>
         <input type="text" id="nouvel-eleve-nom" placeholder="Prénom">
         <div id="erreur-nouvel-eleve"></div>
@@ -533,7 +542,7 @@
         <button class="secondary" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
-    <!-- ================= ÉCRAN MODE PROF : ANALYSE D'UN ÉLÈVE ================= -->
+    <!-- ================= ÉCRAN MODE PARENT : ANALYSE D'UN JOUEUR ================= -->
     <div id="ecran-analyse-eleve" class="hidden">
         <h2>📊 Analyse de <span id="analyse-nom"></span></h2>
         <p id="analyse-stats-globales" style="color:#555;"></p>
@@ -609,10 +618,10 @@
         <div class="section-prof" style="text-align:center;">
             <h3>Gestion du profil</h3>
             <button class="secondary" onclick="exporterEleve()">EXPORTER (SAUVEGARDE) 💾</button>
-            <button class="secondary bouton-danger" onclick="supprimerEleve()">SUPPRIMER CET ÉLÈVE 🗑️</button>
+            <button class="secondary bouton-danger" onclick="supprimerEleve()">SUPPRIMER CE JOUEUR 🗑️</button>
         </div>
 
-        <button class="secondary" onclick="afficherModeProf()">RETOUR À LA LISTE DES ÉLÈVES</button>
+        <button class="secondary" onclick="afficherModeProf()">RETOUR À LA LISTE DES JOUEURS</button>
     </div>
 
     <!-- ================= ÉCRAN PARAMÈTRES ================= -->
@@ -621,7 +630,7 @@
 
         <fieldset>
             <legend>Mon adresse email (pour recevoir les rapports)</legend>
-            <input type="email" id="param-email-prof" placeholder="prof@ecole.fr">
+            <input type="email" id="param-email-prof" placeholder="parent@exemple.fr">
             <button class="secondary" onclick="enregistrerEmailProf()">ENREGISTRER</button>
             <div id="confirmation-email-prof" style="min-height:20px; font-weight:bold; margin-top:6px;"></div>
         </fieldset>
@@ -648,7 +657,7 @@
         <button class="secondary no-print" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
-    <div class="footer-version">Quiz Math Foot — v18.10 <span id="statut-connexion">🔄 connexion…</span></div>
+    <div class="footer-version">Quiz Math Foot — v18.11 <span id="statut-connexion">🔄 connexion…</span></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -669,7 +678,7 @@ let db = null;
 // firebaseOK ne devient vrai qu'une fois la connexion anonyme confirmée (v18.1) : les règles
 // Firestore exigent un appareil authentifié (même anonymement) pour lire/écrire, ce qui bloque les
 // robots/scripts qui scannent le web à la recherche de bases mal protégées, sans imposer le moindre
-// mot de passe aux élèves (connexion invisible, automatique).
+// mot de passe aux joueurs (connexion invisible, automatique).
 let firebaseOK = false;
 try {
     firebase.initializeApp(firebaseConfig);
@@ -685,11 +694,11 @@ const REF_ELEVES = db ? db.collection('eleves') : null;
 // code source de la page, y compris sur le dépôt GitHub public. La vraie autorisation se fait
 // côté serveur, dans les règles Firestore (non visibles publiquement) — voir la note du 10/08/2026.
 // Ici, côté client, on se contente de vérifier qu'il s'agit d'une session authentifiée "nommée"
-// (email/mot de passe) et non d'une session anonyme élève ; les règles Firestore, elles, vérifient
+// (email/mot de passe) et non d'une session anonyme joueur ; les règles Firestore, elles, vérifient
 // la véritable adresse et refusent toute écriture sur classe/liste venant d'un autre compte.
 
 // null tant que la liste n'a pas encore été reçue de Firestore (permet de savoir s'il faut retomber
-// sur les élèves déjà connus localement, pour un fonctionnement hors-ligne ou au tout premier essai).
+// sur les joueurs déjà connus localement, pour un fonctionnement hors-ligne ou au tout premier essai).
 let listeEleveAutorises = null;
 
 function majStatutConnexion(texte) {
@@ -698,7 +707,7 @@ function majStatutConnexion(texte) {
 }
 
 // Firestore interdit '/' dans un identifiant de document ; les noms viennent du prof (saisie
-// courte), pas d'une saisie libre élève, mais on nettoie par précaution.
+// courte), pas d'une saisie libre joueur, mais on nettoie par précaution.
 function nomDocValide(nom) {
     return nom.replace(/\//g, '_').trim();
 }
@@ -736,7 +745,7 @@ function retirerEleveDeLaListeFirestore(nom) {
         .catch(e => console.warn('Retrait de la liste en ligne impossible.', e));
 }
 
-// Écoute en direct la liste des élèves gérée par le prof : dès qu'il ajoute/retire un nom depuis
+// Écoute en direct la liste des joueurs gérée par le prof : dès qu'il ajoute/retire un nom depuis
 // n'importe quel appareil, l'écran de connexion et l'écran de gestion se mettent à jour ici aussi.
 function demarrerEcouteListeClasse() {
     if (!firebaseOK) return;
@@ -750,8 +759,8 @@ function demarrerEcouteListeClasse() {
     }, err => { majStatutConnexion('🔴 hors ligne'); console.warn('Écoute de la liste de classe impossible.', err); });
 }
 
-// Écoute en direct les profils de tous les élèves (Mode Prof en temps réel, depuis n'importe quel
-// appareil). Ne touche jamais au profil de l'élève actuellement connecté SUR CET appareil, pour ne
+// Écoute en direct les profils de tous les joueurs (Mode Parent en temps réel, depuis n'importe quel
+// appareil). Ne touche jamais au profil du joueur actuellement connecté SUR CET appareil, pour ne
 // pas écraser une partie en cours par une version distante en léger décalage.
 function demarrerEcouteElevesDistants() {
     if (!firebaseOK) return;
@@ -765,7 +774,7 @@ function demarrerEcouteElevesDistants() {
         try { localStorage.setItem(CLE_STOCKAGE, JSON.stringify(donnees)); } catch (e) {}
         const ecranProf = document.getElementById('ecran-mode-prof');
         if (ecranProf && !ecranProf.classList.contains('hidden')) afficherModeProf();
-    }, err => console.warn('Écoute des élèves à distance impossible.', err));
+    }, err => console.warn('Écoute des joueurs à distance impossible.', err));
 }
 
 // ========================= STOCKAGE LOCAL =========================
@@ -782,9 +791,9 @@ function chargerDonnees() {
     }
 }
 
-// nomAPousser (optionnel) : nom de l'élève dont le profil doit être synchronisé vers Firestore.
-// Par défaut, l'élève actuellement connecté (utilisateurCourant) — couvre le cas le plus courant
-// (une partie jouée). Pour une action du prof sur un AUTRE élève (Mode Prof), il faut préciser
+// nomAPousser (optionnel) : nom du joueur dont le profil doit être synchronisé vers Firestore.
+// Par défaut, le joueur actuellement connecté (utilisateurCourant) — couvre le cas le plus courant
+// (une partie jouée). Pour une action du prof sur un AUTRE joueur (Mode Parent), il faut préciser
 // explicitement ce nom en argument, sinon rien n'est poussé en ligne pour ce profil.
 function sauvegarderDonnees(nomAPousser) {
     if (stockageDisponible) {
@@ -923,7 +932,7 @@ function compterPartiesAujourdhui(u) {
 // Détermine si une partie est 'qualifiante' (compte pour la série), 'echec' (casse la série),
 // ou 'neutre' (sans-faute mais uniquement sur des tables faciles déjà bien maîtrisées -> ne prouve
 // rien de nouveau). IMPORTANT : appelée AVANT la mise à jour de factStats avec cette partie, pour
-// juger la difficulté à partir de ce que l'élève savait déjà EN ENTRANT dans cette partie.
+// juger la difficulté à partir de ce que le joueur savait déjà EN ENTRANT dans cette partie.
 function evaluerPartieQualifiante(u, sansFaute, details) {
     if (!sansFaute) return 'echec';
     const tablesFaciles = new Set(PALIERS_CM1[0].tables); // tables 1, 2, 5, 10
@@ -932,7 +941,7 @@ function evaluerPartieQualifiante(u, sansFaute, details) {
     if (!toutesFaciles) return 'qualifiante';
 
     // Uniquement des tables faciles : ne compte que si la quasi-totalité (≥80%) des calculs posés
-    // n'étaient pas encore acquis pour cet élève (sinon : trop facile, neutre).
+    // n'étaient pas encore acquis pour ce joueur (sinon : trop facile, neutre).
     const stats = u.factStats || {};
     const nbNonAcquis = details.filter(q => statutOperation(stats[q.a + '_' + q.b]) !== 'acquis').length;
     return (nbNonAcquis / details.length) >= 0.8 ? 'qualifiante' : 'neutre';
@@ -1038,15 +1047,15 @@ function verifierEchecsJoursPasses(u) {
 // ========================= ÉCRAN UTILISATEUR =========================
 // v18.0 : la liste vient du roster géré par le prof (listeEleveAutorises, synchronisé par
 // Firestore). Tant qu'elle n'a pas encore été reçue (pas de réseau, ou tout premier chargement),
-// on retombe sur les élèves déjà connus sur cet appareil pour que l'outil reste utilisable
-// hors-ligne. Un élève listé mais jamais encore joué sur cet appareil obtient un profil par défaut
+// on retombe sur les joueurs déjà connus sur cet appareil pour que l'outil reste utilisable
+// hors-ligne. Un joueur listé mais jamais encore joué sur cet appareil obtient un profil par défaut
 // à la volée.
 function construireListeJoueurs() {
     const liste = document.getElementById('liste-joueurs');
     liste.innerHTML = '';
     const noms = listeEleveAutorises !== null ? listeEleveAutorises : Object.keys(donnees.users);
     if (noms.length === 0) {
-        liste.innerHTML = '<p style="color:#999;">Aucun élève enregistré pour l\'instant. Demande à ton professeur de t\'ajouter (Mode Prof).</p>';
+        liste.innerHTML = '<p style="color:#999;">Aucun joueur enregistré pour l\'instant. Demande à tes parents de t\'ajouter (Mode Parent).</p>';
     }
     noms.forEach(nom => {
         if (!donnees.users[nom]) donnees.users[nom] = creerProfilParDefaut();
@@ -1089,7 +1098,7 @@ function fermerPopupSuggestion() {
     afficherEcran('ecran-accueil');
 }
 
-// Retire de la sélection courante toute table qui ne serait plus autorisée (ex : l'enseignant vient
+// Retire de la sélection courante toute table qui ne serait plus autorisée (ex : le parent vient
 // de restreindre l'accès à une table). Si plus rien n'est sélectionnable, retombe sur "tout ce qui
 // est autorisé" plutôt que de laisser une sélection vide sans explication.
 function synchroniserTablesSelectionneesAvecAutorisations(u) {
@@ -1106,8 +1115,8 @@ function changerDeJoueur() {
 }
 
 // ========================= ÉCRAN ACCUEIL =========================
-// v16.0 : détermine quelle table conseiller en priorité à l'élève, à partir de ses statistiques
-// (factStats) et en respectant les tables autorisées par l'enseignant. Priorité aux tables où des
+// v16.0 : détermine quelle table conseiller en priorité à le joueur, à partir de ses statistiques
+// (factStats) et en respectant les tables autorisées par le parent. Priorité aux tables où des
 // difficultés sont déjà mesurées (essais suffisants, taux < 85%) ; à défaut, propose une table
 // encore peu pratiquée (exploration) ; si tout est déjà bien maîtrisé, aucune suggestion (null).
 function calculerTablePrioritaire(u) {
@@ -1151,7 +1160,7 @@ function afficherSuggestionTable(u) {
 }
 
 // v15.0 : la grille dépend désormais du profil connecté — une table non autorisée par
-// l'enseignant (u.tablesAutorisees) est affichée verrouillée et n'est pas cliquable.
+// le parent (u.tablesAutorisees) est affichée verrouillée et n'est pas cliquable.
 function construireGrilleTables() {
     const grille = document.getElementById('tables-grid');
     grille.innerHTML = '';
@@ -1389,7 +1398,7 @@ function enregistrerResultat(signature, tablesLabel, count, scoreObtenu, total, 
     const dernierMatchMemeConfig = matchsMemeConfig.length > 0 ? matchsMemeConfig[matchsMemeConfig.length - 1] : null;
 
     // v12.0 : évaluer la partie AVANT de mettre à jour factStats, pour juger sa difficulté à partir
-    // de ce que l'élève savait déjà EN ENTRANT dans cette partie (pas après avoir répondu).
+    // de ce que le joueur savait déjà EN ENTRANT dans cette partie (pas après avoir répondu).
     const objectifDuJourAvant = u.tentativesRequises;
     const evaluationTentative = evaluerPartieQualifiante(u, sansFaute, historiqueReponses);
     mettreAJourTentativesRequises(u, evaluationTentative);
@@ -1550,7 +1559,7 @@ function ouvrirDefi() {
 
     if (noms.length === 0) {
         select.innerHTML = '<option>Aucune adresse enregistrée</option>';
-        document.getElementById('erreur-defi').textContent = 'Demande à ton professeur d\'ajouter des adresses dans Paramètres.';
+        document.getElementById('erreur-defi').textContent = 'Demande à tes parents d\'ajouter des adresses dans Paramètres.';
         btnEnvoyer.disabled = true;
     } else {
         select.innerHTML = noms.map(n => '<option value="' + n + '">' + n + '</option>').join('');
@@ -1718,8 +1727,8 @@ function afficherClassementPourConfig() {
     table.innerHTML = html;
 }
 
-// ========================= MODE PROF (protégé par mot de passe depuis la v18.2) =========================
-// Mémorise quel écran protégé a été demandé (Mode Prof ou Paramètres), pour y renvoyer une fois la
+// ========================= MODE PARENT (protégé par mot de passe depuis la v18.2) =========================
+// Mémorise quel écran protégé a été demandé (Mode Parent ou Paramètres), pour y renvoyer une fois la
 // connexion réussie (v18.4 : Paramètres protégé aussi, car il affiche des adresses email en clair).
 let ecranProfDemande = 'mode-prof';
 
@@ -1731,7 +1740,7 @@ function estConnecteCommeProf() {
 
 function afficherModeProf() {
     // Hors ligne (pas de Firebase joignable) : impossible de vérifier le mot de passe, on laisse
-    // passer plutôt que de bloquer complètement l'enseignant sur un appareil sans réseau — c'est le
+    // passer plutôt que de bloquer complètement le parent sur un appareil sans réseau — c'est le
     // même compromis que le reste de l'outil (hors-ligne = confiance locale).
     if (firebaseOK && !estConnecteCommeProf()) {
         ecranProfDemande = 'mode-prof';
@@ -1742,7 +1751,7 @@ function afficherModeProf() {
     liste.innerHTML = '';
     const noms = Object.keys(donnees.users);
     if (noms.length === 0) {
-        liste.innerHTML = '<p style="color:#999;">Aucun élève enregistré pour l\'instant.</p>';
+        liste.innerHTML = '<p style="color:#999;">Aucun joueur enregistré pour l\'instant.</p>';
     }
     noms.forEach(nom => {
         const btn = document.createElement('div');
@@ -1784,8 +1793,8 @@ function connecterProf() {
         });
 }
 
-// Repasse l'appareil en session anonyme (accès élève) en quittant le Mode Prof, pour que l'appareil
-// redevienne utilisable normalement par le prochain élève.
+// Repasse l'appareil en session anonyme (accès joueur) en quittant le Mode Parent, pour que l'appareil
+// redevienne utilisable normalement par le prochain joueur.
 function revenirEnModeEleve() {
     if (firebaseOK && firebase.auth().currentUser && !firebase.auth().currentUser.isAnonymous) {
         firebase.auth().signOut().then(() => firebase.auth().signInAnonymously())
@@ -1793,8 +1802,8 @@ function revenirEnModeEleve() {
     }
 }
 
-// ========================= GESTION DE LA LISTE DES ÉLÈVES (v18.0) =========================
-// nom de l'élève actuellement en cours de renommage dans l'écran Gérer les élèves (bascule la
+// ========================= GESTION DE LA LISTE DES JOUEURS (v18.0) =========================
+// nom du joueur actuellement en cours de renommage dans l'écran Gérer les joueurs (bascule la
 // ligne correspondante en mode édition). null = aucune ligne en édition.
 let nomEnRenommage = null;
 
@@ -1810,7 +1819,7 @@ function construireGestionEleves() {
     liste.innerHTML = '';
     const noms = listeEleveAutorises || [];
     if (noms.length === 0) {
-        liste.innerHTML = '<p style="color:#999;">Aucun élève dans la liste en ligne pour l\'instant.</p>';
+        liste.innerHTML = '<p style="color:#999;">Aucun joueur dans la liste en ligne pour l\'instant.</p>';
     }
     noms.forEach(nom => {
         const ligne = document.createElement('div');
@@ -1893,7 +1902,7 @@ function construireGestionEleves() {
         liste.appendChild(ligne);
     });
 
-    // Élèves déjà connus sur cet appareil (parties jouées en v17 ou avant l'ajout au roster) mais
+    // Joueurs déjà connus sur cet appareil (parties jouées en v17 ou avant l'ajout au roster) mais
     // pas encore dans la liste en ligne : on propose de les y ajouter en un clic.
     const zoneMigration = document.getElementById('zone-migration-locale');
     const localsNonListes = Object.keys(donnees.users).filter(n => !noms.includes(n));
@@ -1926,7 +1935,7 @@ function validerRenommageEleve(ancienNom, nouveauNomBrut) {
     if (nouveauNom === '') { if (erreurDiv) erreurDiv.textContent = 'Le nouveau prénom ne peut pas être vide.'; return; }
     if (nouveauNom === ancienNom) { nomEnRenommage = null; construireGestionEleves(); return; }
     if ((listeEleveAutorises || []).includes(nouveauNom) || donnees.users[nouveauNom]) {
-        if (erreurDiv) erreurDiv.textContent = 'Ce prénom est déjà utilisé par un autre élève.';
+        if (erreurDiv) erreurDiv.textContent = 'Ce prénom est déjà utilisé par un autre joueur.';
         return;
     }
     renommerEleve(ancienNom, nouveauNom);
@@ -1934,7 +1943,7 @@ function validerRenommageEleve(ancienNom, nouveauNomBrut) {
     construireGestionEleves();
 }
 
-// Renomme un élève : déplace son profil (parties, badges, records) vers la nouvelle clé, met à
+// Renomme un joueur : déplace son profil (parties, badges, records) vers la nouvelle clé, met à
 // jour le roster en ligne, et recrée le document Firestore sous le nouveau nom (Firestore n'a pas
 // de "renommer" natif pour un identifiant de document — il faut créer le nouveau puis supprimer
 // l'ancien).
@@ -1960,7 +1969,7 @@ function ajouterEleveDepuisGestion() {
     const nom = champ.value.trim();
     const erreur = document.getElementById('erreur-nouvel-eleve');
     if (nom === '') { erreur.textContent = 'Écris un prénom avant d\'ajouter.'; return; }
-    if ((listeEleveAutorises || []).includes(nom)) { erreur.textContent = 'Cet élève est déjà dans la liste.'; return; }
+    if ((listeEleveAutorises || []).includes(nom)) { erreur.textContent = 'Ce joueur est déjà dans la liste.'; return; }
     if (!donnees.users[nom]) donnees.users[nom] = creerProfilParDefaut();
     ajouterEleveALaListeFirestore(nom);
     sauvegarderDonnees(nom);
@@ -2001,7 +2010,7 @@ function construirePartiesParDate() {
     const totalTexte = document.getElementById('total-parties-jour');
     conteneur.innerHTML = '';
 
-    // Rassemble toutes les parties de tous les élèves connus sur cet appareil (donnees.users, tenu
+    // Rassemble toutes les parties de tous les joueurs connus sur cet appareil (donnees.users, tenu
     // à jour en temps réel par Firestore) jouées ce jour-là, triées de la plus récente à la plus
     // ancienne.
     let parties = [];
@@ -2021,7 +2030,7 @@ function construirePartiesParDate() {
 
     const table = document.createElement('table');
     table.className = 'records';
-    let html = '<tr><th>Heure</th><th>Élève</th><th>Score</th><th>Tables</th><th>Temps</th></tr>';
+    let html = '<tr><th>Heure</th><th>Joueur</th><th>Score</th><th>Tables</th><th>Temps</th></tr>';
     parties.forEach(p => {
         const heure = new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const puce = p.sansFaute ? ' 🎯' : '';
@@ -2614,7 +2623,7 @@ function genererRapportTexte(nom) {
 
 function genererRapportTousLesEleves() {
     const noms = Object.keys(donnees.users);
-    if (noms.length === 0) return 'Aucun élève enregistré.';
+    if (noms.length === 0) return 'Aucun joueur enregistré.';
     return noms.map(n => genererRapportTexte(n)).join('\n\n========================================\n\n');
 }
 
@@ -2685,10 +2694,10 @@ function afficherLectureRapportEleve() {
 
 function afficherLectureRapportTous() {
     const noms = Object.keys(donnees.users);
-    document.getElementById('titre-lecture-rapport').textContent = '📄 Rapport — Tous les élèves';
+    document.getElementById('titre-lecture-rapport').textContent = '📄 Rapport — Tous les joueurs';
     let html = enTeteGeneration();
     if (noms.length === 0) {
-        html += '<p style="color:#999;">Aucun élève enregistré.</p>';
+        html += '<p style="color:#999;">Aucun joueur enregistré.</p>';
     } else {
         noms.forEach(n => { html += '<div class="saut-page-eleve">' + construireContenuRapportHTML(n) + '</div>'; });
     }
@@ -2928,7 +2937,7 @@ function importerEleve(event) {
             if (listeEleveAutorises === null) listeEleveAutorises = [];
             if (!listeEleveAutorises.includes(nomFinal)) listeEleveAutorises.push(nomFinal);
             zoneMessage.style.color = '#1e8449';
-            zoneMessage.textContent = 'Élève importé sous le nom "' + nomFinal + '".';
+            zoneMessage.textContent = 'Joueur importé sous le nom "' + nomFinal + '".';
             afficherModeProf();
         } catch (erreur) {
             zoneMessage.style.color = '#c0392b';
