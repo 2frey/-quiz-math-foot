@@ -1,6 +1,36 @@
 <!DOCTYPE html>
-<!-- Quiz Math Foot - Version 18.11 (vocabulaire "parent/joueur" au lieu de "prof/élève") - 10/08/2026
-     Base : version 18.10 (mise en page renommage corrigée).
+<!-- Quiz Math Foot - Version 18.13 (tableau vitesse×exactitude cliquable aussi dans "Lire le rapport") - 10/08/2026
+     Base : version 18.12 (détail des calculs à la demande, historique retiré du rapport).
+     Correctif v18.13 : la v18.12 n'avait rendu le tableau Vitesse × Exactitude cliquable que dans
+     l'écran "Suivi" — pas dans "Lire le rapport", qui utilise la même carte mais était resté figé
+     (pensé à l'origine pour l'impression papier). Comme cet écran sert aussi à la lecture à l'écran,
+     ce n'était pas justifié : il est maintenant interactif là aussi (construireContenuRapportHTML
+     passe interactif=true), avec la même phrase d'indice sous le tableau. L'impression papier n'est
+     pas affectée (un clic ne fait rien sur une page imprimée). Le bouton RETOUR de l'écran détail
+     des calculs est maintenant contextuel : il ramène vers "Lire le rapport" si c'est de là qu'on
+     est venu, vers "Suivi" sinon.
+     Refonte v18.12, à la demande de Fred :
+     - Rapport imprimé/PDF/texte : la liste "Historique des parties" (qui grossissait sans fin et
+       n'était pas utile) est retirée, remplacée par une phrase résumé (nombre de parties + date de
+       la dernière).
+     - Écran "Suivi" : l'ancienne liste figée des 8 dernières parties (blocs <details> dépliables)
+       est retirée, remplacée par un bouton "Voir le détail de tous les calculs" ouvrant l'écran
+       à la demande ci-dessous.
+     - Nouvel écran réutilisable ecran-detail-calculs : affiche chaque calcul individuel sous forme
+       de petite carte (pas un tableau dense) avec puce colorée (réutilise le code couleur
+       acquis/en cours/à travailler existant), résultat, temps de réponse, date. Filtrable
+       (tous/corrects/incorrects) et triable (récent/ancien/rapide/lent) en direct, sans rechargement.
+     - Trois points d'entrée : (1) bouton dans Suivi → tous les calculs du joueur ; (2) clic sur une
+       case du tableau Vitesse × Exactitude (interactif seulement dans l'écran Suivi, pas dans le
+       rapport imprimé) → calculs de ce fait précis uniquement ; (3) clic sur une ligne dans
+       "Parties par date" → calculs de cette partie précise uniquement. Chaque point d'entrée mémorise
+       comment revenir en arrière (retournerDepuisDetailCalculs).
+     - "Parties par date" : ajout d'une rangée de pastilles cliquables (derniers jours ayant des
+       parties, triés du plus récent, jour affiché en surbrillance) sous le sélecteur de date natif —
+       un calendrier natif ne peut pas être colorié jour par jour dans aucun navigateur, cette rangée
+       de pastilles reproduit le même usage pratique.
+     - Aucune migration de données nécessaire : toute l'info (calcul, résultat, temps) existait déjà
+       dans u.history[].details, simplement jamais exposée de façon filtrable jusqu'ici.
      Ajout v18.11 : Fred n'est pas enseignant mais un père de famille qui aide ses propres enfants —
      tout le texte visible à l'écran est corrigé en conséquence : "Mode Prof" → "Mode Parent",
      "élève(s)" → "joueur(s)", "Réservé à l'enseignant" → "Réservé au parent", les messages
@@ -315,6 +345,27 @@
     .detail-partie summary { cursor: pointer; font-weight: bold; color: #333; }
     table.records.petit th, table.records.petit td { font-size: 0.85em; padding: 5px; }
 
+    /* Détail des calculs (v18.12) : cartes individuelles, pas un tableau dense */
+    .carte-calcul {
+        display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 6px;
+        background: #fff; border: 1px solid #ddd; border-radius: 10px; font-size: 0.95em;
+    }
+    .puce-calcul { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    .calcul-texte { font-weight: bold; flex: 1; min-width: 80px; }
+    .calcul-resultat { width: 24px; text-align: center; flex-shrink: 0; }
+    .calcul-temps { color: #555; width: 55px; text-align: right; flex-shrink: 0; }
+    .calcul-date { color: #999; font-size: 0.85em; width: 90px; text-align: right; flex-shrink: 0; }
+    .barre-filtres-calculs { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+    .barre-filtres-calculs select { flex: 1; min-width: 140px; padding: 8px; border-radius: 8px; border: 2px solid #999; }
+
+    /* Pastilles de dates (Parties par date, v18.12) */
+    .chips-dates { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+    .chip-date {
+        padding: 6px 12px; border-radius: 20px; border: 2px solid #1e8449; background: #eafaf1;
+        color: #145a32; font-weight: bold; font-size: 0.85em; cursor: pointer;
+    }
+    .chip-date-active { background: #1e8449; color: #fff; }
+
     /* Paramètres (v6.0) */
     .ligne-contact {
         display: flex; justify-content: space-between; align-items: center;
@@ -536,10 +587,33 @@
     <div id="ecran-parties-par-date" class="hidden">
         <h2>📅 Parties jouées</h2>
         <label for="filtre-date-parties">Jour à afficher :</label>
-        <input type="date" id="filtre-date-parties" onchange="construirePartiesParDate()">
+        <input type="date" id="filtre-date-parties" onchange="construirePartiesParDate(); construireChipsDatesParties();">
+        <div class="chips-dates" id="chips-dates-parties"></div>
         <p id="total-parties-jour" style="color:#555; font-size:0.9em;"></p>
+        <p style="color:#999; font-size:0.8em;">Clique sur une partie pour voir le détail de chaque calcul.</p>
         <div id="liste-parties-par-date"></div>
         <button class="secondary" onclick="afficherModeProf()">RETOUR</button>
+    </div>
+
+    <!-- ================= ÉCRAN DÉTAIL DES CALCULS (v18.12) ================= -->
+    <div id="ecran-detail-calculs" class="hidden">
+        <h2 id="titre-detail-calculs">🔍 Détail des calculs</h2>
+        <p id="compte-detail-calculs" style="color:#555; font-size:0.9em;"></p>
+        <div class="barre-filtres-calculs">
+            <select id="filtre-resultat-calculs" onchange="construireDetailCalculs()">
+                <option value="tous">Tous les résultats</option>
+                <option value="corrects">Corrects seulement</option>
+                <option value="incorrects">Incorrects seulement</option>
+            </select>
+            <select id="tri-calculs" onchange="construireDetailCalculs()">
+                <option value="recent">Plus récent d'abord</option>
+                <option value="ancien">Plus ancien d'abord</option>
+                <option value="lent">Le plus lent d'abord</option>
+                <option value="rapide">Le plus rapide d'abord</option>
+            </select>
+        </div>
+        <div id="liste-detail-calculs"></div>
+        <button class="secondary" id="bouton-retour-detail-calculs" onclick="retournerDepuisDetailCalculs()">RETOUR</button>
     </div>
 
     <!-- ================= ÉCRAN MODE PARENT : ANALYSE D'UN JOUEUR ================= -->
@@ -585,6 +659,7 @@
                 <span class="legende-item"><span class="legende-puce cellule-a-travailler"></span>Non construit</span>
             </div>
             <div style="text-align:center;" id="analyse-carte-vitesse"></div>
+            <p style="color:#999; font-size:0.8em; text-align:center;">Clique sur une case pour voir le détail des calculs correspondants.</p>
         </div>
 
         <div class="section-prof">
@@ -602,9 +677,9 @@
             <div id="analyse-progression"></div>
         </div>
 
-        <div class="section-prof">
-            <h3>Dernières parties (clique pour voir le détail de chaque calcul)</h3>
-            <div id="analyse-historique"></div>
+        <div class="section-prof" style="text-align:center;">
+            <p id="analyse-resume-parties" style="color:#555;"></p>
+            <button class="secondary" onclick="ouvrirDetailCalculsDepuisAnalyse()">🔍 VOIR LE DÉTAIL DE TOUS LES CALCULS</button>
         </div>
 
         <div class="section-prof" style="text-align:center;">
@@ -657,7 +732,7 @@
         <button class="secondary no-print" onclick="afficherModeProf()">RETOUR</button>
     </div>
 
-    <div class="footer-version">Quiz Math Foot — v18.11 <span id="statut-connexion">🔄 connexion…</span></div>
+    <div class="footer-version">Quiz Math Foot — v18.13 <span id="statut-connexion">🔄 connexion…</span></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -898,7 +973,7 @@ let dernierResultatDefi = null; // {score, total, temps, tablesLabel} pour le mo
 
 // ========================= UTILITAIRES =========================
 function afficherEcran(id) {
-    ['ecran-utilisateur','ecran-accueil','ecran-jeu','ecran-resultat','ecran-profil','ecran-classement','ecran-connexion-prof','ecran-mode-prof','ecran-gestion-eleves','ecran-parties-par-date','ecran-analyse-eleve','ecran-parametres','ecran-lecture-rapport','ecran-annonce-maj','ecran-popup-suggestion']
+    ['ecran-utilisateur','ecran-accueil','ecran-jeu','ecran-resultat','ecran-profil','ecran-classement','ecran-connexion-prof','ecran-mode-prof','ecran-gestion-eleves','ecran-parties-par-date','ecran-detail-calculs','ecran-analyse-eleve','ecran-parametres','ecran-lecture-rapport','ecran-annonce-maj','ecran-popup-suggestion']
         .forEach(e => document.getElementById(e).classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
 }
@@ -2001,7 +2076,35 @@ function afficherPartiesParDate() {
     const champDate = document.getElementById('filtre-date-parties');
     if (!champDate.value) champDate.value = dateStrLocale();
     construirePartiesParDate();
+    construireChipsDatesParties();
     afficherEcran('ecran-parties-par-date');
+}
+
+// Pastilles cliquables des derniers jours ayant au moins une partie, tous joueurs confondus, en
+// remplacement d'une coloration du calendrier natif (impossible à styliser jour par jour dans un
+// <input type="date"> quel que soit le navigateur). Le jour actuellement affiché est en surbrillance.
+function construireChipsDatesParties() {
+    const jours = new Set();
+    Object.values(donnees.users).forEach(u => {
+        (u.history || []).forEach(h => jours.add(dateStrLocale(new Date(h.date))));
+    });
+    const triees = Array.from(jours).sort((a, b) => b.localeCompare(a)).slice(0, 14);
+    const zone = document.getElementById('chips-dates-parties');
+    if (!zone) return;
+    zone.innerHTML = '';
+    const jourActuel = document.getElementById('filtre-date-parties').value;
+    triees.forEach(jour => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip-date' + (jour === jourActuel ? ' chip-date-active' : '');
+        chip.textContent = new Date(jour + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        chip.onclick = () => {
+            document.getElementById('filtre-date-parties').value = jour;
+            construirePartiesParDate();
+            construireChipsDatesParties();
+        };
+        zone.appendChild(chip);
+    });
 }
 
 function construirePartiesParDate() {
@@ -2012,12 +2115,12 @@ function construirePartiesParDate() {
 
     // Rassemble toutes les parties de tous les joueurs connus sur cet appareil (donnees.users, tenu
     // à jour en temps réel par Firestore) jouées ce jour-là, triées de la plus récente à la plus
-    // ancienne.
+    // ancienne. gameIndex conservé pour pouvoir rouvrir le détail exact de cette partie.
     let parties = [];
     Object.keys(donnees.users).forEach(nom => {
         const u = donnees.users[nom];
-        (u.history || []).forEach(h => {
-            if (dateStrLocale(new Date(h.date)) === jour) parties.push(Object.assign({ nom }, h));
+        (u.history || []).forEach((h, gameIndex) => {
+            if (dateStrLocale(new Date(h.date)) === jour) parties.push(Object.assign({ nom, gameIndex }, h));
         });
     });
     parties.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -2030,14 +2133,19 @@ function construirePartiesParDate() {
 
     const table = document.createElement('table');
     table.className = 'records';
-    let html = '<tr><th>Heure</th><th>Joueur</th><th>Score</th><th>Tables</th><th>Temps</th></tr>';
+    const ligneEntete = document.createElement('tr');
+    ligneEntete.innerHTML = '<th>Heure</th><th>Joueur</th><th>Score</th><th>Tables</th><th>Temps</th>';
+    table.appendChild(ligneEntete);
     parties.forEach(p => {
         const heure = new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const puce = p.sansFaute ? ' 🎯' : '';
-        html += '<tr><td>' + heure + '</td><td>' + p.nom + '</td><td>' + p.score + ' / ' + p.total + puce + '</td><td>' +
-            (p.tablesLabel || '—') + '</td><td>' + (p.temps ? p.temps + ' s' : '—') + '</td></tr>';
+        const ligne = document.createElement('tr');
+        ligne.style.cursor = 'pointer';
+        ligne.innerHTML = '<td>' + heure + '</td><td>' + p.nom + '</td><td>' + p.score + ' / ' + p.total + puce + '</td><td>' +
+            (p.tablesLabel || '—') + '</td><td>' + (p.temps ? p.temps + ' s' : '—') + '</td>';
+        ligne.onclick = () => ouvrirDetailCalculsDepuisPartie(p.nom, p.gameIndex);
+        table.appendChild(ligne);
     });
-    table.innerHTML = html;
     conteneur.appendChild(table);
 }
 
@@ -2049,6 +2157,115 @@ function statutOperation(stat) {
     if (taux >= 0.85) return 'acquis';
     if (taux >= 0.6) return 'en-cours';
     return 'a-travailler';
+}
+
+// ========================= DÉTAIL DES CALCULS (v18.12) =========================
+// Remplace l'ancienne liste figée "dernières parties" par un écran unique, réutilisable depuis
+// trois points d'entrée (tous les calculs, un fait précis depuis la carte vitesse×exactitude, ou
+// une partie précise depuis Parties par date), filtrable et triable à la demande.
+
+// Aplatit tout l'historique d'un joueur en une liste de calculs individuels.
+function collecterCalculs(u) {
+    const resultat = [];
+    u.history.forEach((h, gameIndex) => {
+        (h.details || []).forEach((q, qIndex) => {
+            resultat.push({ gameIndex, qIndex, date: h.date, a: q.a, b: q.b, correcte: q.correcte, tempsMs: q.tempsMs });
+        });
+    });
+    return resultat;
+}
+
+let detailCalculsNom = null;
+let detailCalculsBase = [];
+let detailCalculsRetour = null;
+
+function ouvrirDetailCalculs(nom, base, titre, fonctionRetour) {
+    detailCalculsNom = nom;
+    detailCalculsBase = base;
+    detailCalculsRetour = fonctionRetour;
+    document.getElementById('titre-detail-calculs').textContent = titre;
+    document.getElementById('filtre-resultat-calculs').value = 'tous';
+    document.getElementById('tri-calculs').value = 'recent';
+    construireDetailCalculs();
+    afficherEcran('ecran-detail-calculs');
+}
+
+function retournerDepuisDetailCalculs() {
+    if (typeof detailCalculsRetour === 'function') detailCalculsRetour();
+    else afficherModeProf();
+}
+
+function construireDetailCalculs() {
+    const u = donnees.users[detailCalculsNom];
+    const stats = (u && u.factStats) || {};
+    const filtreResultat = document.getElementById('filtre-resultat-calculs').value;
+    const tri = document.getElementById('tri-calculs').value;
+
+    let liste = detailCalculsBase.slice();
+    if (filtreResultat === 'corrects') liste = liste.filter(c => c.correcte);
+    if (filtreResultat === 'incorrects') liste = liste.filter(c => !c.correcte);
+
+    liste.sort((x, y) => {
+        if (tri === 'recent') return (new Date(y.date) - new Date(x.date)) || (y.qIndex - x.qIndex);
+        if (tri === 'ancien') return (new Date(x.date) - new Date(y.date)) || (x.qIndex - y.qIndex);
+        if (tri === 'rapide') return x.tempsMs - y.tempsMs;
+        if (tri === 'lent') return y.tempsMs - x.tempsMs;
+        return 0;
+    });
+
+    document.getElementById('compte-detail-calculs').textContent =
+        liste.length + ' calcul' + (liste.length > 1 ? 's' : '');
+
+    const zone = document.getElementById('liste-detail-calculs');
+    if (liste.length === 0) {
+        zone.innerHTML = '<p style="color:#999;">Aucun calcul à afficher.</p>';
+        return;
+    }
+    const classeParStatut = { 'acquis': 'cellule-acquis', 'en-cours': 'cellule-en-cours', 'a-travailler': 'cellule-a-travailler', 'non-teste': 'cellule-non-teste' };
+    let html = '';
+    liste.forEach(c => {
+        const statut = statutOperation(stats[c.a + '_' + c.b]);
+        const d = new Date(c.date);
+        const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const secondes = (c.tempsMs / 1000).toFixed(1);
+        html += '<div class="carte-calcul">' +
+            '<span class="puce-calcul ' + classeParStatut[statut] + '" title="' + statut + '"></span>' +
+            '<span class="calcul-texte">' + c.a + ' × ' + c.b + ' = ' + (c.a * c.b) + '</span>' +
+            '<span class="calcul-resultat">' + (c.correcte ? '✅' : '❌') + '</span>' +
+            '<span class="calcul-temps">' + secondes + ' s</span>' +
+            '<span class="calcul-date">' + dateStr + '</span>' +
+            '</div>';
+    });
+    zone.innerHTML = html;
+}
+
+// Point d'entrée 1 : depuis "Suivi de [prénom]", tous les calculs du joueur.
+function ouvrirDetailCalculsDepuisAnalyse() {
+    const nom = document.getElementById('analyse-nom').textContent;
+    const u = donnees.users[nom];
+    ouvrirDetailCalculs(nom, collecterCalculs(u), 'Tous les calculs — ' + nom, () => afficherAnalyseEleve(nom));
+}
+
+// Point d'entrée 2 : depuis un clic sur une case de la carte vitesse×exactitude — accessible
+// depuis "Suivi de [prénom]" ET depuis "Lire le rapport" (v18.13), donc le retour doit ramener à
+// l'écran d'où le clic est parti plutôt que toujours vers Suivi.
+function ouvrirDetailCalculsDepuisFait(nom, a, b) {
+    const u = donnees.users[nom];
+    const filtres = collecterCalculs(u).filter(c => Number(c.a) === a && Number(c.b) === b);
+    const ecranLectureVisible = document.getElementById('ecran-lecture-rapport') && !document.getElementById('ecran-lecture-rapport').classList.contains('hidden');
+    const retour = ecranLectureVisible ? (() => afficherEcran('ecran-lecture-rapport')) : (() => afficherAnalyseEleve(nom));
+    ouvrirDetailCalculs(nom, filtres, 'Calculs de ' + a + ' × ' + b + ' — ' + nom, retour);
+}
+
+// Point d'entrée 3 : depuis un clic sur une partie précise dans "Parties par date".
+function ouvrirDetailCalculsDepuisPartie(nom, gameIndex) {
+    const u = donnees.users[nom];
+    const h = u.history[gameIndex];
+    if (!h) return;
+    const calculs = (h.details || []).map((q, qIndex) => ({ gameIndex, qIndex, date: h.date, a: q.a, b: q.b, correcte: q.correcte, tempsMs: q.tempsMs }));
+    const d = new Date(h.date);
+    const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    ouvrirDetailCalculs(nom, calculs, 'Partie du ' + dateStr + ' — ' + nom, () => afficherPartiesParDate());
 }
 
 function construireCarteTables(u) {
@@ -2144,7 +2361,9 @@ function profilVitesseExactitude(stat) {
     return 'non-construit';
 }
 
-function construireCarteVitesseExactitude(u) {
+// interactif + nom : si fournis, chaque case devient cliquable et ouvre le détail des calculs pour
+// ce fait précis (v18.12). Sans ces paramètres (usage dans le rapport imprimé), reste statique.
+function construireCarteVitesseExactitude(u, interactif, nom) {
     const stats = calculerStatsTempsParFait(u);
     const classeParProfil = { 'automatise': 'cellule-acquis', 'en-reconstruction': 'cellule-en-cours', 'confusion': 'cellule-confusion', 'non-construit': 'cellule-a-travailler', 'donnees-insuffisantes': 'cellule-non-teste' };
     let html = '<table class="carte-tables"><tr><th></th>';
@@ -2154,7 +2373,8 @@ function construireCarteVitesseExactitude(u) {
         html += '<tr><th>×' + a + '</th>';
         for (let b = 1; b <= 10; b++) {
             const profil = profilVitesseExactitude(stats[a + '_' + b]);
-            html += '<td class="' + classeParProfil[profil] + '">' + (a * b) + '</td>';
+            const attrClic = interactif ? ' style="cursor:pointer;" onclick="ouvrirDetailCalculsDepuisFait(\'' + nom.replace(/'/g, "\\'") + '\', ' + a + ', ' + b + ')"' : '';
+            html += '<td class="' + classeParProfil[profil] + '"' + attrClic + '>' + (a * b) + '</td>';
         }
         html += '</tr>';
     }
@@ -2504,34 +2724,18 @@ function afficherAnalyseEleve(nom) {
 
     document.getElementById('analyse-carte-tables').innerHTML = construireCarteTables(u);
     document.getElementById('analyse-paliers').innerHTML = construireProgressionPaliers(u);
-    document.getElementById('analyse-carte-vitesse').innerHTML = construireCarteVitesseExactitude(u);
+    document.getElementById('analyse-carte-vitesse').innerHTML = construireCarteVitesseExactitude(u, true, nom);
     document.getElementById('analyse-commutativite').innerHTML = construireListeCommutativite(u);
     document.getElementById('analyse-progression').innerHTML = construireGraphiquesProgression(u);
     document.getElementById('analyse-priorites').innerHTML = listerPriorites(u);
 
-    const zoneHistorique = document.getElementById('analyse-historique');
+    const resume = document.getElementById('analyse-resume-parties');
     if (nbParties === 0) {
-        zoneHistorique.innerHTML = '<p style="color:#999;">Aucune partie jouée.</p>';
+        resume.textContent = 'Aucune partie jouée pour l\'instant.';
     } else {
-        let html = '';
-        u.history.slice(-8).reverse().forEach(h => {
-            const d = new Date(h.date);
-            const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-            html += '<details class="detail-partie"><summary>' + dateStr + ' — ' + h.tablesLabel + ' — Score ' + h.score + '/' + h.total + ' — ' + h.temps + ' s</summary>';
-            const details = h.details || [];
-            if (details.length === 0) {
-                html += '<p style="color:#999; padding:8px;">Détail par question non disponible pour cette partie (jouée avant la v6.0).</p>';
-            } else {
-                html += '<table class="records petit"><tr><th>Calcul</th><th>Résultat</th><th>Temps de réponse</th></tr>';
-                details.forEach(q => {
-                    const secondes = (q.tempsMs / 1000).toFixed(1);
-                    html += '<tr><td>' + q.a + ' × ' + q.b + '</td><td>' + (q.correcte ? '✅' : '❌') + '</td><td>' + secondes + ' s</td></tr>';
-                });
-                html += '</table>';
-            }
-            html += '</details>';
-        });
-        zoneHistorique.innerHTML = html;
+        const derniere = new Date(u.history[u.history.length - 1].date);
+        const dateStr = derniere.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + derniere.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        resume.textContent = nbParties + ' partie(s) jouée(s) au total — dernière le ' + dateStr + '.';
     }
 
     afficherEcran('ecran-analyse-eleve');
@@ -2606,16 +2810,12 @@ function genererRapportTexte(nom) {
         });
     }
     lignes.push('');
-
-    lignes.push('--- Historique des parties ---');
-    if (nbParties === 0) {
-        lignes.push('Aucune partie jouée.');
+    if (nbParties > 0) {
+        const derniere = new Date(u.history[u.history.length - 1].date);
+        const dateStr = derniere.toLocaleDateString('fr-FR') + ' ' + derniere.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        lignes.push(nbParties + ' partie(s) jouée(s) au total — dernière le ' + dateStr + '. Détail des calculs disponible dans l\'appli (Suivi → Voir le détail de tous les calculs).');
     } else {
-        u.history.forEach(h => {
-            const d = new Date(h.date);
-            const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-            lignes.push(dateStr + ' | ' + h.tablesLabel + ' | Score ' + h.score + '/' + h.total + ' | Temps total ' + h.temps + ' s');
-        });
+        lignes.push('Aucune partie jouée pour l\'instant.');
     }
 
     return lignes.join('\n');
@@ -2657,7 +2857,8 @@ function construireContenuRapportHTML(nom) {
         '<span class="legende-item"><span class="legende-puce cellule-en-cours"></span>En reconstruction</span>' +
         '<span class="legende-item"><span class="legende-puce cellule-confusion"></span>Confusion mémorisée</span>' +
         '<span class="legende-item"><span class="legende-puce cellule-a-travailler"></span>Non construit</span></div>';
-    html += '<div style="text-align:center;">' + construireCarteVitesseExactitude(u) + '</div>';
+    html += '<div style="text-align:center;">' + construireCarteVitesseExactitude(u, true, nom) + '</div>';
+    html += '<p style="color:#999; font-size:0.8em; text-align:center;">Clique sur une case pour voir le détail des calculs correspondants.</p>';
 
     html += '<h3>Commutativité</h3>' + construireListeCommutativite(u);
 
@@ -2665,17 +2866,12 @@ function construireContenuRapportHTML(nom) {
 
     html += '<h3>Progression dans le temps</h3>' + construireGraphiquesProgression(u);
 
-    html += '<h3>Historique des parties</h3>';
-    if (nbParties === 0) {
-        html += '<p style="color:#999;">Aucune partie jouée.</p>';
+    if (nbParties > 0) {
+        const derniere = new Date(u.history[u.history.length - 1].date);
+        const dateStr = derniere.toLocaleDateString('fr-FR') + ' ' + derniere.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        html += '<p style="color:#555; font-size:0.9em;">' + nbParties + ' partie(s) jouée(s) au total — dernière le ' + dateStr + '. Le détail calcul par calcul est disponible dans l\'appli (écran Suivi).</p>';
     } else {
-        html += '<table class="records"><tr><th>Date</th><th>Configuration</th><th>Score</th><th>Temps</th></tr>';
-        u.history.forEach(h => {
-            const d = new Date(h.date);
-            const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-            html += '<tr><td>' + dateStr + '</td><td>' + h.tablesLabel + '</td><td>' + h.score + '/' + h.total + '</td><td>' + h.temps + ' s</td></tr>';
-        });
-        html += '</table>';
+        html += '<p style="color:#999;">Aucune partie jouée pour l\'instant.</p>';
     }
     html += '</div>';
     return html;
