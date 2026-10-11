@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<!-- Sonic Quest du Matin — v3.1 — mis à jour le 27/09/2026
+     v3.1 : lien du Quiz Math Foot corrigé (quiz-math-foot-v8.html -> quiz-math-foot.html) pour le site GitHub Pages
+     v3.0 : 21/07/2026 -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Sonic Quest du Matin</title>
+<style>
+  :root{
+    --bleu: #0a84ff;
+    --bleu-fonce: #063a73;
+    --or: #ffd23f;
+    --rouge-ninja: #d7263d;
+    --vert-ninja: #1fae59;
+    --fond1: #0b1030;
+    --fond2: #161b4d;
+    --carte: #1c2255;
+    --carte-done: #123a24;
+    --texte: #f4f6ff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Segoe UI", Verdana, Arial, sans-serif;
+    background: radial-gradient(circle at 20% 0%, var(--fond2), var(--fond1) 70%);
+    color:var(--texte);
+    min-height:100vh;
+    padding:14px;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  header{text-align:center;padding:14px 10px 10px;}
+  h1{
+    margin:0;font-size:1.7em;letter-spacing:1px;
+    background: linear-gradient(90deg, var(--or), var(--bleu));
+    -webkit-background-clip: text;background-clip:text;color:transparent;
+    text-shadow: 0 0 18px rgba(255,210,63,.25);
+  }
+  .sous-titre{opacity:.75;font-size:.9em;margin-top:4px;}
+  .barre-haut{
+    display:flex; justify-content:space-between; align-items:center;
+    background: linear-gradient(135deg, var(--bleu-fonce), #1a1150);
+    border:2px solid var(--bleu); border-radius:14px; padding:10px 14px; margin:12px 0;
+    flex-wrap:wrap; gap:6px;
+  }
+  .jour-badge{
+    font-weight:bold;background: var(--or);color:#2a1c00;
+    padding:5px 12px;border-radius:999px;font-size:.9em;
+    box-shadow:0 0 10px rgba(255,210,63,.5);
+  }
+  .rings{display:flex;align-items:center;gap:6px;font-weight:bold;}
+  .rings span.count{color:var(--or);font-size:1.1em;}
+  .reglages-btn, .historique-btn{
+    background:none;border:1px solid rgba(255,255,255,.3);color:var(--texte);
+    border-radius:10px;padding:6px 10px;font-size:.8em;cursor:pointer;
+  }
+  .progress-bar{
+    height:14px;border-radius:999px;background:rgba(255,255,255,.1);
+    overflow:hidden;margin:10px 0 18px;border:1px solid rgba(255,255,255,.2);
+  }
+  .progress-fill{
+    height:100%;background: linear-gradient(90deg, var(--vert-ninja), var(--or));
+    width:0%;transition: width .4s ease;
+  }
+  section.groupe{margin-bottom:22px;}
+  .groupe-titre{
+    font-size:1.05em;font-weight:bold;margin:0 0 10px 4px;
+    display:flex;align-items:center;gap:8px;color:var(--or);
+  }
+  .carte-tache{
+    background: var(--carte);border:2px solid rgba(255,255,255,.08);border-radius:16px;
+    padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;
+    cursor:pointer;transition: all .2s ease;position:relative;
+  }
+  .carte-tache:active{transform:scale(.97);}
+  .carte-tache.faite{background: var(--carte-done);border-color: var(--vert-ninja);}
+  .icone{font-size:1.9em;flex-shrink:0;width:44px;text-align:center;}
+  .contenu-tache{flex:1;}
+  .nom-tache{font-weight:bold;font-size:1.05em;}
+  .fait-par{font-size:.8em;opacity:.8;margin-top:2px;color:var(--or);}
+  .lien-quiz{color:var(--bleu);font-weight:bold;text-decoration:underline;opacity:1;}
+  .check{
+    width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
+    display:flex;align-items:center;justify-content:center;font-size:1.1em;flex-shrink:0;
+  }
+  .carte-tache.faite .check{background:var(--vert-ninja);border-color:var(--vert-ninja);}
+  .badge-partage{
+    position:absolute; top:-8px; right:10px;background:var(--rouge-ninja); color:#fff;
+    font-size:.65em; font-weight:bold;padding:3px 8px; border-radius:999px;
+    box-shadow:0 2px 6px rgba(0,0,0,.4);
+  }
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,6,25,.85);
+    display:none;align-items:center;justify-content:center;z-index:50; padding:20px;
+    overflow-y:auto;
+  }
+  .overlay.actif{display:flex;}
+  .modale{
+    background:var(--fond2); border:2px solid var(--or);border-radius:18px;
+    padding:22px; max-width:400px; width:100%;text-align:center;
+    max-height:88vh; overflow-y:auto;
+  }
+  .modale h3{margin-top:0;color:var(--or);}
+  .choix-perso{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center;}
+  .choix-perso button{
+    flex:1; min-width:110px;background:var(--bleu-fonce); border:2px solid var(--bleu);
+    color:var(--texte); padding:12px 8px; border-radius:12px;font-weight:bold; font-size:.95em; cursor:pointer;
+  }
+  .choix-perso button.suggere{border-color:var(--or); box-shadow:0 0 12px rgba(255,210,63,.5);}
+  .suggestion-txt{font-size:.8em;opacity:.75;margin-top:10px;}
+  .modale input[type=text]{
+    width:100%; padding:10px; margin:6px 0; border-radius:10px;
+    border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08);
+    color:var(--texte); font-size:1em; text-align:center;
+  }
+  .fermer-btn{
+    margin-top:10px; background:none; border:none; color:rgba(255,255,255,.5);
+    cursor:pointer; font-size:.85em; text-decoration:underline;
+  }
+  .zone-bonus-titre{color:var(--or);font-weight:bold;margin:0 0 10px 4px;}
+  .recompenses{display:flex; gap:10px; flex-wrap:wrap;}
+  .carte-recompense{
+    flex:1; min-width:150px; border-radius:16px; padding:16px 10px; text-align:center;
+    border:2px dashed rgba(255,255,255,.25);
+  }
+  .carte-recompense.verrouille{background:rgba(255,255,255,.03);}
+  .carte-recompense.deverrouille{
+    background: linear-gradient(135deg, #142b52, #1a1150);
+    border:2px solid var(--or); animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 10px rgba(255,210,63,.3);}
+    50%{box-shadow:0 0 26px rgba(255,210,63,.7);}
+  }
+  .carte-recompense .gros-emoji{font-size:2.2em;}
+  .carte-recompense h4{margin:6px 0 2px;font-size:.95em;}
+  .carte-recompense p{margin:0;opacity:.85;font-size:.75em;}
+  .message-motiv{text-align:center; font-size:.95em; opacity:.9; margin:10px 0 4px;min-height:20px;}
+  footer{text-align:center; opacity:.4; font-size:.75em; margin-top:26px;}
+  .liste-participants{list-style:none;padding:0;margin:10px 0;text-align:left;}
+  .liste-participants li{
+    display:flex;justify-content:space-between;align-items:center;
+    background:rgba(255,255,255,.06);padding:8px 12px;border-radius:10px;margin-bottom:6px;
+  }
+  .liste-participants button{
+    background:var(--rouge-ninja);border:none;color:#fff;border-radius:8px;
+    padding:4px 10px;cursor:pointer;font-size:.8em;
+  }
+  .ajout-participant{display:flex;gap:6px;margin-top:8px;}
+  .ajout-participant input{flex:1;margin:0;}
+  .ajout-participant button{
+    background:var(--vert-ninja);border:none;color:#fff;border-radius:10px;
+    padding:0 14px;cursor:pointer;font-weight:bold;
+  }
+  .historique-liste{list-style:none;padding:0;margin:10px 0;text-align:left;max-height:300px;overflow-y:auto;}
+  .historique-liste li{
+    background:rgba(255,255,255,.05);padding:8px 12px;border-radius:10px;margin-bottom:6px;font-size:.85em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>⚡ Sonic Quest du Matin 🥷</h1>
+    <div class="sous-titre">Chaque tâche accomplie rapporte des anneaux dorés !</div>
+  </header>
+
+  <div class="barre-haut">
+    <div class="jour-badge" id="jourBadge">Jour 1</div>
+    <div class="rings">💍 <span class="count" id="ringsCount">0</span>/<span id="totalCount">9</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="historique-btn" id="btnHistorique">📜 Historique</button>
+      <button class="reglages-btn" id="btnReglages">⚙️ Joueurs</button>
+      <button class="reglages-btn" id="btnTaches">🗂️ Tâches</button>
+    </div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="message-motiv" id="messageMotiv"></div>
+
+  <section class="groupe">
+    <div class="groupe-titre">🍳 Après le petit-déjeuner</div>
+    <div id="groupeMatin"></div>
+  </section>
+
+  <section class="groupe">
+    <div class="groupe-titre">🧩 Mes autres missions</div>
+    <div id="groupeSuite"></div>
+  </section>
+
+  <section class="groupe">
+    <div class="zone-bonus-titre">🎁 Récompenses possibles</div>
+    <div class="recompenses" id="zoneRecompenses"></div>
+  </section>
+
+  <footer>Sonic Quest du Matin — v3.1</footer>
+</div>
+
+<!-- Modale : qui a fait la tâche partagée -->
+<div class="overlay" id="overlayPartage">
+  <div class="modale">
+    <h3 id="titrePartage">Qui a relevé le défi ?</h3>
+    <div class="choix-perso" id="choixPersoContainer"></div>
+    <div class="suggestion-txt" id="suggestionTxt"></div>
+    <div><button class="fermer-btn" id="fermerPartage">Annuler</button></div>
+  </div>
+</div>
+
+<!-- Modale : réglages des participants -->
+<div class="overlay" id="overlayReglages">
+  <div class="modale">
+    <h3>⚙️ Participants aux tâches</h3>
+    <ul class="liste-participants" id="listeParticipants"></ul>
+    <div class="ajout-participant">
+      <input type="text" id="inputNouveauParticipant" placeholder="Ajouter un prénom" maxlength="16">
+      <button id="btnAjouterParticipant">Ajouter</button>
+    </div>
+    <div><button class="fermer-btn" id="fermerReglages">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Modale : historique -->
+<div class="overlay" id="overlayHistorique">
+  <div class="modale">
+    <h3>📜 Qui a fait quoi, et quand</h3>
+    <ul class="historique-liste" id="listeHistorique"></ul>
+    <div><button class="fermer-btn" id="fermerHistorique">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Modale : gestion des tâches -->
+<div class="overlay" id="overlayTaches">
+  <div class="modale">
+    <h3>🗂️ Gérer les tâches</h3>
+    <div style="text-align:left;font-weight:bold;color:var(--or);margin-top:6px;">🍳 Après le petit-déjeuner</div>
+    <ul class="liste-participants" id="listeTachesMatin"></ul>
+    <div style="text-align:left;font-weight:bold;color:var(--or);margin-top:10px;">🧩 Autres missions</div>
+    <ul class="liste-participants" id="listeTachesSuite"></ul>
+
+    <div style="text-align:left;margin-top:14px;font-weight:bold;color:var(--or);">➕ Ajouter une tâche</div>
+    <input type="text" id="inputNouvelleTache" placeholder="Nom de la tâche" maxlength="60">
+    <input type="text" id="inputIconeTache" placeholder="Emoji (optionnel, ex: 🧦)" maxlength="4">
+    <select id="selectGroupeTache" style="width:100%;padding:10px;margin:6px 0;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:var(--texte);font-size:1em;">
+      <option value="matin">Après le petit-déjeuner</option>
+      <option value="suite" selected>Autres missions</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:8px;justify-content:center;font-size:.9em;margin-top:4px;">
+      <input type="checkbox" id="checkTachePartagee" style="width:auto;margin:0;">
+      Tâche partagée (tour de rôle entre participants)
+    </label>
+    <div><button class="valider-btn" id="btnAjouterTache" style="margin-top:14px;background:var(--vert-ninja);border:none;color:#fff;padding:10px 22px;border-radius:12px;font-weight:bold;cursor:pointer;font-size:1em;">Ajouter la tâche</button></div>
+    <div><button class="fermer-btn" id="fermerTaches">Fermer</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const TACHES_PAR_DEFAUT = [
+    {id:"table", icone:"🍽️", nom:"Débarrasser et nettoyer la table du petit-déj", groupe:"matin"},
+    {id:"rangervaisselle", icone:"🧽", nom:"Ranger la vaisselle", groupe:"matin", partage:true},
+    {id:"fairevaisselle", icone:"🫧", nom:"Faire la vaisselle", groupe:"matin", partage:true},
+    {id:"douche", icone:"🚿", nom:"Douche", groupe:"matin"},
+    {id:"lit", icone:"🛏️", nom:"Faire son lit", groupe:"suite"},
+    {id:"cahier", icone:"📘", nom:"Cahier d'activités (1h)", groupe:"suite"},
+    {id:"lecture", icone:"📖", nom:"Lecture (1h)", groupe:"suite"},
+    {id:"jouets", icone:"🧸", nom:"Mission Sauvetage des Jouets (tout ranger !)", groupe:"suite"},
+    {id:"quizdujour", groupe:"suite", quizJour:true}
+  ];
+
+  // Les 2 vrais outils de quiz de Fred, alternés chaque jour (pas les quiz maison précédents)
+  // v3.1 : noms de fichiers alignés sur le site GitHub Pages (tous les fichiers à la racine)
+  const QUIZ_VARIANTS = [
+    {icone:"⚽", nom:"Quiz Math Foot", fichier:"quiz-math-foot.html"},
+    {icone:"🧩", nom:"Résolution de problèmes CM1", fichier:"resolution_problemes_cm1.html"}
+  ];
+  function quizDuJour(numeroJour){
+    return QUIZ_VARIANTS[(numeroJour - 1) % QUIZ_VARIANTS.length];
+  }
+
+  let taches = [];
+  let participants = ["Joueur 1", "Joueur 2"];
+  let dayCount = 1;
+  let historique = [];
+  let todayStr = "";
+  let etatJour = null;
+  let tachePartageEnCours = null;
+
+  function dateDuJour(){
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function dateAffichage(iso){
+    const [y,m,d] = iso.split("-");
+    return d + "/" + m + "/" + y;
+  }
+
+  // Stockage local au navigateur : ce fichier est ouvert directement (tablette/PC),
+  // pas forcément dans l'interface Claude, donc on utilise localStorage plutôt que
+  // le stockage propre aux artefacts Claude (qui échouait sur cet appareil).
+  function storageGet(key){
+    try{
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : null;
+    }catch(e){
+      console.error("Lecture impossible", key, e);
+      return null;
+    }
+  }
+  function storageSet(key, value){
+    try{
+      localStorage.setItem(key, JSON.stringify(value));
+    }catch(e){
+      console.error("Erreur de sauvegarde", key, e);
+    }
+  }
+
+  function creerEtatVide(){
+    const tacheState = {};
+    const doneBy = {};
+    taches.forEach(t=>{
+      tacheState[t.id]=false;
+      if(t.partage) doneBy[t.id]=null;
+    });
+    return {date: todayStr, tasks: tacheState, doneBy: doneBy};
+  }
+
+  function synchroniserEtatAvecTaches(){
+    if(!etatJour) return;
+    taches.forEach(t=>{
+      if(!(t.id in etatJour.tasks)) etatJour.tasks[t.id] = false;
+      if(t.partage && !(t.id in etatJour.doneBy)) etatJour.doneBy[t.id] = null;
+    });
+  }
+
+  function init(){
+    todayStr = dateDuJour();
+
+    const t = storageGet("sq_taches");
+    if(t && Array.isArray(t) && t.length>0) taches = t;
+    else { taches = TACHES_PAR_DEFAUT; storageSet("sq_taches", taches); }
+    document.getElementById("totalCount").textContent = taches.length;
+
+    const p = storageGet("sq_participants");
+    if(p && Array.isArray(p) && p.length>0) participants = p;
+    else storageSet("sq_participants", participants);
+
+    const h = storageGet("sq_historique");
+    if(h && Array.isArray(h)) historique = h;
+
+    const jourExistant = storageGet("sq_day_" + todayStr);
+    if(jourExistant){
+      etatJour = jourExistant;
+      const dc = storageGet("sq_dayCount_valeur_" + todayStr);
+      if(dc) dayCount = dc;
+      synchroniserEtatAvecTaches();
+    } else {
+      const dcPrecedent = storageGet("sq_dayCount");
+      dayCount = dcPrecedent ? dcPrecedent + 1 : 1;
+      storageSet("sq_dayCount", dayCount);
+      storageSet("sq_dayCount_valeur_" + todayStr, dayCount);
+      etatJour = creerEtatVide();
+      storageSet("sq_day_" + todayStr, etatJour);
+    }
+
+    document.getElementById("jourBadge").textContent = "Jour " + dayCount;
+    render();
+  }
+
+  function render(){
+    document.getElementById("totalCount").textContent = taches.length;
+    renderGroupe("groupeMatin", taches.filter(t=>t.groupe==="matin"));
+    renderGroupe("groupeSuite", taches.filter(t=>t.groupe==="suite"));
+    renderProgress();
+    renderRecompenses();
+  }
+
+  function renderGroupe(idConteneur, liste){
+    const conteneur = document.getElementById(idConteneur);
+    conteneur.innerHTML = "";
+    liste.forEach(t=>{
+      const fait = etatJour.tasks[t.id];
+      const div = document.createElement("div");
+      div.className = "carte-tache" + (fait ? " faite" : "");
+
+      if(t.quizJour){
+        const q = quizDuJour(dayCount);
+        div.innerHTML = `
+          <div class="icone">${q.icone}</div>
+          <div class="contenu-tache">
+            <div class="nom-tache">${q.nom}</div>
+            <div class="fait-par">
+              <a href="${q.fichier}" target="_blank" class="lien-quiz" onclick="event.stopPropagation();">▶️ Ouvrir le quiz</a>
+            </div>
+          </div>
+          <div class="check">${fait ? "✔" : ""}</div>
+        `;
+        div.onclick = () => onTapTache(t);
+        conteneur.appendChild(div);
+        return;
+      }
+
+      let faitParHtml = "";
+      if(t.partage){
+        const nomFait = etatJour.doneBy[t.id];
+        faitParHtml = `<div class="fait-par">${fait ? "✅ Fait par " + nomFait : "À tour de rôle 🔄"}</div>`;
+      }
+      div.innerHTML = `
+        ${t.partage ? '<div class="badge-partage">TOUR DE RÔLE</div>' : ''}
+        <div class="icone">${t.icone}</div>
+        <div class="contenu-tache">
+          <div class="nom-tache">${t.nom}</div>
+          ${faitParHtml}
+        </div>
+        <div class="check">${fait ? "✔" : ""}</div>
+      `;
+      div.onclick = () => onTapTache(t);
+      conteneur.appendChild(div);
+    });
+  }
+
+  function onTapTache(t){
+    if(t.partage){
+      if(etatJour.tasks[t.id]){
+        etatJour.tasks[t.id] = false;
+        etatJour.doneBy[t.id] = null;
+        sauverJourEtRender();
+      } else {
+        ouvrirModalePartage(t);
+      }
+    } else {
+      etatJour.tasks[t.id] = !etatJour.tasks[t.id];
+      sauverJourEtRender();
+    }
+  }
+
+  // --- Tâches partagées : mémoire qui/quand ---
+  function dernierePersonnePour(taskId){
+    const entrees = historique.filter(e => e.taskId === taskId);
+    if(entrees.length===0) return null;
+    entrees.sort((a,b)=> a.date < b.date ? 1 : -1);
+    return entrees[0].person;
+  }
+  function dateDerniereFoisPour(taskId, personne){
+    const entrees = historique.filter(e => e.taskId === taskId && e.person === personne);
+    if(entrees.length===0) return null;
+    entrees.sort((a,b)=> a.date < b.date ? 1 : -1);
+    return entrees[0].date;
+  }
+
+  function ouvrirModalePartage(t){
+    tachePartageEnCours = t;
+    document.getElementById("titrePartage").textContent = "Qui a fait : " + t.nom + " ?";
+
+    const dernier = dernierePersonnePour(t.id);
+    // suggestion = participant qui ne l'a pas fait depuis le plus longtemps (ou jamais)
+    const tries = [...participants].sort((a,b)=>{
+      const da = dateDerniereFoisPour(t.id, a);
+      const db = dateDerniereFoisPour(t.id, b);
+      if(da===null && db===null) return 0;
+      if(da===null) return -1;
+      if(db===null) return 1;
+      return da < db ? -1 : (da > db ? 1 : 0);
+    });
+    const suggere = tries[0];
+
+    const container = document.getElementById("choixPersoContainer");
+    container.innerHTML = "";
+    participants.forEach(p=>{
+      const btn = document.createElement("button");
+      btn.textContent = "🥷 " + p;
+      if(p === suggere) btn.classList.add("suggere");
+      btn.onclick = () => choisirPersonnePartage(p);
+      container.appendChild(btn);
+    });
+
+    const suggTxt = document.getElementById("suggestionTxt");
+    if(dernier && suggere){
+      suggTxt.textContent = "💡 La dernière fois c'était " + dernier + ", ça pourrait être le tour de " + suggere + " !";
+    } else if(suggere){
+      suggTxt.textContent = "💡 Première fois pour cette tâche, à toi de choisir !";
+    } else {
+      suggTxt.textContent = "";
+    }
+
+    document.getElementById("overlayPartage").classList.add("actif");
+  }
+
+  function choisirPersonnePartage(personne){
+    const t = tachePartageEnCours;
+    if(!t) return;
+    etatJour.tasks[t.id] = true;
+    etatJour.doneBy[t.id] = personne;
+    historique.unshift({date: todayStr, taskId: t.id, taskName: t.nom, person: personne});
+    storageSet("sq_historique", historique);
+    document.getElementById("overlayPartage").classList.remove("actif");
+    sauverJourEtRender();
+  }
+
+  function sauverJourEtRender(){
+    storageSet("sq_day_" + todayStr, etatJour);
+    render();
+  }
+
+  function renderProgress(){
+    const total = taches.length;
+    const faites = taches.filter(t=>etatJour.tasks[t.id]).length;
+    document.getElementById("ringsCount").textContent = faites;
+    document.getElementById("progressFill").style.width = (total>0 ? (faites/total*100) : 0) + "%";
+
+    const msg = document.getElementById("messageMotiv");
+    if(total===0) msg.textContent = "Ajoute des tâches avec 🗂️ Tâches pour commencer !";
+    else if(faites === total) msg.textContent = "🏆 Mission du jour terminée à 100% !";
+    else if(faites === 0) msg.textContent = "🚀 Prêt à foncer comme Sonic ce matin ?";
+    else if(faites < total/2) msg.textContent = "💪 Bon départ, continue comme ça !";
+    else msg.textContent = "🥷 Plus que quelques missions, tu y es presque !";
+  }
+
+  function renderRecompenses(){
+    const total = taches.length;
+    const faites = taches.filter(t=>etatJour.tasks[t.id]).length;
+    const debloque = total>0 && faites === total;
+    const RECOMPENSES = [
+      {emoji:"🎮", nom:"PS4", desc:"selon accord des parents"},
+      {emoji:"📺", nom:"Dessin animé", desc:"un épisode au choix"},
+      {emoji:"🎬", nom:"Film", desc:"séance ciné maison"}
+    ];
+    const zone = document.getElementById("zoneRecompenses");
+    zone.innerHTML = "";
+    RECOMPENSES.forEach(r=>{
+      const div = document.createElement("div");
+      div.className = "carte-recompense " + (debloque ? "deverrouille" : "verrouille");
+      div.innerHTML = `
+        <div class="gros-emoji">${debloque ? r.emoji : "🔒"}</div>
+        <h4>${r.nom}</h4>
+        <p>${debloque ? "Débloqué ! (" + r.desc + ")" : "Termine toutes les missions"}</p>
+      `;
+      zone.appendChild(div);
+    });
+  }
+
+  // --- Réglages participants ---
+  function renderListeParticipants(){
+    const ul = document.getElementById("listeParticipants");
+    ul.innerHTML = "";
+    participants.forEach((p, idx)=>{
+      const li = document.createElement("li");
+      li.innerHTML = `<span>🥷 ${p}</span>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Retirer";
+      btn.onclick = () => {
+        if(participants.length <= 1) return;
+        participants.splice(idx,1);
+        storageSet("sq_participants", participants);
+        renderListeParticipants();
+        render();
+      };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+  }
+
+  document.getElementById("btnReglages").onclick = () => {
+    renderListeParticipants();
+    document.getElementById("overlayReglages").classList.add("actif");
+  };
+  document.getElementById("fermerReglages").onclick = () => {
+    document.getElementById("overlayReglages").classList.remove("actif");
+  };
+  document.getElementById("btnAjouterParticipant").onclick = () => {
+    const input = document.getElementById("inputNouveauParticipant");
+    const val = input.value.trim();
+    if(val && !participants.includes(val)){
+      participants.push(val);
+      storageSet("sq_participants", participants);
+      input.value = "";
+      renderListeParticipants();
+      render();
+    }
+  };
+
+  // --- Historique ---
+  document.getElementById("btnHistorique").onclick = () => {
+    const ul = document.getElementById("listeHistorique");
+    ul.innerHTML = "";
+    if(historique.length === 0){
+      ul.innerHTML = "<li>Aucune tâche partagée enregistrée pour l'instant.</li>";
+    } else {
+      historique.slice(0,30).forEach(e=>{
+        const li = document.createElement("li");
+        li.textContent = dateAffichage(e.date) + " — " + e.taskName + " — " + e.person;
+        ul.appendChild(li);
+      });
+    }
+    document.getElementById("overlayHistorique").classList.add("actif");
+  };
+  document.getElementById("fermerHistorique").onclick = () => {
+    document.getElementById("overlayHistorique").classList.remove("actif");
+  };
+
+  document.getElementById("fermerPartage").onclick = () => {
+    document.getElementById("overlayPartage").classList.remove("actif");
+    tachePartageEnCours = null;
+  };
+
+  // --- Gestion des tâches (ajout / suppression) ---
+  function slugifier(texte){
+    return "t_" + texte.toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g,"")
+      .replace(/[^a-z0-9]+/g,"")
+      .slice(0,20) + "_" + Date.now();
+  }
+
+  function renderListeTaches(){
+    const ulMatin = document.getElementById("listeTachesMatin");
+    const ulSuite = document.getElementById("listeTachesSuite");
+    ulMatin.innerHTML = "";
+    ulSuite.innerHTML = "";
+    taches.forEach(t=>{
+      const ul = t.groupe === "matin" ? ulMatin : ulSuite;
+      const li = document.createElement("li");
+      const nomAffiche = t.quizJour ? "🧠 Quiz du jour (alterné automatiquement)" : (t.icone + " " + t.nom + (t.partage ? " 🔄" : ""));
+      li.innerHTML = `<span>${nomAffiche}</span>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Retirer";
+      btn.onclick = () => {
+        taches = taches.filter(x => x.id !== t.id);
+        storageSet("sq_taches", taches);
+        renderListeTaches();
+        render();
+      };
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    if(taches.filter(t=>t.groupe==="matin").length===0) ulMatin.innerHTML = "<li>Aucune tâche.</li>";
+    if(taches.filter(t=>t.groupe==="suite").length===0) ulSuite.innerHTML = "<li>Aucune tâche.</li>";
+  }
+
+  document.getElementById("btnTaches").onclick = () => {
+    renderListeTaches();
+    document.getElementById("overlayTaches").classList.add("actif");
+  };
+  document.getElementById("fermerTaches").onclick = () => {
+    document.getElementById("overlayTaches").classList.remove("actif");
+  };
+  document.getElementById("btnAjouterTache").onclick = () => {
+    const inputNom = document.getElementById("inputNouvelleTache");
+    const inputIcone = document.getElementById("inputIconeTache");
+    const selectGroupe = document.getElementById("selectGroupeTache");
+    const checkPartagee = document.getElementById("checkTachePartagee");
+
+    const nom = inputNom.value.trim();
+    if(!nom) return;
+    const icone = inputIcone.value.trim() || "📌";
+    const groupe = selectGroupe.value;
+    const partage = checkPartagee.checked;
+
+    const nouvelleTache = {id: slugifier(nom), icone: icone, nom: nom, groupe: groupe};
+    if(partage) nouvelleTache.partage = true;
+
+    taches.push(nouvelleTache);
+    storageSet("sq_taches", taches);
+
+    etatJour.tasks[nouvelleTache.id] = false;
+    if(partage) etatJour.doneBy[nouvelleTache.id] = null;
+    storageSet("sq_day_" + todayStr, etatJour);
+
+    inputNom.value = "";
+    inputIcone.value = "";
+    checkPartagee.checked = false;
+
+    renderListeTaches();
+    render();
+  };
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Level Up Zone</title>
+<!--
+  HISTORIQUE DES VERSIONS
+  | Version | Date       | Modifications                                                    |
+  |---------|------------|-------------------------------------------------------------------|
+  | 1.0     | 2026-07-21 | Création initiale : 2 chapitres de tâches, système de jour,       |
+  |         |            | XP/Niveau, streak, tâche partagée (vaisselle), bonus PS4          |
+  | 1.1     | 2026-07-21 | Sauvegarde robuste avec réessais (stockage plateforme)            |
+  | 1.2     | 2026-07-21 | Passage à localStorage (fiable en fichier autonome) + color-scheme|
+  | 1.3     | 2026-07-21 | XP recalculé depuis l'état des cases (fin de la dérive possible)  |
+  | 1.4     | 2026-07-21 | Ajout bouton "Réinitialiser TOUT" (XP compris, réservé aux tests) |
+  | 1.5     | 2026-07-21 | Participants nommés, sélecteur "qui a fait ?" sur tâches         |
+  |         |            | partagées avec horodatage, historique consultable, 2e récompense |
+  |         |            | (dessin animé / film) en plus de la PS4                          |
+-->
+<style>
+  :root{
+    color-scheme: dark;
+    --bg1:#0b0713;
+    --bg2:#150a24;
+    --purple:#8b5cf6;
+    --purple-glow:#a855f7;
+    --orange:#ff7a18;
+    --red:#ef233c;
+    --green:#22c55e;
+    --card:#1a1030;
+    --card-border:#2e1b4d;
+    --text:#f1e9ff;
+    --text-dim:#a99bc7;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(139,92,246,0.25), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(239,35,60,0.2), transparent 45%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+    color:var(--text);
+    min-height:100vh;
+    padding:20px 14px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  header{text-align:center;margin-bottom:18px;}
+  .logo{
+    font-size:2.1rem;
+    font-weight:900;
+    letter-spacing:1px;
+    background:linear-gradient(90deg,var(--orange),var(--purple-glow),var(--red));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 30px rgba(168,85,247,0.35);
+    margin:0;
+  }
+  .subtitle{color:var(--text-dim);font-size:.85rem;margin-top:4px;}
+  .datebar{
+    display:flex;justify-content:center;gap:18px;flex-wrap:wrap;
+    margin:14px 0 20px;font-size:.85rem;color:var(--text-dim);
+  }
+  .datebar b{color:var(--text);}
+
+  .statuspanel{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:14px 16px;
+    margin-bottom:20px;
+    box-shadow:0 0 25px rgba(139,92,246,0.12);
+  }
+  .statusrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:.85rem;}
+  .lvlbadge{
+    background:linear-gradient(90deg,var(--purple),var(--red));
+    padding:3px 10px;border-radius:20px;font-weight:700;font-size:.8rem;
+  }
+  .streak{color:var(--orange);font-weight:700;}
+  .xpbar-outer{
+    background:#0e0620;border:1px solid var(--card-border);
+    border-radius:10px;height:14px;overflow:hidden;
+  }
+  .xpbar-inner{
+    height:100%;
+    background:linear-gradient(90deg,var(--purple),var(--purple-glow));
+    width:0%;
+    transition:width .4s ease;
+  }
+
+  .progresspanel{margin-bottom:22px;}
+  .progresslabel{display:flex;justify-content:space-between;font-size:.8rem;color:var(--text-dim);margin-bottom:6px;}
+  .progress-outer{
+    background:#0e0620;border:1px solid var(--card-border);
+    border-radius:14px;height:20px;overflow:hidden;
+  }
+  .progress-inner{
+    height:100%;
+    background:linear-gradient(90deg,var(--orange),var(--red));
+    width:0%;
+    transition:width .5s ease;
+    box-shadow:0 0 12px rgba(255,122,24,.5);
+  }
+
+  .chapter{margin-bottom:24px;}
+  .chapter-title{
+    display:flex;align-items:center;gap:8px;
+    font-size:1rem;font-weight:800;
+    margin-bottom:10px;
+    color:var(--text);
+    text-transform:uppercase;letter-spacing:.5px;
+  }
+  .chapter-tag{
+    font-size:.65rem;font-weight:700;
+    background:var(--card-border);
+    padding:2px 8px;border-radius:8px;
+    color:var(--text-dim);
+  }
+
+  .task{
+    display:flex;align-items:center;gap:12px;
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:14px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    cursor:pointer;
+    transition:transform .15s ease, border-color .2s ease, background .2s ease;
+    user-select:none;
+  }
+  .task:active{transform:scale(0.98);}
+  .task.done{
+    border-color:var(--green);
+    background:linear-gradient(90deg, rgba(34,197,94,0.12), var(--card));
+  }
+  .checkbox{
+    width:28px;height:28px;min-width:28px;
+    border-radius:8px;
+    border:2px solid var(--card-border);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1rem;
+    transition:all .2s ease;
+  }
+  .task.done .checkbox{
+    background:var(--green);border-color:var(--green);
+    box-shadow:0 0 10px rgba(34,197,94,.6);
+  }
+  .task-texts{flex:1;}
+  .task-label{
+    font-weight:700;font-size:.92rem;
+    text-decoration:none;
+  }
+  .task.done .task-label{color:var(--text-dim);text-decoration:line-through;}
+  .task-flavor{font-size:.78rem;color:var(--text-dim);margin-top:2px;}
+  .shared-tag{
+    display:inline-block;
+    font-size:.65rem;font-weight:700;
+    background:rgba(139,92,246,.25);
+    color:#d8c8ff;
+    border:1px solid rgba(139,92,246,.5);
+    padding:1px 7px;border-radius:8px;
+    margin-left:6px;
+  }
+
+  .reward{
+    display:none;
+    text-align:center;
+    background:linear-gradient(135deg, rgba(255,122,24,.18), rgba(139,92,246,.18));
+    border:1px solid var(--orange);
+    border-radius:16px;
+    padding:18px;
+    margin:20px 0;
+    animation:pulseglow 2s infinite;
+  }
+  .reward.show{display:block;}
+  @keyframes pulseglow{
+    0%,100%{box-shadow:0 0 15px rgba(255,122,24,.3);}
+    50%{box-shadow:0 0 30px rgba(255,122,24,.6);}
+  }
+  .reward-title{font-size:1.1rem;font-weight:900;color:#ffd28a;margin-bottom:4px;}
+  .reward-sub{font-size:.8rem;color:var(--text-dim);}
+
+  footer{
+    text-align:center;margin-top:30px;
+    font-size:.7rem;color:var(--text-dim);
+    opacity:.6;
+  }
+  .resetbtn{
+    display:block;margin:18px auto 0;
+    background:none;border:1px solid var(--card-border);
+    color:var(--text-dim);font-size:.7rem;
+    padding:6px 12px;border-radius:10px;
+    cursor:pointer;
+  }
+  .participants-panel{
+    background:var(--card);
+    border:1px solid var(--card-border);
+    border-radius:16px;
+    padding:14px 16px;
+    margin-bottom:20px;
+  }
+  .participants-title{font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .chip{
+    display:flex;align-items:center;gap:6px;
+    background:linear-gradient(90deg, rgba(139,92,246,.25), rgba(239,35,60,.15));
+    border:1px solid var(--card-border);
+    padding:5px 10px;border-radius:20px;
+    font-size:.8rem;font-weight:600;
+  }
+  .chip button{
+    background:none;border:none;color:var(--text-dim);
+    cursor:pointer;font-size:.9rem;line-height:1;padding:0;
+  }
+  .add-row{display:flex;gap:8px;}
+  .add-row input{
+    flex:1;background:#0e0620;border:1px solid var(--card-border);
+    border-radius:10px;padding:8px 10px;color:var(--text);font-size:.85rem;
+  }
+  .add-row button{
+    background:linear-gradient(90deg,var(--purple),var(--purple-glow));
+    border:none;color:#fff;font-weight:700;font-size:.8rem;
+    padding:8px 14px;border-radius:10px;cursor:pointer;
+  }
+  .empty-hint{font-size:.75rem;color:var(--text-dim);}
+
+  .picker{
+    background:var(--card);
+    border:1px solid var(--purple);
+    border-radius:14px;
+    padding:12px 14px;
+    margin-bottom:10px;
+  }
+  .picker-label{font-size:.8rem;color:var(--text-dim);margin-bottom:8px;}
+  .picker-btns{display:flex;flex-wrap:wrap;gap:8px;}
+  .picker-name{
+    background:linear-gradient(90deg,var(--purple),var(--purple-glow));
+    border:none;color:#fff;font-weight:700;font-size:.8rem;
+    padding:7px 14px;border-radius:20px;cursor:pointer;
+  }
+  .picker-cancel{
+    background:none;border:1px solid var(--card-border);
+    color:var(--text-dim);font-size:.8rem;
+    padding:7px 14px;border-radius:20px;cursor:pointer;
+  }
+
+  .history-panel{margin:20px 0;}
+  .history-toggle{
+    width:100%;text-align:left;
+    background:var(--card);border:1px solid var(--card-border);
+    color:var(--text);font-weight:700;font-size:.85rem;
+    padding:12px 14px;border-radius:14px;cursor:pointer;
+  }
+  .history-list{margin-top:8px;}
+  .history-item{
+    display:flex;justify-content:space-between;gap:10px;
+    font-size:.78rem;color:var(--text-dim);
+    padding:8px 12px;border-bottom:1px solid var(--card-border);
+  }
+  .history-item b{color:var(--text);}
+  .history-empty{font-size:.78rem;color:var(--text-dim);padding:8px 12px;}
+
+  .rewards-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:12px;
+    margin:20px 0;
+  }
+  @media (max-width:420px){ .rewards-grid{grid-template-columns:1fr;} }
+  .reward-card{
+    display:none;
+    text-align:center;
+    background:linear-gradient(135deg, rgba(255,122,24,.18), rgba(139,92,246,.18));
+    border:1px solid var(--orange);
+    border-radius:16px;
+    padding:16px 12px;
+    animation:pulseglow 2s infinite;
+  }
+  .reward-card.show{display:block;}
+  .reward-card-title{font-size:1rem;font-weight:900;color:#ffd28a;margin-bottom:4px;}
+  .reward-card-sub{font-size:.72rem;color:var(--text-dim);}
+
+  .loading{text-align:center;color:var(--text-dim);padding:40px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="logo">⚡ LEVEL UP ZONE ⚡</p>
+    <p class="subtitle">Ta routine du jour. Accomplis tes missions, gagne de l'XP.</p>
+  </header>
+
+  <div class="datebar">
+    <span>📅 <b id="today-label">—</b></span>
+    <span>🔥 <b id="streak-label">0</b> jours de suite</span>
+  </div>
+
+  <div id="storage-indicator" style="display:none;font-size:.72rem;text-align:center;color:#ffb4b4;background:rgba(239,35,60,.12);border:1px solid rgba(239,35,60,.4);border-radius:10px;padding:6px 10px;margin-bottom:14px;">
+    ⚠️ Ton navigateur bloque la sauvegarde locale (souvent en navigation privée) — la progression fonctionne mais ne sera pas gardée si tu fermes la page.
+  </div>
+
+  <div class="participants-panel" id="participants-panel"></div>
+
+  <div id="app">
+    <div class="loading">Chargement de ta progression…</div>
+  </div>
+
+  <footer>Level Up Zone v1.5 — progression sauvegardée automatiquement</footer>
+</div>
+
+<script>
+const STORAGE_KEY = 'levelupzone:progress';
+
+const TASKS = [
+  {id:'debarrasser', group:1, label:'Débarrasser et nettoyer la table du petit-déjeuner', flavor:'Nettoyage de la zone de combat 🍽️'},
+  {id:'ranger_vaisselle', group:1, label:'Ranger la vaisselle', flavor:'Rangement de l\'arsenal 🥢', shared:true},
+  {id:'faire_vaisselle', group:1, label:'Faire la vaisselle', flavor:'Mission duo — purification 💧', shared:true},
+  {id:'douche', group:1, label:'Douche', flavor:'Recharge d\'énergie ⚡'},
+  {id:'lit', group:2, label:'Faire son lit', flavor:'Sceller la base 🛏️'},
+  {id:'cahier', group:2, label:'Cahier d\'activités (1h)', flavor:'Entraînement académique 📘'},
+  {id:'lecture', group:2, label:'Lecture (1h)', flavor:'Bibliothèque des missions 📖'},
+  {id:'jouets', group:2, label:'Rangement des jouets', flavor:'Fermeture de la base secrète 🎮'},
+  {id:'plastique', group:2, label:'Jeter le plastique', flavor:'Mission recyclage ♻️'},
+];
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function prettyDate(){
+  const d = new Date();
+  return d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+}
+
+let record = null;
+let storageOK = true;
+let pendingPick = null;
+let historyOpen = false;
+
+function readStorage(key){
+  try{
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){
+    console.error('Lecture impossible', e);
+    return null;
+  }
+}
+
+function writeStorage(key, valueObj){
+  try{
+    localStorage.setItem(key, JSON.stringify(valueObj));
+    storageOK = true;
+  }catch(e){
+    // Cas typique : navigation privée, ou stockage désactivé par le navigateur.
+    storageOK = false;
+    console.error('Sauvegarde impossible', e);
+  }
+  updateStorageIndicator();
+}
+
+function updateStorageIndicator(){
+  const el = document.getElementById('storage-indicator');
+  if(!el) return;
+  el.style.display = storageOK ? 'none' : 'block';
+}
+
+async function loadRecord(){
+  const stored = readStorage(STORAGE_KEY);
+  const today = todayStr();
+
+  if(!stored){
+    record = { date: today, checks:{}, archivedXP:0, streak:0, participants:[], sharedLog:[] };
+  } else if(stored.date !== today){
+    const doneYesterday = TASKS.filter(t => stored.checks[t.id]).length;
+    const allDoneYesterday = doneYesterday === TASKS.length;
+    const priorArchived = stored.archivedXP !== undefined ? stored.archivedXP : (stored.totalXP || 0);
+    record = {
+      date: today,
+      checks: {},
+      archivedXP: priorArchived + doneYesterday*10,
+      streak: allDoneYesterday ? (stored.streak||0) + 1 : 0,
+      participants: stored.participants || [],
+      sharedLog: stored.sharedLog || []
+    };
+  } else if(stored.archivedXP === undefined){
+    // Migration depuis l'ancien format (totalXP cumulatif incrémental) :
+    // on retire la part déjà comptée aujourd'hui pour repartir sur des bases saines.
+    const doneToday = TASKS.filter(t => stored.checks[t.id]).length;
+    record = {
+      date: stored.date,
+      checks: stored.checks,
+      archivedXP: Math.max(0, (stored.totalXP || 0) - doneToday*10),
+      streak: stored.streak || 0,
+      participants: stored.participants || [],
+      sharedLog: stored.sharedLog || []
+    };
+  } else {
+    record = stored;
+    if(!record.participants) record.participants = [];
+    if(!record.sharedLog) record.sharedLog = [];
+  }
+  saveRecord();
+}
+
+function saveRecord(){
+  writeStorage(STORAGE_KEY, record);
+}
+
+function renderParticipants(){
+  const panel = document.getElementById('participants-panel');
+  const chipsHTML = record.participants.length
+    ? record.participants.map(name => `
+        <span class="chip">${name}<button data-name="${name}" class="remove-participant">✕</button></span>
+      `).join('')
+    : '<span class="empty-hint">Aucun participant pour l\'instant — ajoute des prénoms pour savoir qui fait quoi sur les tâches partagées.</span>';
+
+  panel.innerHTML = `
+    <div class="participants-title">👥 Participants aux tâches</div>
+    <div class="chips">${chipsHTML}</div>
+    <div class="add-row">
+      <input type="text" id="new-participant" placeholder="Prénom…" maxlength="20">
+      <button id="add-participant-btn">Ajouter</button>
+    </div>
+  `;
+
+  document.querySelectorAll('.remove-participant').forEach(btn => {
+    btn.addEventListener('click', () => removeParticipant(btn.dataset.name));
+  });
+  document.getElementById('add-participant-btn').addEventListener('click', addParticipantFromInput);
+  document.getElementById('new-participant').addEventListener('keydown', e => {
+    if(e.key === 'Enter') addParticipantFromInput();
+  });
+}
+
+function addParticipantFromInput(){
+  const input = document.getElementById('new-participant');
+  const name = input.value.trim();
+  if(!name) return;
+  if(record.participants.includes(name)){ input.value=''; return; }
+  record.participants.push(name);
+  saveRecord();
+  input.value = '';
+  renderParticipants();
+}
+
+function removeParticipant(name){
+  record.participants = record.participants.filter(n => n !== name);
+  saveRecord();
+  renderParticipants();
+}
+
+function formatWhen(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' à ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderHistoryHTML(){
+  const entries = [...record.sharedLog].sort((a,b) => b.ts.localeCompare(a.ts)).slice(0,15);
+  const list = entries.length
+    ? entries.map(e => {
+        const t = TASKS.find(x => x.id === e.taskId);
+        const label = t ? t.label : e.taskId;
+        return `<div class="history-item"><span>${label}</span><span><b>${e.name}</b> — ${formatWhen(e.ts)}</span></div>`;
+      }).join('')
+    : '<div class="history-empty">Pas encore d\'historique sur les tâches partagées.</div>';
+
+  return `
+    <div class="history-panel">
+      <button class="history-toggle" id="history-toggle">📜 Historique des tâches partagées (${record.sharedLog.length}) ${historyOpen?'▲':'▼'}</button>
+      ${historyOpen ? `<div class="history-list">${list}</div>` : ''}
+    </div>`;
+}
+
+function render(){
+  document.getElementById('today-label').textContent = prettyDate();
+  document.getElementById('streak-label').textContent = record.streak;
+
+  const doneCount = TASKS.filter(t => record.checks[t.id]).length;
+  const todayXP = doneCount * 10;
+  const totalXP = record.archivedXP + todayXP;
+  const level = Math.floor(totalXP/100) + 1;
+  const xpInLevel = totalXP % 100;
+  const pct = Math.round((doneCount/TASKS.length)*100);
+  const allDone = doneCount === TASKS.length;
+
+  const groups = [1,2].map(g => {
+    const items = TASKS.filter(t => t.group === g).map(t => {
+      const done = !!record.checks[t.id];
+
+      if(t.shared && pendingPick === t.id){
+        const names = record.participants.map(n => `<button class="picker-name" data-name="${n}">${n}</button>`).join('');
+        return `
+          <div class="picker">
+            <div class="picker-label">Qui a fait « ${t.label} » ?</div>
+            <div class="picker-btns">${names}<button class="picker-cancel" id="cancel-pick">Annuler</button></div>
+          </div>`;
+      }
+
+      return `
+        <div class="task ${done?'done':''}" data-id="${t.id}">
+          <div class="checkbox">${done?'✓':''}</div>
+          <div class="task-texts">
+            <div class="task-label">${t.label}${t.shared?'<span class="shared-tag">🤝 partagée</span>':''}</div>
+            <div class="task-flavor">${t.flavor}</div>
+          </div>
+        </div>`;
+    }).join('');
+    const title = g === 1 ? '☀️ Chapitre 1 — Après le petit-déjeuner' : '🎯 Chapitre 2 — Mission du jour';
+    return `<div class="chapter"><div class="chapter-title">${title} <span class="chapter-tag">${TASKS.filter(t=>t.group===g && record.checks[t.id]).length}/${TASKS.filter(t=>t.group===g).length}</span></div>${items}</div>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+    <div class="statuspanel">
+      <div class="statusrow">
+        <span class="lvlbadge">Niveau ${level}</span>
+        <span>${xpInLevel} / 100 XP</span>
+      </div>
+      <div class="xpbar-outer"><div class="xpbar-inner" style="width:${xpInLevel}%"></div></div>
+    </div>
+
+    <div class="progresspanel">
+      <div class="progresslabel"><span>Progression du jour</span><span>${doneCount}/${TASKS.length}</span></div>
+      <div class="progress-outer"><div class="progress-inner" style="width:${pct}%"></div></div>
+    </div>
+
+    ${groups}
+
+    <div class="rewards-grid">
+      <div class="reward-card ${allDone?'show':''}">
+        <div class="reward-card-title">🎮 PS4 disponible</div>
+        <div class="reward-card-sub">Bonus non obligatoire, bien joué !</div>
+      </div>
+      <div class="reward-card ${allDone?'show':''}">
+        <div class="reward-card-title">🎬 Dessin animé / Film</div>
+        <div class="reward-card-sub">Bonus non obligatoire, bien joué !</div>
+      </div>
+    </div>
+
+    ${renderHistoryHTML()}
+
+    <button class="resetbtn" id="resetday">Réinitialiser la journée (test)</button>
+    <button class="resetbtn" id="resetall" style="margin-top:6px;">Réinitialiser TOUT — XP compris (test)</button>
+  `;
+
+  document.querySelectorAll('.task').forEach(el => {
+    el.addEventListener('click', () => handleTaskClick(el.dataset.id));
+  });
+  document.querySelectorAll('.picker-name').forEach(btn => {
+    btn.addEventListener('click', () => confirmPick(pendingPick, btn.dataset.name));
+  });
+  const cancelBtn = document.getElementById('cancel-pick');
+  if(cancelBtn) cancelBtn.addEventListener('click', cancelPick);
+
+  const historyToggle = document.getElementById('history-toggle');
+  if(historyToggle) historyToggle.addEventListener('click', () => { historyOpen = !historyOpen; render(); });
+
+  document.getElementById('resetday').addEventListener('click', resetDay);
+  document.getElementById('resetall').addEventListener('click', resetAll);
+}
+
+function handleTaskClick(id){
+  const task = TASKS.find(t => t.id === id);
+  const done = !!record.checks[id];
+
+  if(task.shared && !done){
+    if(record.participants.length === 0){
+      toggleTaskSimple(id);
+    } else {
+      pendingPick = id;
+      render();
+    }
+    return;
+  }
+
+  if(task.shared && done){
+    delete record.checks[id];
+    removeLastLogForTaskToday(id);
+    saveRecord();
+    render();
+    return;
+  }
+
+  toggleTaskSimple(id);
+}
+
+function toggleTaskSimple(id){
+  if(record.checks[id]){
+    delete record.checks[id];
+  } else {
+    record.checks[id] = true;
+  }
+  saveRecord();
+  render();
+}
+
+function confirmPick(taskId, name){
+  record.checks[taskId] = true;
+  record.sharedLog.push({ taskId, name, ts: new Date().toISOString() });
+  pendingPick = null;
+  saveRecord();
+  render();
+}
+
+function cancelPick(){
+  pendingPick = null;
+  render();
+}
+
+function removeLastLogForTaskToday(taskId){
+  const today = todayStr();
+  for(let i = record.sharedLog.length - 1; i >= 0; i--){
+    const entry = record.sharedLog[i];
+    if(entry.taskId === taskId && entry.ts.slice(0,10) === today){
+      record.sharedLog.splice(i,1);
+      break;
+    }
+  }
+}
+
+async function resetDay(){
+  const doneCount = TASKS.filter(t => record.checks[t.id]).length;
+  record.archivedXP += doneCount * 10; // on garde l'XP déjà gagné aujourd'hui
+  record.checks = {};
+  saveRecord();
+  render();
+}
+
+function resetAll(){
+  record = { date: todayStr(), checks:{}, archivedXP:0, streak:0, participants: record.participants || [], sharedLog:[] };
+  saveRecord();
+  render();
+}
+
+loadRecord().then(() => { renderParticipants(); render(); });
+</script>
+</body>
+</html>

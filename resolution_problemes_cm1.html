@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<!--
+  Résolution de problèmes — CM1/CM2
+  v1.7 (27/09/2026) : vocabulaire harmonisé — « Mode Parent », « Espace parent », « joueur(s) »
+                      (textes affichés uniquement ; clés de stockage rp_v1_* inchangées, données conservées)
+  v1.6 : version précédente
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Résolution de problèmes — CM1</title>
+<style>
+  :root{
+    --indigo:#4338CA;
+    --indigo-dark:#312896;
+    --indigo-light:#EEF0FD;
+    --vert:#2E7D32;
+    --vert-clair:#E6F4E7;
+    --rouge:#C62828;
+    --rouge-clair:#FDEAEA;
+    --gris:#5B6472;
+    --gris-clair:#F4F5F7;
+    --bord:#E1E4EC;
+    --jaune:#F57C00;
+    --pokemon:#E3350D;
+    --football:#2E7D32;
+    --voiture:#1565C0;
+    --classique:#F57C00;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Verdana, Arial, sans-serif;
+    background:linear-gradient(135deg,#F4F6FB 0%,#EDEFFA 100%);
+    color:#232733;
+    min-height:100vh;
+  }
+  .app{
+    max-width:760px;
+    margin:0 auto;
+    padding:18px 16px 60px;
+  }
+  .screen{display:none;}
+  .screen.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:18px;
+  }
+  header.top .titre-app{
+    font-size:15px; font-weight:700; color:var(--indigo);
+    letter-spacing:.02em;
+  }
+  .version-badge{
+    font-size:10px; color:#8A93A6; background:#fff; border:1px solid var(--bord);
+    padding:2px 8px; border-radius:20px;
+  }
+
+  .carte{
+    background:#fff; border:1px solid var(--bord); border-radius:18px;
+    padding:22px; box-shadow:0 2px 10px rgba(50,60,100,.06);
+    margin-bottom:16px;
+  }
+  h1{font-size:22px; margin:0 0 6px; color:#20233A;}
+  h2{font-size:18px; margin:0 0 10px; color:#20233A;}
+  p.soustitre{color:var(--gris); font-size:14px; margin:0 0 20px;}
+
+  .consigne{
+    background:var(--indigo-light); border:2px dashed var(--indigo);
+    border-radius:12px; padding:13px 16px; color:var(--indigo-dark);
+    font-weight:700; margin-bottom:18px; font-size:14.5px; text-align:center;
+  }
+
+  fieldset.etape{
+    border:2px solid var(--bord); border-radius:14px; margin:0 0 16px; padding:14px;
+  }
+  fieldset.etape legend{
+    font-weight:700; color:var(--indigo-dark); padding:0 8px; font-size:13.5px;
+  }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border:none; border-radius:14px; padding:14px 20px; font-size:15px;
+    font-weight:700; cursor:pointer; width:100%; transition:transform .08s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primaire{background:var(--indigo); color:#fff; box-shadow:0 3px 0 var(--indigo-dark);}
+  .btn-primaire:disabled{background:#B9BEDD; box-shadow:none; cursor:not-allowed;}
+  .btn-secondaire{background:#fff; color:var(--indigo); border:2px solid var(--indigo-light); }
+  .btn-aide{background:#fff; color:var(--jaune); border:2px solid #FCE3C2;}
+  .btn-ghost{background:transparent; color:var(--gris); font-weight:600; padding:10px;}
+  .btn-tertiaire{
+    background:var(--gris-clair); color:#5B6472; border:2px solid var(--bord);
+    font-weight:700; font-size:13.5px; margin-top:10px;
+  }
+  .btn-danger{background:var(--rouge); color:#fff;}
+  .btn-sm{padding:9px 14px; font-size:13px; width:auto;}
+  .row-btns{display:flex; gap:10px;}
+
+  .lien-prof{
+    display:block; text-align:center; margin-top:26px; color:#9AA1B4;
+    font-size:12.5px; text-decoration:none;
+  }
+
+  .btn-accueil-flottant{
+    position:fixed; top:14px; left:14px; z-index:35;
+    background:#fff; border:2px solid var(--indigo); color:var(--indigo);
+    font-weight:800; font-size:13px; padding:10px 16px; border-radius:30px;
+    box-shadow:0 4px 14px rgba(50,60,100,.22); cursor:pointer;
+    display:flex; align-items:center; gap:7px;
+  }
+  .btn-accueil-flottant:active{transform:scale(.96);}
+
+  #toast-global{
+    display:none; position:fixed; top:14px; left:50%; transform:translateX(-50%);
+    background:#20233A; color:#fff; padding:12px 20px; border-radius:12px;
+    font-size:13.5px; font-weight:600; z-index:100; box-shadow:0 6px 18px rgba(0,0,0,.28);
+    max-width:88%; text-align:center;
+  }
+  #toast-global.erreur{background:#C62828;}
+  #toast-global.succes{background:#2E7D32;}
+  #toast-global.info{background:var(--indigo);}
+
+  /* Écran d'accueil */
+  .grand-choix{display:flex; flex-direction:column; gap:12px; margin-top:18px;}
+  .choix-carte{
+    background:#fff; border:2px solid var(--bord); border-radius:16px; padding:18px;
+    display:flex; align-items:center; gap:14px; cursor:pointer;
+  }
+  .choix-carte:active{border-color:var(--indigo);}
+  .choix-carte .emoji{font-size:30px;}
+  .choix-carte .txt strong{display:block; font-size:15px; color:#20233A;}
+  .choix-carte .txt span{font-size:12.5px; color:var(--gris);}
+
+  /* Joueur : liste des prénoms */
+  .liste-eleves{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;}
+  .pill-eleve{
+    background:var(--indigo-light); color:var(--indigo); border:2px solid transparent;
+    padding:10px 16px; border-radius:30px; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .pill-eleve.selected{border-color:var(--indigo); background:#fff;}
+  input.champ-texte{
+    width:100%; padding:13px 14px; border-radius:12px; border:2px solid var(--bord);
+    font-size:15px; margin-bottom:10px; font-family:inherit;
+  }
+  input.champ-texte:focus{outline:none; border-color:var(--indigo);}
+  label.lbl{font-size:13px; font-weight:700; color:var(--gris); display:block; margin:14px 0 6px;}
+
+  /* Thèmes */
+  .grille-themes{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0;}
+  .theme-carte{
+    border-radius:16px; padding:18px 14px; text-align:center; cursor:pointer;
+    border:2px solid var(--bord); background:#fff;
+  }
+  .theme-carte.selected{border-color:var(--tc,var(--indigo)); background:var(--tc-bg,var(--indigo-light));}
+  .theme-carte .emoji{font-size:28px; display:block; margin-bottom:6px;}
+  .theme-carte strong{font-size:14px;}
+  .theme-melange{grid-column:1/3;}
+
+  .grille-niveaux{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:14px 0 4px;}
+  .niveau-carte{
+    border-radius:14px; padding:12px 8px; text-align:center; cursor:pointer;
+    border:2px solid var(--bord); background:#fff; font-size:13px; font-weight:700;
+  }
+  .niveau-carte .emoji{font-size:20px; display:block; margin-bottom:4px;}
+  .niveau-carte[data-niveau="facile"].selected{border-color:#2E7D32; background:#E6F4E7; color:#1B5E20;}
+  .niveau-carte[data-niveau="moyen"].selected{border-color:#F57C00; background:#FFF1E0; color:#8A4B00;}
+  .niveau-carte[data-niveau="difficile"].selected{border-color:#C62828; background:#FDEAEA; color:#8E1F1F;}
+
+  .rappel-brouillon{
+    display:flex; align-items:flex-start; gap:10px; background:#FFF1E0; border:2px solid #F5B95C;
+    border-radius:14px; padding:13px 14px; margin:14px 0 18px; font-size:13.5px; line-height:1.5;
+    color:#7A4300; font-weight:600;
+  }
+  .rappel-brouillon .picto{font-size:22px; flex-shrink:0;}
+
+  .badge-info{
+    display:inline-flex; align-items:center; gap:6px; font-size:12.5px;
+    background:var(--gris-clair); color:var(--gris); padding:6px 12px; border-radius:30px;
+    margin-bottom:14px;
+  }
+  .badge-info.on{background:#FFF3DA; color:#8A5A00;}
+
+  /* Écran problème */
+  .barre-progression{display:flex; gap:6px; margin-bottom:14px;}
+  .barre-progression .seg{flex:1; height:6px; border-radius:6px; background:var(--bord);}
+  .barre-progression .seg.done{background:var(--vert);}
+  .barre-progression .seg.current{background:var(--indigo);}
+
+  .theme-tag{
+    display:inline-block; font-size:11.5px; font-weight:700; color:#fff;
+    padding:4px 10px; border-radius:20px; margin-bottom:10px;
+  }
+  .enonce-box{
+    background:var(--indigo-light); border-radius:14px; padding:16px; font-size:15.5px;
+    line-height:1.55; margin-bottom:6px; color:#232B4D;
+  }
+  .question-box{
+    font-size:15.5px; font-weight:700; color:var(--indigo-dark); margin:12px 0 18px;
+  }
+
+  textarea.champ-calcul{
+    width:100%; min-height:70px; padding:13px 14px; border-radius:12px; border:2px solid var(--bord);
+    font-size:16px; font-family:'Consolas', monospace; resize:vertical; margin-bottom:4px;
+  }
+  textarea.champ-phrase{
+    width:100%; min-height:60px; padding:13px 14px; border-radius:12px; border:2px solid var(--bord);
+    font-size:15px; font-family:inherit; resize:vertical; margin-bottom:4px;
+  }
+  textarea:focus{outline:none; border-color:var(--indigo);}
+  .aide-champ{font-size:12px; color:#9AA1B4; margin:0 0 16px;}
+
+  .feedback{
+    border-radius:14px; padding:16px; margin-top:8px; font-size:14.5px; line-height:1.5;
+  }
+  .feedback.ok{background:var(--vert-clair); border:2px solid #B7DFB9; color:#1B5E20;}
+  .feedback.ko{background:var(--rouge-clair); border:2px solid #F3C4C4; color:#8E1F1F;}
+  .feedback strong{display:block; margin-bottom:6px; font-size:15.5px;}
+
+  /* Modale Aide */
+  .voile{
+    display:none; position:fixed; inset:0; background:rgba(20,22,40,.55);
+    align-items:flex-end; justify-content:center; z-index:40;
+  }
+  .voile.active{display:flex;}
+  .modale-aide{
+    background:#fff; border-radius:22px 22px 0 0; padding:22px 20px 26px; width:100%;
+    max-width:760px; max-height:82vh; overflow-y:auto;
+  }
+  @media(min-width:600px){
+    .voile{align-items:center;}
+    .modale-aide{border-radius:22px; max-width:520px;}
+  }
+  .modale-aide h3{margin:0 0 4px; font-size:17px; color:var(--jaune);}
+  .etape-compteur{font-size:12px; color:var(--gris); margin-bottom:14px;}
+  .etape-question{
+    background:#FFF8EC; border:2px solid #FCE3C2; border-radius:14px; padding:16px;
+    font-size:15px; line-height:1.55; margin-bottom:16px; min-height:70px;
+  }
+  .aide-nav{display:flex; gap:10px;}
+
+  /* Récap fin de session */
+  .score-central{text-align:center; padding:20px 0;}
+  .score-central .chiffre{font-size:48px; font-weight:800; color:var(--indigo);}
+  .score-central .sur{font-size:20px; color:var(--gris);}
+  .recap-ligne{
+    display:flex; justify-content:space-between; align-items:center; padding:10px 0;
+    border-bottom:1px solid var(--bord); font-size:14px;
+  }
+  .recap-ligne:last-child{border-bottom:none;}
+  .puce{width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; color:#fff;}
+  .puce.ok{background:var(--vert);} .puce.ko{background:var(--rouge);}
+
+  /* Mode Parent */
+  .onglets{display:flex; gap:8px; margin-bottom:16px;}
+  .onglet{flex:1; text-align:center; padding:10px; border-radius:12px; background:var(--gris-clair); font-weight:700; font-size:13px; color:var(--gris); cursor:pointer;}
+  .onglet.active{background:var(--indigo); color:#fff;}
+  .sous-ecran{display:none;}
+  .sous-ecran.active{display:block;}
+
+  .ligne-eleve{
+    display:flex; align-items:center; justify-content:space-between; padding:12px 0; gap:10px;
+    border-bottom:1px solid var(--bord);
+  }
+  .ligne-eleve:last-child{border-bottom:none;}
+  .nom-eleve{font-weight:700; font-size:14.5px; flex:1;}
+  .droite-eleve{display:flex; align-items:center; gap:10px;}
+  .btn-suppr-eleve{
+    background:none; border:none; font-size:17px; cursor:pointer; padding:4px 6px;
+    color:#C62828; flex-shrink:0;
+  }
+  .toggle-aide{
+    width:52px; height:30px; border-radius:20px; background:#D8DBE6; position:relative; cursor:pointer; flex-shrink:0;
+  }
+  .toggle-aide .bille{
+    position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .15s ease;
+  }
+  .toggle-aide.on{background:var(--vert);}
+  .toggle-aide.on .bille{left:25px;}
+
+  table.tbl-analyse{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:6px;}
+  table.tbl-analyse th{background:var(--indigo-light); color:var(--indigo-dark); padding:8px 6px; text-align:left;}
+  table.tbl-analyse td{padding:8px 6px; border-bottom:1px solid var(--bord);}
+  .fiche-eleve{margin-bottom:18px; border:1px solid var(--bord); border-radius:14px; padding:14px;}
+  .fiche-eleve h4{margin:0 0 8px; font-size:14.5px; color:var(--indigo-dark);}
+  .mini-stat{display:inline-block; background:var(--gris-clair); padding:4px 10px; border-radius:10px; font-size:11.5px; margin:0 6px 6px 0; color:#4B5261;}
+  .erreur-item{font-size:12.5px; background:var(--rouge-clair); border-radius:8px; padding:8px 10px; margin-bottom:6px; color:#7A2323;}
+  .vide{color:#9AA1B4; font-size:13px; text-align:center; padding:20px 0;}
+
+  .carte-historique{border:1px solid var(--bord); border-radius:14px; padding:12px 14px; margin-bottom:10px; cursor:pointer;}
+  .carte-historique .ligne-haut{display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;}
+  .carte-historique .qui{font-weight:700; font-size:14px;}
+  .carte-historique .quand{font-size:11.5px; color:var(--gris);}
+  .carte-historique .puces-resume{display:flex; gap:6px; align-items:center; margin-top:6px; flex-wrap:wrap;}
+  .score-pastille{font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px;}
+  .score-pastille.s3{background:var(--vert-clair); color:#1B5E20;}
+  .score-pastille.s2{background:#FFF3DA; color:#8A5A00;}
+  .score-pastille.s1, .score-pastille.s0{background:var(--rouge-clair); color:#8E1F1F;}
+  .detail-historique{display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--bord); font-size:12.5px;}
+  .detail-historique.ouvert{display:block;}
+  .detail-historique .ligne-pb{display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #F0F1F5;}
+  .detail-historique .ligne-pb:last-child{border-bottom:none;}
+  footer.pied{text-align:center; font-size:11px; color:#B0B5C4; margin-top:26px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <span class="titre-app">🧮 Résolution de problèmes</span>
+    <span class="version-badge">v1.7</span>
+  </header>
+
+  <!-- ÉCRAN ACCUEIL / SÉLECTION DU JOUEUR -->
+  <section id="screen-accueil" class="screen active">
+    <div class="carte">
+      <h1>🧮 Résolution de problèmes</h1>
+      <div class="consigne">Qui es-tu ?</div>
+      <div id="liste-eleves-login" class="liste-eleves"></div>
+      <label class="lbl">Ajouter un nouveau prénom</label>
+      <input type="text" id="input-nouveau-prenom" class="champ-texte" placeholder="Ex : Fred">
+      <button class="btn btn-primaire" id="btn-valider-login" onclick="creerEleveDepuisAccueil()">Créer ce profil →</button>
+      <button class="btn btn-tertiaire" onclick="ouvrirPortailProf()">👨‍👩‍👧 Espace parent</button>
+    </div>
+  </section>
+
+  <!-- ÉCRAN CHOIX THÈME -->
+  <section id="screen-theme" class="screen">
+    <div id="bandeau-reprise" class="carte" style="display:none; border:2px solid var(--indigo); background:var(--indigo-light);">
+      <strong style="font-size:15px;">⏸️ Tu as une session en pause</strong>
+      <p id="texte-reprise" style="font-size:13.5px; color:#3A3F63; margin:6px 0 14px;"></p>
+      <div class="row-btns">
+        <button class="btn btn-secondaire btn-sm" style="width:auto;" onclick="abandonnerPause()">Abandonner</button>
+        <button class="btn btn-primaire" onclick="reprendreSessionEnPause()">▶️ Reprendre où j'en étais</button>
+      </div>
+    </div>
+    <div class="carte">
+      <h2 id="titre-bienvenue" class="consigne" style="margin-bottom:14px;">Bienvenue !</h2>
+      <span id="badge-aide-info" class="badge-info">ℹ️ Info aide</span>
+
+      <fieldset class="etape">
+        <legend>1. Choisis le thème de tes 3 problèmes</legend>
+        <div class="grille-themes">
+          <div class="theme-carte" data-theme="classique" style="--tc:#F57C00; --tc-bg:#FFF1E0;" onclick="choisirTheme('classique')">
+            <span class="emoji">📘</span><strong>Classique</strong>
+          </div>
+          <div class="theme-carte" data-theme="pokemon" style="--tc:#E3350D; --tc-bg:#FDE7E4;" onclick="choisirTheme('pokemon')">
+            <span class="emoji">⚡</span><strong>Pokémon</strong>
+          </div>
+          <div class="theme-carte" data-theme="football" style="--tc:#2E7D32; --tc-bg:#E6F4E7;" onclick="choisirTheme('football')">
+            <span class="emoji">⚽</span><strong>Football</strong>
+          </div>
+          <div class="theme-carte" data-theme="voiture" style="--tc:#1565C0; --tc-bg:#E5EFFB;" onclick="choisirTheme('voiture')">
+            <span class="emoji">🚗</span><strong>Voiture</strong>
+          </div>
+          <div class="theme-carte theme-melange" data-theme="melange" style="--tc:#4338CA; --tc-bg:#EEF0FD;" onclick="choisirTheme('melange')">
+            <span class="emoji">🎲</span><strong>Mélange surprise</strong>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="etape">
+        <legend>2. Choisis ton niveau de difficulté</legend>
+        <div class="grille-niveaux">
+          <div class="niveau-carte" data-niveau="facile" onclick="choisirNiveau('facile')">
+            <span class="emoji">🟢</span>Facile
+          </div>
+          <div class="niveau-carte" data-niveau="moyen" onclick="choisirNiveau('moyen')">
+            <span class="emoji">🟠</span>Moyen
+          </div>
+          <div class="niveau-carte" data-niveau="difficile" onclick="choisirNiveau('difficile')">
+            <span class="emoji">🔴</span>Difficile
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="rappel-brouillon">
+        <span class="picto">📝</span>
+        <span>Avant de noter ta réponse : fais ton calcul sur ton <strong>cahier de brouillon</strong>, puis <strong>vérifie-le</strong> ! Un calcul vérifié est un calcul juste.</span>
+      </div>
+
+      <button class="btn btn-primaire" id="btn-demarrer" onclick="demarrerSession()" disabled>Commencer les 3 problèmes</button>
+      <button class="btn btn-tertiaire" onclick="allerEcranAccueil()">Changer de joueur</button>
+    </div>
+  </section>
+
+  <!-- ÉCRAN PROBLÈME -->
+  <section id="screen-probleme" class="screen">
+    <button class="btn-accueil-flottant" onclick="quitterSessionEnCours()">🏠 Accueil</button>
+    <div class="barre-progression" id="barre-progression"></div>
+    <div class="carte">
+      <span id="tag-theme-probleme" class="theme-tag">Thème</span>
+      <div id="titre-probleme" style="font-weight:700; font-size:15px; margin-bottom:8px;"></div>
+      <div class="enonce-box" id="enonce-probleme"></div>
+      <div class="question-box" id="question-probleme"></div>
+
+      <div class="rappel-brouillon">
+        <span class="picto">📝</span>
+        <span>Fais d'abord ton calcul sur le <strong>cahier de brouillon</strong> et <strong>vérifie-le</strong> avant de le recopier ici !</span>
+      </div>
+
+      <label class="lbl">✏️ Mon calcul</label>
+      <textarea id="champ-calcul" class="champ-calcul" placeholder="Ex : 12 x 3 = 36"></textarea>
+      <p class="aide-champ">Tu peux utiliser + − x (ou ×) ÷</p>
+
+      <label class="lbl">💬 Ma phrase réponse</label>
+      <textarea id="champ-phrase" class="champ-phrase" placeholder="Écris une phrase complète pour répondre à la question."></textarea>
+
+      <div id="zone-feedback"></div>
+
+      <div class="row-btns" style="margin-top:16px;">
+        <button class="btn btn-aide" id="btn-ouvrir-aide" onclick="ouvrirAide()">💡 Aide</button>
+        <button class="btn btn-primaire" id="btn-valider-probleme" onclick="validerProbleme()">Valider ✓</button>
+      </div>
+      <button class="btn btn-primaire" id="btn-probleme-suivant" onclick="problemeSuivant()" style="display:none; margin-top:10px;">Problème suivant →</button>
+    </div>
+  </section>
+
+  <!-- ÉCRAN RÉCAP -->
+  <section id="screen-recap" class="screen">
+    <div class="carte">
+      <h2>Session terminée !</h2>
+      <div class="score-central">
+        <span class="chiffre" id="recap-score">0</span><span class="sur" id="recap-sur">/3</span>
+      </div>
+      <div id="recap-details"></div>
+    </div>
+    <button class="btn btn-primaire" onclick="allerEcranTheme()">🔁 Refaire une session</button>
+    <button class="btn btn-ghost" onclick="allerEcranAccueil()">Terminer</button>
+  </section>
+
+  <!-- ÉCRAN PORTAIL PARENT (code) -->
+  <section id="screen-prof-code" class="screen">
+    <div class="carte">
+      <h2>👨‍👩‍👧 Espace parent</h2>
+      <p class="soustitre">Entre le code pour accéder au Mode Parent.</p>
+      <input type="password" id="input-code-prof" class="champ-texte" placeholder="Code parent">
+      <div class="row-btns">
+        <button class="btn btn-secondaire" onclick="allerEcranAccueil()">← Retour</button>
+        <button class="btn btn-primaire" onclick="verifierCodeProf()">Entrer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ÉCRAN MODE PARENT -->
+  <section id="screen-prof" class="screen">
+    <div class="carte">
+      <h2>Mode Parent</h2>
+      <div class="onglets">
+        <div class="onglet active" data-onglet="autorisations" onclick="changerOngletProf('autorisations')">Joueurs &amp; aide</div>
+        <div class="onglet" data-onglet="historique" onclick="changerOngletProf('historique')">Historique</div>
+        <div class="onglet" data-onglet="analyse" onclick="changerOngletProf('analyse')">Analyse</div>
+        <div class="onglet" data-onglet="reglages" onclick="changerOngletProf('reglages')">Réglages</div>
+      </div>
+
+      <div id="sous-autorisations" class="sous-ecran active">
+        <p class="soustitre">Active ou désactive la fonction Aide pour chaque joueur.</p>
+        <div id="liste-autorisations"></div>
+        <label class="lbl">Ajouter un joueur</label>
+        <div class="row-btns">
+          <input type="text" id="input-nouvel-eleve-prof" class="champ-texte" placeholder="Prénom">
+          <button class="btn btn-primaire btn-sm" style="width:auto;" onclick="ajouterEleveDepuisProf()">Ajouter</button>
+        </div>
+      </div>
+
+      <div id="sous-historique" class="sous-ecran">
+        <p class="soustitre">Journal de toutes les sessions effectuées, de la plus récente à la plus ancienne.</p>
+        <label class="lbl">Filtrer par joueur</label>
+        <select id="select-filtre-historique" class="champ-texte" onchange="construireHistorique()"></select>
+        <div id="zone-historique"></div>
+      </div>
+
+      <div id="sous-analyse" class="sous-ecran">
+        <p class="soustitre">Analyse détaillée des sessions par joueur.</p>
+        <div id="zone-analyse"></div>
+      </div>
+
+      <div id="sous-reglages" class="sous-ecran">
+        <p class="soustitre">Paramètres et maintenance des données.</p>
+        <label class="lbl">Changer le code Mode Parent</label>
+        <input type="text" id="input-nouveau-code" class="champ-texte" placeholder="Nouveau code">
+        <button class="btn btn-secondaire" onclick="changerCodeProf()">Enregistrer le code</button>
+        <label class="lbl">Export / maintenance</label>
+        <button class="btn btn-secondaire" onclick="exporterDonnees()">📤 Exporter les données (JSON)</button>
+        <button class="btn btn-danger" style="margin-top:10px;" onclick="reinitialiserDonnees()">🗑️ Réinitialiser toutes les données</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="allerEcranAccueil()">← Quitter le Mode Parent</button>
+  </section>
+
+  <footer class="pied">Outil Résolution de problèmes — CM1/CM2 · v1.7 · fonctionne hors-ligne, aucune donnée envoyée sur internet</footer>
+</div>
+
+<!-- MODALE AIDE -->
+<div class="voile" id="voile-aide">
+  <div class="modale-aide">
+    <h3>💡 Un coup de pouce</h3>
+    <div class="etape-compteur" id="aide-compteur">Étape 1/5</div>
+    <div class="etape-question" id="aide-question-texte"></div>
+    <div class="aide-nav">
+      <button class="btn btn-secondaire btn-sm" id="btn-aide-precedent" onclick="aideEtapePrecedente()">← Précédent</button>
+      <button class="btn btn-primaire btn-sm" id="btn-aide-suivant" onclick="aideEtapeSuivante()">Suivant →</button>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:14px;" onclick="fermerAide()">Fermer l'aide et reprendre le problème</button>
+  </div>
+</div>
+
+<!-- MODALE CONFIRMATION -->
+<div class="voile" id="voile-confirmation">
+  <div class="modale-aide" style="max-width:420px;">
+    <h3 style="color:var(--rouge);">⚠️ Confirmation</h3>
+    <div class="etape-question" id="texte-confirmation" style="background:#FDEAEA; border-color:#F3C4C4;"></div>
+    <div class="aide-nav">
+      <button class="btn btn-secondaire btn-sm" onclick="annulerConfirmation()">Annuler</button>
+      <button class="btn btn-danger btn-sm" style="width:auto; flex:1;" onclick="validerConfirmation()">Confirmer</button>
+    </div>
+  </div>
+</div>
+<div id="toast-global"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   DONNÉES — clés de stockage (inchangées depuis v1 : ne pas renommer)
+   ============================================================ */
+const CLES = {
+  ELEVES: "rp_v1_eleves",
+  SESSIONS: "rp_v1_sessions",
+  CODE_PROF: "rp_v1_code_prof",
+  PAUSE: "rp_v1_pause"
+};
+
+/* ============================================================
+   BANQUE DE PROBLÈMES
+   ============================================================ */
+const EXEMPLES_OPERATION = {
+  addition: "Si tu as 4 billes puis qu'on t'en donne 3 de plus, combien en as-tu en tout ? On additionne : 4 + 3 = 7.",
+  soustraction: "Si tu as 10 bonbons et que tu en manges 4, combien en reste-t-il ? On soustrait : 10 − 4 = 6.",
+  multiplication: "Si 3 paquets contiennent 5 images chacun, combien d'images en tout ? On multiplie : 3 × 5 = 15.",
+  division: "Si tu partages 12 images entre 3 amis à parts égales, combien chacun en reçoit-il ? On divise : 12 ÷ 3 = 4.",
+  "multi-etapes": "Certains problèmes demandent deux calculs à la suite. Fais le premier calcul, utilise son résultat pour faire le second."
+};
+
+const BANQUE = [
+  /* ============ NIVEAU FACILE (CM1 — 1 étape, nombres entiers) ============ */
+  { id:"cl1", theme:"classique", niveau:"facile", emoji:"📘", titre:"Les albums de BD",
+    enonce:"Léa achète 3 albums de bandes dessinées à 8 € chacun. Elle paie avec un billet de 50 €.",
+    question:"Combien d'argent lui rend-on ?",
+    operation:"multi-etapes", expected:26, unite:"€" },
+  { id:"cl2", theme:"classique", niveau:"facile", emoji:"📘", titre:"Les groupes de sport",
+    enonce:"Une classe de 24 élèves doit être répartie en groupes de 4 pour un exercice de sport.",
+    question:"Combien de groupes seront formés ?",
+    operation:"division", expected:6, unite:"groupes" },
+  { id:"cl3", theme:"classique", niveau:"facile", emoji:"📘", titre:"La récolte de pommes",
+    enonce:"Un fermier récolte 145 kg de pommes le lundi et 238 kg le mardi.",
+    question:"Combien de kilogrammes récolte-t-il en tout ?",
+    operation:"addition", expected:383, unite:"kg" },
+
+  { id:"pk1", theme:"pokemon", niveau:"facile", emoji:"⚡", titre:"Une journée de capture",
+    enonce:"Sacha capture 6 Pokémon le matin et 9 Pokémon l'après-midi.",
+    question:"Combien de Pokémon a-t-il capturés dans la journée ?",
+    operation:"addition", expected:15, unite:"Pokémon" },
+  { id:"pk2", theme:"pokemon", niveau:"facile", emoji:"⚡", titre:"Le combat difficile",
+    enonce:"Un Pokémon a 84 points de vie (PV). Une attaque adverse lui fait perdre 27 PV.",
+    question:"Combien de PV lui reste-t-il ?",
+    operation:"soustraction", expected:57, unite:"PV" },
+  { id:"pk3", theme:"pokemon", niveau:"facile", emoji:"⚡", titre:"Les Poké Balls",
+    enonce:"Dans un magasin, une Poké Ball coûte 3 €. Un dresseur en achète 7.",
+    question:"Combien va-t-il payer ?",
+    operation:"multiplication", expected:21, unite:"€" },
+  { id:"pk4", theme:"pokemon", niveau:"facile", emoji:"⚡", titre:"Les bonbons d'évolution",
+    enonce:"Un dresseur a 45 bonbons à répartir également entre 5 Pokémon.",
+    question:"Combien de bonbons chaque Pokémon reçoit-il ?",
+    operation:"division", expected:9, unite:"bonbons" },
+
+  { id:"fb1", theme:"football", niveau:"facile", emoji:"⚽", titre:"Le match du week-end",
+    enonce:"Lors d'un match, l'équipe de Kylian marque 3 buts en 1ère mi-temps et 2 buts en 2e mi-temps.",
+    question:"Combien de buts a marqué l'équipe au total ?",
+    operation:"addition", expected:5, unite:"buts" },
+  { id:"fb2", theme:"football", niveau:"facile", emoji:"⚽", titre:"Le stade",
+    enonce:"Un stade peut accueillir 42 000 spectateurs. Il reste encore 8 500 places libres.",
+    question:"Combien de spectateurs sont déjà installés ?",
+    operation:"soustraction", expected:33500, unite:"spectateurs" },
+  { id:"fb3", theme:"football", niveau:"facile", emoji:"⚽", titre:"Les nouveaux ballons",
+    enonce:"Un club achète 6 nouveaux ballons à 15 € l'unité.",
+    question:"Quel est le prix total de cet achat ?",
+    operation:"multiplication", expected:90, unite:"€" },
+  { id:"fb4", theme:"football", niveau:"facile", emoji:"⚽", titre:"Le tournoi",
+    enonce:"32 joueurs doivent être répartis en équipes de 8 pour un tournoi.",
+    question:"Combien d'équipes seront formées ?",
+    operation:"division", expected:4, unite:"équipes" },
+
+  { id:"vt1", theme:"voiture", niveau:"facile", emoji:"🚗", titre:"Le trajet sur autoroute",
+    enonce:"Une voiture roule à une vitesse de 90 km/h pendant 3 heures.",
+    question:"Quelle distance parcourt-elle ?",
+    operation:"multiplication", expected:270, unite:"km" },
+  { id:"vt2", theme:"voiture", niveau:"facile", emoji:"🚗", titre:"Le plein d'essence",
+    enonce:"Un réservoir contient 52 litres d'essence. Après un trajet, il en reste 19 litres.",
+    question:"Combien de litres ont été consommés pendant le trajet ?",
+    operation:"soustraction", expected:33, unite:"litres" },
+  { id:"vt3", theme:"voiture", niveau:"facile", emoji:"🚗", titre:"Le parking",
+    enonce:"Un parking est composé de 6 rangées de 12 places chacune.",
+    question:"Combien de places compte ce parking au total ?",
+    operation:"multiplication", expected:72, unite:"places" },
+  { id:"vt4", theme:"voiture", niveau:"facile", emoji:"🚗", titre:"La livraison de pneus",
+    enonce:"Un garage doit répartir 48 pneus neufs également sur 4 camions de livraison.",
+    question:"Combien de pneus chaque camion transportera-t-il ?",
+    operation:"division", expected:12, unite:"pneus" },
+
+  /* ============ NIVEAU MOYEN (fin CM1 / CM2 — 2 étapes, nombres décimaux simples) ============ */
+  { id:"cl_m1", theme:"classique", niveau:"moyen", emoji:"📘", titre:"Le carton de livres",
+    enonce:"Un libraire reçoit un carton de 18 livres à 12,50 € chacun. Il en vend déjà 5.",
+    question:"Quelle est la valeur des livres qui restent en stock ?",
+    operation:"multi-etapes", expected:162.5, unite:"€" },
+  { id:"cl_m2", theme:"classique", niveau:"moyen", emoji:"📘", titre:"La bibliothèque",
+    enonce:"Une bibliothèque compte 3 rayonnages de 45 livres et reçoit une nouvelle caisse de 96 livres.",
+    question:"Combien de livres la bibliothèque compte-t-elle maintenant ?",
+    operation:"multi-etapes", expected:231, unite:"livres" },
+  { id:"cl_m3", theme:"classique", niveau:"moyen", emoji:"📘", titre:"La tombola de la kermesse",
+    enonce:"Une kermesse vend des billets de tombola à 1,50 € l'unité. 240 billets sont vendus.",
+    question:"Quelle recette totale la kermesse a-t-elle réalisée ?",
+    operation:"multiplication", expected:360, unite:"€" },
+
+  { id:"pk_m1", theme:"pokemon", niveau:"moyen", emoji:"⚡", titre:"Une journée bien remplie",
+    enonce:"Un dresseur possède 6 Pokémon et en attrape 8 de plus dans la journée. Le soir, il en libère 3.",
+    question:"Combien de Pokémon possède-t-il à la fin de la journée ?",
+    operation:"multi-etapes", expected:11, unite:"Pokémon" },
+  { id:"pk_m2", theme:"pokemon", niveau:"moyen", emoji:"⚡", titre:"Les potions de soin",
+    enonce:"Une potion coûte 2,50 €. Un dresseur en achète 6 pour soigner son équipe.",
+    question:"Quel est le prix total de cet achat ?",
+    operation:"multiplication", expected:15, unite:"€" },
+  { id:"pk_m3", theme:"pokemon", niveau:"moyen", emoji:"⚡", titre:"Le Pokédex",
+    enonce:"Un Pokédex répertorie 18 Pokémon de type Feu, et 3 fois plus de Pokémon de type Eau.",
+    question:"Combien de Pokémon de type Eau le Pokédex répertorie-t-il ?",
+    operation:"multiplication", expected:54, unite:"Pokémon" },
+
+  { id:"fb_m1", theme:"football", niveau:"moyen", emoji:"⚽", titre:"La capacité du stade",
+    enonce:"Un stade compte 3 tribunes de 8 500 places chacune, plus une tribune VIP de 1 200 places.",
+    question:"Quelle est la capacité totale du stade ?",
+    operation:"multi-etapes", expected:26700, unite:"places" },
+  { id:"fb_m2", theme:"football", niveau:"moyen", emoji:"⚽", titre:"Le kilométrage du joueur",
+    enonce:"Un joueur court en moyenne 10,5 km par match. Il joue 4 matchs ce mois-ci.",
+    question:"Quelle distance totale a-t-il parcourue ce mois-ci ?",
+    operation:"multiplication", expected:42, unite:"km" },
+  { id:"fb_m3", theme:"football", niveau:"moyen", emoji:"⚽", titre:"Le bilan de la saison",
+    enonce:"Une équipe a gagné 14 matchs et en a perdu 6 de moins que de matchs gagnés.",
+    question:"Combien de matchs l'équipe a-t-elle perdus ?",
+    operation:"soustraction", expected:8, unite:"matchs" },
+
+  { id:"vt_m1", theme:"voiture", niveau:"moyen", emoji:"🚗", titre:"Le trajet à vitesse moyenne",
+    enonce:"Un trajet de 3 heures est parcouru à une vitesse moyenne de 72,5 km/h.",
+    question:"Quelle distance ce trajet représente-t-il ?",
+    operation:"multiplication", expected:217.5, unite:"km" },
+  { id:"vt_m2", theme:"voiture", niveau:"moyen", emoji:"🚗", titre:"Le stock du garage",
+    enonce:"Un garage a 8 rangées de 15 voitures à vendre, plus 24 voitures supplémentaires arrivées ce matin.",
+    question:"Combien de voitures le garage a-t-il en stock maintenant ?",
+    operation:"multi-etapes", expected:144, unite:"voitures" },
+  { id:"vt_m3", theme:"voiture", niveau:"moyen", emoji:"🚗", titre:"Les ventes du concessionnaire",
+    enonce:"Un concessionnaire vend 9 voitures le premier mois, et le double le mois suivant.",
+    question:"Combien de voitures a-t-il vendues le deuxième mois ?",
+    operation:"multiplication", expected:18, unite:"voitures" },
+
+  /* ============ NIVEAU DIFFICILE (fin CM2 — 2-3 étapes, décimaux, conversions, données inutiles) ============ */
+  { id:"cl_d1", theme:"classique", niveau:"difficile", emoji:"📘", titre:"La sortie scolaire",
+    enonce:"Une école organise une sortie pour 87 élèves. Un car peut transporter 32 passagers. Le billet de bus coûte 4,50 € par élève.",
+    question:"Combien de cars faut-il réserver pour transporter tous les élèves ?",
+    operation:"division", expected:3, unite:"cars", arrondi:"sup" },
+  { id:"cl_d2", theme:"classique", niveau:"difficile", emoji:"📘", titre:"La randonnée",
+    enonce:"Un randonneur parcourt 2,3 km le matin, puis 1 750 m l'après-midi.",
+    question:"Quelle distance totale a-t-il parcourue, en mètres ?",
+    operation:"addition", expected:4050, unite:"m" },
+  { id:"cl_d3", theme:"classique", niveau:"difficile", emoji:"📘", titre:"La planche du menuisier",
+    enonce:"Un menuisier a une planche de 3,5 m de long. Il découpe 4 morceaux de 60 cm chacun.",
+    question:"Quelle longueur de planche lui reste-t-il, en centimètres ?",
+    operation:"multi-etapes", expected:110, unite:"cm" },
+
+  { id:"pk_d1", theme:"pokemon", niveau:"difficile", emoji:"⚡", titre:"Le combat à deux attaques",
+    enonce:"Un Pokémon a 120 PV. Il subit une attaque qui lui fait perdre 35 PV, puis une seconde qui lui fait perdre 28 PV. Son dresseur a aussi 3 Poké Balls dans son sac.",
+    question:"Combien de PV lui reste-t-il après les deux attaques ?",
+    operation:"multi-etapes", expected:57, unite:"PV" },
+  { id:"pk_d2", theme:"pokemon", niveau:"difficile", emoji:"⚡", titre:"La salle d'arcade",
+    enonce:"Une salle d'arcade Pokémon coûte 1,20 € la partie. Un groupe de 4 amis joue chacun 3 parties.",
+    question:"Quel est le coût total pour le groupe ?",
+    operation:"multi-etapes", expected:14.4, unite:"€" },
+  { id:"pk_d3", theme:"pokemon", niveau:"difficile", emoji:"⚡", titre:"Le tournoi Pokémon",
+    enonce:"Un dresseur gagne 45 € en remportant un tournoi. Il dépense 12 € pour 4 Poké Balls, puis 8 € pour une potion. Son ami a gagné 30 € au même tournoi.",
+    question:"Combien d'argent lui reste-t-il après ses achats ?",
+    operation:"multi-etapes", expected:25, unite:"€" },
+
+  { id:"fb_d1", theme:"football", niveau:"difficile", emoji:"⚽", titre:"La billetterie",
+    enonce:"Un club vend des places à 18 € l'unité. Il vend 1 250 places pour un match, sachant que le stade compte 2 000 places au total.",
+    question:"Quelle recette totale le club a-t-il obtenue avec la vente des billets ?",
+    operation:"multiplication", expected:22500, unite:"€" },
+  { id:"fb_d2", theme:"football", niveau:"difficile", emoji:"⚽", titre:"Les billets remboursés",
+    enonce:"Des places sont vendues 22 € pour les adultes. Un groupe de 15 adultes achète des billets, puis 4 personnes se désistent et sont remboursées avant le match.",
+    question:"Quelle est la recette finale du club pour ce groupe ?",
+    operation:"multi-etapes", expected:242, unite:"€" },
+  { id:"fb_d3", theme:"football", niveau:"difficile", emoji:"⚽", titre:"Le tour du terrain",
+    enonce:"Un terrain de football mesure 105 m de long et 68 m de large. Un joueur fait 2 fois le tour complet du terrain en courant.",
+    question:"Quelle distance a-t-il parcourue, en mètres ?",
+    operation:"multi-etapes", expected:692, unite:"m" },
+
+  { id:"vt_d1", theme:"voiture", niveau:"difficile", emoji:"🚗", titre:"L'autonomie du réservoir",
+    enonce:"Une voiture a un réservoir de 55 litres. Elle consomme 5,5 litres aux 100 km. Le plein coûte 82,50 €.",
+    question:"Quelle distance la voiture peut-elle parcourir avec un plein complet ?",
+    operation:"multi-etapes", expected:1000, unite:"km" },
+  { id:"vt_d2", theme:"voiture", niveau:"difficile", emoji:"🚗", titre:"Le chargement du camion",
+    enonce:"Un camion transporte 2,4 tonnes de marchandises. Chaque caisse pèse 300 kg.",
+    question:"Combien de caisses le camion transporte-t-il ?",
+    operation:"division", expected:8, unite:"caisses" },
+  { id:"vt_d3", theme:"voiture", niveau:"difficile", emoji:"🚗", titre:"La limite de charge",
+    enonce:"Un camion peut transporter 3,2 tonnes. Il est déjà chargé de 1 850 kg de marchandises. Le chauffeur roule à 80 km/h.",
+    question:"Combien de kilogrammes peut-il encore charger avant d'atteindre la limite ?",
+    operation:"multi-etapes", expected:1350, unite:"kg" }
+];
+
+const NOMS_THEME = { classique:"Classique", pokemon:"Pokémon", football:"Football", voiture:"Voiture" };
+const COULEURS_THEME = { classique:"#F57C00", pokemon:"#E3350D", football:"#2E7D32", voiture:"#1565C0" };
+const NOMS_NIVEAU = { facile:"🟢 Facile", moyen:"🟠 Moyen", difficile:"🔴 Difficile" };
+
+/* ============================================================
+   ÉTAT DE L'APPLICATION
+   ============================================================ */
+let etat = {
+  elevePrenom: null,
+  themeChoisi: null,
+  niveauChoisi: null,
+  problemes: [],       // 3 problèmes tirés pour la session, avec suivi
+  indexCourant: 0,
+  aideAutorisee: false,
+  ongletProfActif: "autorisations",
+  aide: { etapeIndex:0, etapes:[], ouvertureTemps:null }
+};
+
+/* ============================================================
+   STOCKAGE LOCAL
+   ============================================================ */
+function chargerEleves(){
+  try{ return JSON.parse(localStorage.getItem(CLES.ELEVES)) || {}; }catch(e){ return {}; }
+}
+function sauverEleves(obj){ localStorage.setItem(CLES.ELEVES, JSON.stringify(obj)); }
+
+function chargerSessions(){
+  try{ return JSON.parse(localStorage.getItem(CLES.SESSIONS)) || []; }catch(e){ return []; }
+}
+function sauverSessions(arr){ localStorage.setItem(CLES.SESSIONS, JSON.stringify(arr)); }
+
+function getCodeProf(){ return localStorage.getItem(CLES.CODE_PROF) || "1234"; }
+
+function chargerPauses(){
+  try{ return JSON.parse(localStorage.getItem(CLES.PAUSE)) || {}; }catch(e){ return {}; }
+}
+function sauverPauses(obj){ localStorage.setItem(CLES.PAUSE, JSON.stringify(obj)); }
+function obtenirPauseEleve(prenom){
+  const pauses = chargerPauses();
+  return pauses[prenom] || null;
+}
+function supprimerPauseEleve(prenom){
+  const pauses = chargerPauses();
+  delete pauses[prenom];
+  sauverPauses(pauses);
+}
+function sauvegarderPauseSession(){
+  if(!etat.elevePrenom || etat.problemes.length === 0) return;
+  const pauses = chargerPauses();
+  pauses[etat.elevePrenom] = {
+    theme: etat.themeChoisi,
+    niveau: etat.niveauChoisi,
+    indexCourant: etat.indexCourant,
+    horodatage: new Date().toISOString(),
+    problemes: etat.problemes.map(it => ({
+      id: it.ref.id,
+      calculSaisi: it.calculSaisi, phraseSaisie: it.phraseSaisie,
+      calculCorrect: it.calculCorrect, phraseCorrect: it.phraseCorrect,
+      tentatives: it.tentatives, aideOuvertures: it.aideOuvertures, aideEtapeMax: it.aideEtapeMax,
+      tempsAideSec: it.tempsAideSec, debut: it.debut, tempsSec: it.tempsSec, valide: it.valide
+    }))
+  };
+  sauverPauses(pauses);
+}
+
+function garantirEleve(prenom){
+  const eleves = chargerEleves();
+  if(!eleves[prenom]){
+    eleves[prenom] = { aideAutorisee:false };
+    sauverEleves(eleves);
+  }
+  return eleves;
+}
+
+/* ============================================================
+   NOTIFICATIONS (remplacent alert()/confirm() natifs, souvent
+   bloqués dans les environnements web embarqués/sandboxés)
+   ============================================================ */
+let toastTimeout = null;
+function afficherToast(message, type){
+  const t = document.getElementById("toast-global");
+  t.className = type || "";
+  t.textContent = message;
+  t.style.display = "block";
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { t.style.display = "none"; }, 3200);
+}
+
+let callbackConfirmation = null;
+function demanderConfirmation(message, onConfirme){
+  document.getElementById("texte-confirmation").textContent = message;
+  callbackConfirmation = onConfirme;
+  document.getElementById("voile-confirmation").classList.add("active");
+}
+function validerConfirmation(){
+  document.getElementById("voile-confirmation").classList.remove("active");
+  const fn = callbackConfirmation;
+  callbackConfirmation = null;
+  if(typeof fn === "function") fn();
+}
+function annulerConfirmation(){
+  document.getElementById("voile-confirmation").classList.remove("active");
+  callbackConfirmation = null;
+}
+
+/* ============================================================
+   NAVIGATION ENTRE ÉCRANS
+   ============================================================ */
+function afficherEcran(id){
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function allerEcranAccueil(){ construireListeElevesLogin(); afficherEcran("screen-accueil"); }
+function quitterSessionEnCours(){
+  const enCours = etat.problemes.length > 0;
+  document.getElementById("voile-aide").classList.remove("active");
+  if(enCours){
+    sauvegarderPauseSession();
+    afficherToast("Session mise en pause. Tu pourras la reprendre ici.", "info");
+    allerEcranTheme();
+  } else {
+    allerEcranAccueil();
+  }
+}
+function allerEcranTheme(){
+  document.getElementById("titre-bienvenue").textContent = "Bienvenue, " + etat.elevePrenom + " !";
+  const eleves = chargerEleves();
+  etat.aideAutorisee = !!(eleves[etat.elevePrenom] && eleves[etat.elevePrenom].aideAutorisee);
+  const badge = document.getElementById("badge-aide-info");
+  if(etat.aideAutorisee){
+    badge.textContent = "✅ La fonction Aide est activée pour toi";
+    badge.className = "badge-info on";
+  } else {
+    badge.textContent = "🔒 La fonction Aide n'est pas activée (demande à tes parents)";
+    badge.className = "badge-info";
+  }
+  document.querySelectorAll(".theme-carte").forEach(c => c.classList.remove("selected"));
+  document.querySelectorAll(".niveau-carte").forEach(c => c.classList.remove("selected"));
+  etat.themeChoisi = null;
+  etat.niveauChoisi = null;
+  document.getElementById("btn-demarrer").disabled = true;
+
+  const pause = obtenirPauseEleve(etat.elevePrenom);
+  const bandeau = document.getElementById("bandeau-reprise");
+  if(pause){
+    const nbFaits = pause.problemes.filter(p => p.valide).length;
+    document.getElementById("texte-reprise").textContent =
+      (NOMS_THEME[pause.theme] || (pause.theme === "melange" ? "Mélange" : pause.theme)) + " · " +
+      (NOMS_NIVEAU[pause.niveau] || pause.niveau) + " · Problème " + (pause.indexCourant + 1) + "/3" +
+      " (" + nbFaits + " déjà réussi(s))";
+    bandeau.style.display = "block";
+  } else {
+    bandeau.style.display = "none";
+  }
+
+  afficherEcran("screen-theme");
+}
+
+/* ============================================================
+   ÉCRAN ACCUEIL — SÉLECTION / CRÉATION DU JOUEUR
+   ============================================================ */
+function construireListeElevesLogin(){
+  const eleves = chargerEleves();
+  const zone = document.getElementById("liste-eleves-login");
+  zone.innerHTML = "";
+  const noms = Object.keys(eleves).sort();
+  if(noms.length === 0){
+    zone.innerHTML = "<p class='vide' style='padding:0;'>Aucun joueur enregistré pour le moment. Ajoute ton prénom ci-dessous.</p>";
+    return;
+  }
+  noms.forEach(nom => {
+    const pill = document.createElement("div");
+    pill.className = "pill-eleve";
+    pill.textContent = nom;
+    pill.onclick = () => selectionnerEleve(nom);
+    zone.appendChild(pill);
+  });
+}
+function selectionnerEleve(nom){
+  garantirEleve(nom);
+  etat.elevePrenom = nom;
+  allerEcranTheme();
+}
+function creerEleveDepuisAccueil(){
+  const champ = document.getElementById("input-nouveau-prenom");
+  const nom = champ.value.trim();
+  if(!nom){
+    afficherToast("Écris un prénom avant de créer le profil.", "erreur");
+    return;
+  }
+  champ.value = "";
+  selectionnerEleve(nom);
+}
+
+/* ============================================================
+   ÉCRAN THÈME
+   ============================================================ */
+function choisirTheme(theme){
+  etat.themeChoisi = theme;
+  document.querySelectorAll(".theme-carte").forEach(c => c.classList.remove("selected"));
+  document.querySelector(".theme-carte[data-theme='" + theme + "']").classList.add("selected");
+  majBoutonDemarrer();
+}
+function choisirNiveau(niveau){
+  etat.niveauChoisi = niveau;
+  document.querySelectorAll(".niveau-carte").forEach(c => c.classList.remove("selected"));
+  document.querySelector(".niveau-carte[data-niveau='" + niveau + "']").classList.add("selected");
+  majBoutonDemarrer();
+}
+function majBoutonDemarrer(){
+  document.getElementById("btn-demarrer").disabled = !(etat.themeChoisi && etat.niveauChoisi);
+}
+function melangerTableau(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function tirerProblemes(theme, niveau){
+  let pool = BANQUE.filter(p => p.niveau === niveau);
+  if(theme !== "melange"){ pool = pool.filter(p => p.theme === theme); }
+  const melange = melangerTableau(pool);
+  return melange.slice(0, 3);
+}
+function demarrerSession(){
+  if(!etat.themeChoisi || !etat.niveauChoisi) return;
+  const lancer = () => {
+    const tires = tirerProblemes(etat.themeChoisi, etat.niveauChoisi);
+    etat.problemes = tires.map(p => ({
+      ref: p,
+      calculSaisi:"", phraseSaisie:"",
+      calculCorrect:false, phraseCorrect:false,
+      tentatives:0, aideOuvertures:0, aideEtapeMax:0, tempsAideSec:0,
+      debut: Date.now(), tempsSec:0, valide:false
+    }));
+    etat.indexCourant = 0;
+    afficherProbleme();
+    afficherEcran("screen-probleme");
+  };
+  const pause = obtenirPauseEleve(etat.elevePrenom);
+  if(pause){
+    demanderConfirmation("Tu as une session en pause. Commencer une nouvelle session la remplacera définitivement. Continuer ?", () => {
+      supprimerPauseEleve(etat.elevePrenom);
+      lancer();
+    });
+  } else {
+    lancer();
+  }
+}
+function reprendreSessionEnPause(){
+  const pause = obtenirPauseEleve(etat.elevePrenom);
+  if(!pause) return;
+  const problemesReconstruits = pause.problemes.map(pb => {
+    const ref = BANQUE.find(p => p.id === pb.id);
+    return {
+      ref: ref,
+      calculSaisi: pb.calculSaisi, phraseSaisie: pb.phraseSaisie,
+      calculCorrect: pb.calculCorrect, phraseCorrect: pb.phraseCorrect,
+      tentatives: pb.tentatives, aideOuvertures: pb.aideOuvertures, aideEtapeMax: pb.aideEtapeMax,
+      tempsAideSec: pb.tempsAideSec, debut: pb.debut, tempsSec: pb.tempsSec, valide: pb.valide
+    };
+  }).filter(it => it.ref);
+  if(problemesReconstruits.length !== pause.problemes.length){
+    afficherToast("Certains problèmes de cette pause ne sont plus disponibles.", "erreur");
+  }
+  if(problemesReconstruits.length === 0){
+    supprimerPauseEleve(etat.elevePrenom);
+    afficherToast("Cette session en pause n'est plus disponible.", "erreur");
+    return;
+  }
+  etat.themeChoisi = pause.theme;
+  etat.niveauChoisi = pause.niveau;
+  etat.problemes = problemesReconstruits;
+  etat.indexCourant = Math.min(pause.indexCourant, problemesReconstruits.length - 1);
+  afficherProbleme();
+  afficherEcran("screen-probleme");
+}
+function abandonnerPause(){
+  demanderConfirmation("Abandonner définitivement cette session en pause ?", () => {
+    supprimerPauseEleve(etat.elevePrenom);
+    document.getElementById("bandeau-reprise").style.display = "none";
+    afficherToast("Session en pause abandonnée.", "info");
+  });
+}
+
+/* ============================================================
+   ÉCRAN PROBLÈME
+   ============================================================ */
+function construireBarreProgression(){
+  const barre = document.getElementById("barre-progression");
+  barre.innerHTML = "";
+  etat.problemes.forEach((p, i) => {
+    const seg = document.createElement("div");
+    seg.className = "seg";
+    if(i < etat.indexCourant) seg.classList.add("done");
+    else if(i === etat.indexCourant) seg.classList.add("current");
+    barre.appendChild(seg);
+  });
+}
+function afficherProbleme(){
+  const item = etat.problemes[etat.indexCourant];
+  const p = item.ref;
+  construireBarreProgression();
+
+  const tag = document.getElementById("tag-theme-probleme");
+  tag.textContent = (p.emoji || "") + " " + (NOMS_THEME[p.theme] || p.theme) + " · " + (NOMS_NIVEAU[p.niveau] || p.niveau);
+  tag.style.background = COULEURS_THEME[p.theme] || "#4338CA";
+
+  document.getElementById("titre-probleme").textContent = "Problème " + (etat.indexCourant + 1) + "/3 — " + p.titre;
+  document.getElementById("enonce-probleme").textContent = p.enonce;
+  document.getElementById("question-probleme").textContent = "❓ " + p.question;
+
+  document.getElementById("champ-calcul").value = item.calculSaisi;
+  document.getElementById("champ-phrase").value = item.phraseSaisie;
+  document.getElementById("zone-feedback").innerHTML = "";
+
+  document.getElementById("btn-ouvrir-aide").style.display = etat.aideAutorisee ? "inline-flex" : "none";
+
+  const dejaValide = item.valide;
+  document.getElementById("champ-calcul").disabled = dejaValide;
+  document.getElementById("champ-phrase").disabled = dejaValide;
+  document.getElementById("btn-valider-probleme").style.display = dejaValide ? "none" : "inline-flex";
+  document.getElementById("btn-probleme-suivant").style.display = dejaValide ? "inline-flex" : "none";
+  document.getElementById("btn-probleme-suivant").textContent = (etat.indexCourant === etat.problemes.length - 1) ? "Voir mon résultat →" : "Problème suivant →";
+
+  if(dejaValide){ afficherFeedback(item, true); }
+}
+
+/* ---------- Analyse du calcul saisi ---------- */
+function analyserCalcul(saisie){
+  let s = saisie.trim();
+  if(!s) return { ok:false, resultat:null };
+  s = s.replace(/,/g, ".");
+  s = s.replace(/[×xX✕]/g, "*");
+  s = s.replace(/[÷]/g, "/");
+  s = s.replace(/\s+/g, "");
+  let partieAEvaluer = s;
+  if(s.includes("=")){
+    const morceaux = s.split("=");
+    partieAEvaluer = morceaux[0];
+  }
+  if(!/^[0-9+\-*/.()]+$/.test(partieAEvaluer) || partieAEvaluer.length === 0){
+    return { ok:false, resultat:null };
+  }
+  try{
+    const valeur = Function('"use strict"; return (' + partieAEvaluer + ")")();
+    if(typeof valeur !== "number" || !isFinite(valeur)) return { ok:false, resultat:null };
+    return { ok:true, resultat:Math.round(valeur * 100) / 100 };
+  }catch(e){
+    return { ok:false, resultat:null };
+  }
+}
+
+/* ---------- Analyse de la phrase réponse ---------- */
+function analyserPhrase(saisie, nombreAttendu){
+  const texte = saisie.trim();
+  if(texte.length < 8) return { ok:false, contientNombre:false, phraseCourte:true };
+  // Fusionne les espaces de séparation des milliers (ex : "33 500" -> "33500")
+  const texteFusionne = texte.replace(/(\d)[\s ](\d)/g, "$1$2");
+  const nombreStr = String(nombreAttendu).replace(".", ",");
+  const nombreStrPoint = String(nombreAttendu);
+  // Le nombre doit apparaître isolé (pas comme sous-chaîne d'un autre nombre, ex : "3" dans "32")
+  const echapper = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const motif = new RegExp("(^|[^0-9,])" + echapper(nombreStr) + "([^0-9,]|$)|(^|[^0-9,])" + echapper(nombreStrPoint) + "([^0-9,]|$)");
+  const contientNombre = motif.test(texteFusionne);
+  const nbMots = texte.split(/\s+/).filter(Boolean).length;
+  const ok = contientNombre && nbMots >= 3;
+  return { ok, contientNombre, phraseCourte:false };
+}
+
+function validerProbleme(){
+  const item = etat.problemes[etat.indexCourant];
+  const p = item.ref;
+  const saisieCalcul = document.getElementById("champ-calcul").value;
+  const saisiePhrase = document.getElementById("champ-phrase").value;
+  item.calculSaisi = saisieCalcul;
+  item.phraseSaisie = saisiePhrase;
+  item.tentatives += 1;
+
+  const resCalcul = analyserCalcul(saisieCalcul);
+  let calculCorrect = resCalcul.ok && Math.abs(resCalcul.resultat - p.expected) < 0.01;
+  if(!calculCorrect && resCalcul.ok && p.arrondi === "sup"){
+    calculCorrect = Math.ceil(resCalcul.resultat) === p.expected;
+  }
+  const resPhrase = analyserPhrase(saisiePhrase, p.expected);
+  const phraseCorrecte = resPhrase.ok;
+
+  item.calculCorrect = calculCorrect;
+  item.phraseCorrect = phraseCorrecte;
+
+  if(calculCorrect && phraseCorrecte){
+    item.valide = true;
+    item.tempsSec = Math.round((Date.now() - item.debut) / 1000);
+    document.getElementById("champ-calcul").disabled = true;
+    document.getElementById("champ-phrase").disabled = true;
+    document.getElementById("btn-valider-probleme").style.display = "none";
+    document.getElementById("btn-probleme-suivant").style.display = "inline-flex";
+    document.getElementById("btn-probleme-suivant").textContent = (etat.indexCourant === etat.problemes.length - 1) ? "Voir mon résultat →" : "Problème suivant →";
+  }
+  afficherFeedback(item, calculCorrect && phraseCorrecte, resCalcul, resPhrase);
+}
+
+function afficherFeedback(item, reussi, resCalcul, resPhrase){
+  const p = item.ref;
+  const zone = document.getElementById("zone-feedback");
+  if(reussi){
+    const noteArrondi = p.arrondi === "sup" ? " (le résultat exact du calcul a une virgule : on arrondit toujours au nombre entier supérieur dans ce type de problème.)" : "";
+    zone.innerHTML =
+      "<div class='feedback ok'><strong>✅ Bravo, c'est la bonne réponse !</strong>" +
+      "Calcul attendu : " + calculModele(p) + " = " + formaterNombre(p.expected) + " " + p.unite + "." + noteArrondi +
+      "</div>";
+  } else {
+    let msg = "<div class='feedback ko'><strong>❌ Pas encore tout à fait...</strong>";
+    if(resCalcul && !resCalcul.ok){
+      msg += "Vérifie ton calcul : utilise seulement des chiffres et + − x ÷.<br>";
+    } else if(resCalcul && Math.abs(resCalcul.resultat - p.expected) >= 0.01){
+      msg += "Le résultat de ton calcul n'est pas encore le bon. Relis l'énoncé.<br>";
+    }
+    if(resPhrase && resPhrase.phraseCourte){
+      msg += "Ta phrase réponse est trop courte : écris une vraie phrase.<br>";
+    } else if(resPhrase && !resPhrase.contientNombre){
+      msg += "Ta phrase réponse doit contenir le résultat de ton calcul.<br>";
+    }
+    msg += "Tu peux corriger et valider à nouveau" + (etat.aideAutorisee ? ", ou utiliser l'Aide 💡." : ".") + "</div>";
+    zone.innerHTML = msg;
+  }
+}
+function calculModele(p){
+  switch(p.operation){
+    case "addition": return "… + … = " + p.expected;
+    case "soustraction": return "… − … = " + p.expected;
+    case "multiplication": return "… × … = " + p.expected;
+    case "division": return "… ÷ … = " + p.expected;
+    default: return "(calcul en 2 étapes) = " + p.expected;
+  }
+}
+function formaterNombre(n){
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function problemeSuivant(){
+  if(etat.indexCourant < etat.problemes.length - 1){
+    etat.indexCourant += 1;
+    afficherProbleme();
+  } else {
+    terminerSession();
+  }
+}
+
+/* ============================================================
+   MODALE AIDE
+   ============================================================ */
+function construireEtapesAide(p){
+  const etapes = [];
+  etapes.push("Quelles informations (les nombres) donne l'énoncé ? Relis-le et note-les au brouillon.");
+  etapes.push("Que te demande exactement la question posée ?");
+  etapes.push("Toutes les informations sont-elles utiles ? Y a-t-il une donnée inutile, ou une unité à convertir (m/km, g/kg, kg/t, €/centimes…) ?");
+  etapes.push("Dois-tu ajouter, enlever, multiplier ou partager ? Pourquoi ce choix ?");
+  etapes.push("Ce problème se résout-il en une seule étape, ou dois-tu calculer une première chose avant une seconde ?");
+  etapes.push("Exemple pour t'aider : " + (EXEMPLES_OPERATION[p.operation] || EXEMPLES_OPERATION["multi-etapes"]));
+  return etapes;
+}
+function ouvrirAide(){
+  const item = etat.problemes[etat.indexCourant];
+  item.aideOuvertures += 1;
+  etat.aide.etapes = construireEtapesAide(item.ref);
+  etat.aide.etapeIndex = 0;
+  etat.aide.ouvertureTemps = Date.now();
+  afficherEtapeAide();
+  document.getElementById("voile-aide").classList.add("active");
+}
+function afficherEtapeAide(){
+  const total = etat.aide.etapes.length;
+  const idx = etat.aide.etapeIndex;
+  document.getElementById("aide-compteur").textContent = "Étape " + (idx + 1) + "/" + total;
+  document.getElementById("aide-question-texte").textContent = etat.aide.etapes[idx];
+  document.getElementById("btn-aide-precedent").style.visibility = idx === 0 ? "hidden" : "visible";
+  document.getElementById("btn-aide-suivant").textContent = (idx === total - 1) ? "Recommencer ↺" : "Suivant →";
+  const item = etat.problemes[etat.indexCourant];
+  item.aideEtapeMax = Math.max(item.aideEtapeMax, idx + 1);
+}
+function aideEtapeSuivante(){
+  const total = etat.aide.etapes.length;
+  if(etat.aide.etapeIndex === total - 1){ etat.aide.etapeIndex = 0; }
+  else{ etat.aide.etapeIndex += 1; }
+  afficherEtapeAide();
+}
+function aideEtapePrecedente(){
+  if(etat.aide.etapeIndex > 0){ etat.aide.etapeIndex -= 1; afficherEtapeAide(); }
+}
+function fermerAide(){
+  const item = etat.problemes[etat.indexCourant];
+  if(etat.aide.ouvertureTemps){
+    item.tempsAideSec += Math.round((Date.now() - etat.aide.ouvertureTemps) / 1000);
+  }
+  document.getElementById("voile-aide").classList.remove("active");
+}
+
+/* ============================================================
+   FIN DE SESSION — RÉCAP + ENREGISTREMENT
+   ============================================================ */
+function terminerSession(){
+  supprimerPauseEleve(etat.elevePrenom);
+  const score = etat.problemes.filter(it => it.valide).length;
+  document.getElementById("recap-score").textContent = score;
+  document.getElementById("recap-sur").textContent = "/" + etat.problemes.length;
+
+  const zone = document.getElementById("recap-details");
+  zone.innerHTML = "";
+  etat.problemes.forEach((item, i) => {
+    const ligne = document.createElement("div");
+    ligne.className = "recap-ligne";
+    ligne.innerHTML =
+      "<span>" + (item.ref.emoji || "") + " " + item.ref.titre + "</span>" +
+      "<span class='puce " + (item.valide ? "ok" : "ko") + "'>" + (item.valide ? "✓" : "✕") + "</span>";
+    zone.appendChild(ligne);
+  });
+
+  const sessions = chargerSessions();
+  sessions.push({
+    eleve: etat.elevePrenom,
+    date: new Date().toISOString(),
+    theme: etat.themeChoisi,
+    niveau: etat.niveauChoisi,
+    aideAutorisee: etat.aideAutorisee,
+    score: score,
+    total: etat.problemes.length,
+    problemes: etat.problemes.map(it => ({
+      id: it.ref.id, titre: it.ref.titre, theme: it.ref.theme, niveau: it.ref.niveau,
+      calculCorrect: it.calculCorrect, phraseCorrect: it.phraseCorrect,
+      valide: it.valide, tentatives: it.tentatives,
+      aideOuvertures: it.aideOuvertures, aideEtapeMax: it.aideEtapeMax, tempsAideSec: it.tempsAideSec,
+      tempsSec: it.tempsSec,
+      dernierCalculSaisi: it.calculSaisi, dernierePhraseSaisie: it.phraseSaisie
+    }))
+  });
+  sauverSessions(sessions);
+
+  afficherEcran("screen-recap");
+}
+
+/* ============================================================
+   ESPACE PARENT
+   ============================================================ */
+function ouvrirPortailProf(){
+  document.getElementById("input-code-prof").value = "";
+  afficherEcran("screen-prof-code");
+}
+function verifierCodeProf(){
+  const saisi = document.getElementById("input-code-prof").value;
+  if(saisi === getCodeProf()){
+    afficherEcran("screen-prof");
+    changerOngletProf("autorisations");
+  } else {
+    afficherToast("Code incorrect.", "erreur");
+  }
+}
+function changerOngletProf(nom){
+  etat.ongletProfActif = nom;
+  document.querySelectorAll(".onglet").forEach(o => o.classList.toggle("active", o.dataset.onglet === nom));
+  document.querySelectorAll(".sous-ecran").forEach(s => s.classList.remove("active"));
+  document.getElementById("sous-" + nom).classList.add("active");
+  if(nom === "autorisations") construireListeAutorisations();
+  if(nom === "historique") construireHistorique();
+  if(nom === "analyse") construireAnalyse();
+}
+
+function construireListeAutorisations(){
+  const eleves = chargerEleves();
+  const zone = document.getElementById("liste-autorisations");
+  zone.innerHTML = "";
+  const noms = Object.keys(eleves).sort();
+  if(noms.length === 0){
+    zone.innerHTML = "<p class='vide'>Aucun joueur pour le moment.</p>";
+    return;
+  }
+  noms.forEach(nom => {
+    const ligne = document.createElement("div");
+    ligne.className = "ligne-eleve";
+    const on = !!eleves[nom].aideAutorisee;
+    ligne.innerHTML =
+      "<span class='nom-eleve'>" + nom + "</span>" +
+      "<div class='droite-eleve'>" +
+      "<div class='toggle-aide" + (on ? " on" : "") + "' data-nom='" + nom + "'><div class='bille'></div></div>" +
+      "<button class='btn-suppr-eleve' data-nom-suppr='" + nom + "' title='Supprimer ce joueur'>🗑️</button>" +
+      "</div>";
+    zone.appendChild(ligne);
+  });
+  zone.querySelectorAll(".toggle-aide").forEach(t => {
+    t.onclick = () => basculerAideEleve(t.dataset.nom, t);
+  });
+  zone.querySelectorAll(".btn-suppr-eleve").forEach(b => {
+    b.onclick = () => supprimerEleve(b.dataset.nomSuppr);
+  });
+}
+function supprimerEleve(nom){
+  demanderConfirmation("Supprimer définitivement « " + nom + " » ainsi que tout son historique de sessions ? Cette action est irréversible.", () => {
+    const eleves = chargerEleves();
+    delete eleves[nom];
+    sauverEleves(eleves);
+    const sessions = chargerSessions().filter(s => s.eleve !== nom);
+    sauverSessions(sessions);
+    supprimerPauseEleve(nom);
+    construireListeAutorisations();
+    if(document.getElementById("sous-analyse").classList.contains("active")) construireAnalyse();
+    if(document.getElementById("sous-historique").classList.contains("active")) construireHistorique();
+    afficherToast(nom + " a été supprimé.", "succes");
+  });
+}
+function basculerAideEleve(nom, elementToggle){
+  const eleves = chargerEleves();
+  if(!eleves[nom]) eleves[nom] = { aideAutorisee:false };
+  eleves[nom].aideAutorisee = !eleves[nom].aideAutorisee;
+  sauverEleves(eleves);
+  elementToggle.classList.toggle("on", eleves[nom].aideAutorisee);
+}
+function ajouterEleveDepuisProf(){
+  const champ = document.getElementById("input-nouvel-eleve-prof");
+  const nom = champ.value.trim();
+  if(!nom) return;
+  garantirEleve(nom);
+  champ.value = "";
+  construireListeAutorisations();
+}
+
+/* ---------- Historique (journal des sessions) ---------- */
+function construireHistorique(){
+  const sessions = chargerSessions().slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  const select = document.getElementById("select-filtre-historique");
+  const valeurAvant = select.value;
+  const noms = Array.from(new Set(sessions.map(s => s.eleve))).sort();
+  select.innerHTML = "<option value='__tous__'>Tous les joueurs</option>" +
+    noms.map(n => "<option value='" + n + "'>" + n + "</option>").join("");
+  if(noms.includes(valeurAvant)) select.value = valeurAvant;
+
+  const filtre = select.value;
+  const sessionsAffichees = (filtre === "__tous__" || !filtre) ? sessions : sessions.filter(s => s.eleve === filtre);
+
+  const zone = document.getElementById("zone-historique");
+  zone.innerHTML = "";
+  if(sessionsAffichees.length === 0){
+    zone.innerHTML = "<p class='vide'>Aucune session enregistrée pour le moment.</p>";
+    return;
+  }
+  sessionsAffichees.forEach((s, i) => {
+    const d = new Date(s.date);
+    const dateStr = d.toLocaleDateString("fr-FR") + " à " + d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"});
+    const carte = document.createElement("div");
+    carte.className = "carte-historique";
+    const idDetail = "detail-hist-" + i;
+    carte.innerHTML =
+      "<div class='ligne-haut'>" +
+        "<span class='qui'>" + s.eleve + "</span>" +
+        "<span class='quand'>" + dateStr + "</span>" +
+      "</div>" +
+      "<div class='puces-resume'>" +
+        "<span class='score-pastille s" + s.score + "'>Score : " + s.score + "/" + s.total + "</span>" +
+        "<span class='mini-stat'>" + (NOMS_THEME[s.theme] || (s.theme === "melange" ? "Mélange" : s.theme)) + "</span>" +
+        "<span class='mini-stat'>" + (NOMS_NIVEAU[s.niveau] || s.niveau) + "</span>" +
+        "<span class='mini-stat'>Aide : " + (s.aideAutorisee ? "autorisée" : "non autorisée") + "</span>" +
+      "</div>" +
+      "<div class='detail-historique' id='" + idDetail + "'>" +
+        s.problemes.map(pb =>
+          "<div class='ligne-pb'><span>" + (pb.valide ? "✅" : "❌") + " " + pb.titre + "</span>" +
+          "<span>" + pb.tentatives + " tentative(s)" + (pb.aideOuvertures > 0 ? " · aide ×" + pb.aideOuvertures : "") + "</span></div>"
+        ).join("") +
+      "</div>";
+    carte.onclick = () => {
+      document.getElementById(idDetail).classList.toggle("ouvert");
+    };
+    zone.appendChild(carte);
+  });
+}
+
+/* ---------- Analyse poussée ---------- */
+function construireAnalyse(){
+  const sessions = chargerSessions();
+  const zone = document.getElementById("zone-analyse");
+  zone.innerHTML = "";
+  if(sessions.length === 0){
+    zone.innerHTML = "<p class='vide'>Aucune session enregistrée pour le moment.</p>";
+    return;
+  }
+  const parEleve = {};
+  sessions.forEach(s => {
+    if(!parEleve[s.eleve]) parEleve[s.eleve] = [];
+    parEleve[s.eleve].push(s);
+  });
+
+  Object.keys(parEleve).sort().forEach(nom => {
+    const sess = parEleve[nom];
+    let sommeScore = 0, totalProbs = 0, sommeAide = 0, calculOk = 0, phraseOk = 0;
+    const parNiveau = { facile:0, moyen:0, difficile:0 };
+    const erreursRecentes = [];
+    sess.forEach(s => {
+      sommeScore += s.score;
+      if(parNiveau[s.niveau] !== undefined) parNiveau[s.niveau] += 1;
+      s.problemes.forEach(pb => {
+        totalProbs += 1;
+        sommeAide += pb.aideOuvertures;
+        if(pb.calculCorrect) calculOk += 1;
+        if(pb.phraseCorrect) phraseOk += 1;
+        if(!pb.valide){
+          erreursRecentes.push({ date:s.date, titre:pb.titre, calcul:pb.dernierCalculSaisi, phrase:pb.dernierePhraseSaisie, calculCorrect:pb.calculCorrect, phraseCorrect:pb.phraseCorrect });
+        }
+      });
+    });
+    const scoreMoyen = (sommeScore / sess.length).toFixed(1);
+    const tauxCalcul = totalProbs ? Math.round(100 * calculOk / totalProbs) : 0;
+    const tauxPhrase = totalProbs ? Math.round(100 * phraseOk / totalProbs) : 0;
+    const aideMoyenne = totalProbs ? (sommeAide / totalProbs).toFixed(1) : "0";
+
+    const fiche = document.createElement("div");
+    fiche.className = "fiche-eleve";
+    let html = "<h4>" + nom + "</h4>";
+    html += "<span class='mini-stat'>" + sess.length + " session(s)</span>";
+    html += "<span class='mini-stat'>Score moyen : " + scoreMoyen + "/3</span>";
+    html += "<span class='mini-stat'>Réussite calcul : " + tauxCalcul + "%</span>";
+    html += "<span class='mini-stat'>Réussite phrase : " + tauxPhrase + "%</span>";
+    html += "<span class='mini-stat'>Ouvertures Aide (moy./pb) : " + aideMoyenne + "</span>";
+    html += "<span class='mini-stat'>Niveaux joués : 🟢" + parNiveau.facile + " 🟠" + parNiveau.moyen + " 🔴" + parNiveau.difficile + "</span>";
+    if(erreursRecentes.length > 0){
+      html += "<div style='margin-top:10px; font-size:12.5px; font-weight:700; color:var(--gris);'>Dernières difficultés :</div>";
+      erreursRecentes.slice(-4).reverse().forEach(e => {
+        html += "<div class='erreur-item'><strong>" + e.titre + "</strong><br>" +
+          "Calcul saisi : « " + (e.calcul || "—") + " » " + (e.calculCorrect ? "✅" : "❌") + "<br>" +
+          "Phrase saisie : « " + (e.phrase || "—") + " » " + (e.phraseCorrect ? "✅" : "❌") + "</div>";
+      });
+    }
+    fiche.innerHTML = html;
+    zone.appendChild(fiche);
+  });
+}
+
+/* ---------- Réglages ---------- */
+function changerCodeProf(){
+  const champ = document.getElementById("input-nouveau-code");
+  const val = champ.value.trim();
+  if(!val){ afficherToast("Entre un nouveau code.", "erreur"); return; }
+  localStorage.setItem(CLES.CODE_PROF, val);
+  champ.value = "";
+  afficherToast("Code Mode Parent mis à jour.", "succes");
+}
+function exporterDonnees(){
+  const data = {
+    eleves: chargerEleves(),
+    sessions: chargerSessions(),
+    exporteLe: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "resolution_problemes_donnees.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function reinitialiserDonnees(){
+  demanderConfirmation("Cette action supprime définitivement tous les joueurs et toutes les sessions enregistrées. Continuer ?", () => {
+    localStorage.removeItem(CLES.ELEVES);
+    localStorage.removeItem(CLES.SESSIONS);
+    localStorage.removeItem(CLES.PAUSE);
+    construireListeAutorisations();
+    construireHistorique();
+    construireAnalyse();
+    afficherToast("Toutes les données ont été réinitialisées.", "succes");
+  });
+}
+
+/* ============================================================
+   INITIALISATION
+   ============================================================ */
+window.addEventListener("DOMContentLoaded", function(){
+  allerEcranAccueil();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<!--
+  CHRONO DEVOIRS — Travaille malin, bats ton record !
+  HISTORIQUE DES VERSIONS
+  | Version | Date       | Modifications                                                                 |
+  |---------|------------|-------------------------------------------------------------------------------|
+  | 2.0     | 2026-10-03 | Synchronisation Firebase entre appareils : joueur choisi dans la liste de Quiz Math Foot,   |
+  |         |            | séances et jeux enregistrés en ligne (une entrée = un document, sans conflit), récompense   |
+  |         |            | et effacement réservés au parent (connexion email/mot de passe). Fonctionne hors ligne :    |
+  |         |            | file d'attente locale puis envoi automatique. Sans Firebase : code local (v1.2) conservé.   |
+  | 1.2     | 2026-10-03 | Mode Parent protégé par un code choisi par le parent (création au 1er accès, 👁️, changement,   |
+  |         |            | blocage 30 s après 3 erreurs, « code oublié » = effacement des données) ; fin du calcul 17 × 6 |
+  | 1.1     | 2026-10-03 | Astuces pendant les exercices : mémo permanent (méthode + mots-clés pour les maths),        |
+  |         |            | astuces propres à la matière dans le chrono, bouton « Toutes les astuces » (chrono non coupé)|
+  | 1.0     | 2026-10-03 | Création : chrono par matière + type (exercices / leçon), défi temps,         |
+  |         |            | historique (tableau + graphique 7 jours), points / niveaux / badges,           |
+  |         |            | récompense choisie par le parent, astuces de méthode, jeu « Énoncés en        |
+  |         |            | 5 étapes » (nombres, mots-clés, opération, calcul, phrase-réponse), Mode Parent|
+
+  NOTES TECHNIQUES
+  - Un seul fichier, aucune dépendance : fonctionne en ligne (GitHub Pages) et hors ligne.
+  - Données enregistrées dans le navigateur (localStorage) : propres à chaque appareil.
+  - Aucun alert()/confirm() : fenêtres et messages maison. Aucun glisser-déposer : tout se fait au toucher.
+  - Lien « Accueil » relatif : ce fichier doit être à la racine du dépôt, à côté de index.html.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Chrono Devoirs — Bats ton record !</title>
+<style>
+  :root{
+    --fond1:#FFF7E6; --fond2:#E8F4FF; --texte:#1F2340; --doux:#5B6280; --blanc:#fff;
+    --ombre:0 5px 0 rgba(31,35,64,.12), 0 9px 20px rgba(31,35,64,.10);
+    --vert:#2EAD5B; --vert-c:#E3F7EA; --indigo:#4B45D6; --indigo-c:#ECEBFF;
+    --orange:#FF8A1F; --orange-c:#FFF0E0; --bleu:#1E88E5; --bleu-c:#E3F1FD;
+    --violet:#8B3FE0; --violet-c:#F3EAFF; --jaune:#FFC93C; --rose-c:#FDEAEA; --rose:#D96A6A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:"Segoe UI","Trebuchet MS",Verdana,Arial,sans-serif; color:var(--texte); font-size:17px;
+    background:radial-gradient(circle at 10% 5%,rgba(255,201,60,.35),transparent 40%),
+               radial-gradient(circle at 90% 95%,rgba(75,69,214,.18),transparent 45%),
+               linear-gradient(160deg,var(--fond1),var(--fond2));
+    min-height:100vh; padding:14px 12px 40px; -webkit-tap-highlight-color:transparent;
+  }
+  .page{max-width:920px;margin:0 auto;}
+  button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;}
+  a.accueil{display:inline-block;color:var(--indigo);font-weight:700;text-decoration:none;font-size:15px;margin-bottom:6px;}
+
+  /* En-tête */
+  .top{background:var(--blanc);border-radius:22px;box-shadow:var(--ombre);padding:12px 16px;margin-bottom:14px;
+       display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .top .logo{font-size:40px;line-height:1;animation:rebond 2.4s ease-in-out infinite;}
+  @keyframes rebond{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-6px) rotate(4deg);}}
+  .top h1{margin:0;font-size:clamp(22px,5vw,30px);font-weight:900;
+          background:linear-gradient(90deg,var(--orange),var(--violet),var(--bleu));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .top .sous{font-size:14px;color:var(--doux);}
+  .score{margin-left:auto;text-align:right;min-width:190px;flex:1 1 190px;}
+  .score .l1{font-weight:800;font-size:16px;}
+  .xp{height:12px;background:#E6E8F2;border-radius:8px;overflow:hidden;margin:5px 0 2px;}
+  .xp i{display:block;height:100%;background:linear-gradient(90deg,var(--jaune),var(--orange));border-radius:8px;transition:width .5s;}
+  .score .l2{font-size:13px;color:var(--doux);}
+
+  /* Onglets */
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  @media(min-width:640px){.tabs{grid-template-columns:repeat(6,1fr);}}
+  .tab{background:var(--blanc);border:3px solid transparent;border-radius:16px;padding:9px 4px;font-weight:800;font-size:14px;
+       box-shadow:0 3px 0 rgba(31,35,64,.12);text-align:center;line-height:1.2;}
+  .tab .ic{display:block;font-size:24px;}
+  .tab.on{border-color:var(--indigo);background:var(--indigo-c);}
+  .panel{display:none;} .panel.on{display:block;}
+
+  /* Cartes */
+  .card{background:var(--blanc);border-radius:20px;box-shadow:var(--ombre);padding:16px;margin-bottom:14px;}
+  .card h2{margin:0 0 4px;font-size:20px;} .card h3{margin:14px 0 6px;font-size:17px;}
+  .etape{display:inline-block;background:var(--indigo);color:#fff;border-radius:20px;padding:2px 12px;font-weight:800;font-size:15px;margin-bottom:6px;}
+  .consigne{background:#FFFBEA;border:3px dashed var(--jaune);border-radius:16px;padding:10px 14px;font-weight:800;margin:8px 0 12px;}
+  .doux{color:var(--doux);font-size:15px;}
+
+  /* Puces / boutons */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px;}
+  .chip{background:#F4F5FB;border:3px solid #E1E4F2;border-radius:30px;padding:9px 14px;font-weight:700;min-height:46px;}
+  .chip.on{background:var(--vert-c);border-color:var(--vert);}
+  .btn{display:inline-block;border:none;border-radius:18px;padding:13px 22px;font-weight:900;font-size:18px;color:#fff;
+       background:var(--indigo);box-shadow:0 5px 0 #3631A8;min-height:50px;}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #3631A8;}
+  .btn.vert{background:var(--vert);box-shadow:0 5px 0 #1F8545;} .btn.vert:active{box-shadow:0 2px 0 #1F8545;}
+  .btn.orange{background:var(--orange);box-shadow:0 5px 0 #C76A10;} .btn.orange:active{box-shadow:0 2px 0 #C76A10;}
+  .btn.gris{background:#8A90AA;box-shadow:0 5px 0 #646A84;} .btn.gris:active{box-shadow:0 2px 0 #646A84;}
+  .btn[disabled]{opacity:.45;pointer-events:none;}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;}
+
+  /* Chrono */
+  .big{font-size:clamp(54px,16vw,96px);font-weight:900;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:2px;color:var(--indigo);line-height:1.1;}
+  .big.pause{color:var(--doux);}
+  .bar{height:20px;background:#E6E8F2;border-radius:12px;overflow:hidden;margin:6px 0;}
+  .bar i{display:block;height:100%;width:0;background:var(--vert);border-radius:12px;transition:width .3s,background .3s;}
+  .bar i.chaud{background:var(--orange);} .bar i.depasse{background:var(--violet);}
+  .centre{text-align:center;}
+  .astuce{background:var(--bleu-c);border-left:6px solid var(--bleu);border-radius:12px;padding:10px 14px;margin-top:12px;font-weight:600;}
+  details.memo{background:#EAF3FD;border:3px solid var(--bleu);border-radius:16px;padding:10px 14px;margin-top:12px;text-align:left;}
+  details.memo summary{font-weight:900;cursor:pointer;font-size:17px;}
+  details.memo ul{margin:8px 0 0;padding-left:20px;} details.memo li{margin:4px 0;font-weight:600;font-size:16px;}
+  .info{background:var(--vert-c);border-radius:12px;padding:9px 13px;margin-top:10px;font-weight:600;font-size:16px;}
+
+  /* Tableaux */
+  .tw{overflow:auto;max-height:380px;border:2px solid #E1E4F2;border-radius:14px;}
+  table{border-collapse:collapse;width:100%;font-size:15px;}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #ECEEF7;white-space:nowrap;}
+  td.wrap,th.wrap{white-space:normal;}
+  th{position:sticky;top:0;background:var(--indigo-c);z-index:1;font-size:14px;}
+  tr:nth-child(even) td{background:#FAFAFE;}
+  .mots td:first-child{font-weight:800;white-space:normal;}
+  .pill{display:inline-block;border-radius:20px;padding:1px 10px;font-weight:800;font-size:14px;}
+  .pill.ok{background:var(--vert-c);color:#1F7A41;} .pill.no{background:var(--orange-c);color:#B35A00;}
+
+  /* Graphique 7 jours */
+  .graph{display:flex;align-items:flex-end;gap:8px;height:150px;padding:6px 4px 0;}
+  .graph div{flex:1;text-align:center;font-size:12px;color:var(--doux);display:flex;flex-direction:column;justify-content:flex-end;height:100%;}
+  .graph b{display:block;background:linear-gradient(180deg,var(--bleu),var(--indigo));border-radius:8px 8px 0 0;min-height:0;}
+  .graph span{font-weight:800;color:var(--texte);}
+
+  /* Badges */
+  .badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .badge{border-radius:16px;padding:10px;text-align:center;background:#F1F2F8;border:3px solid #E1E4F2;}
+  .badge .e{font-size:34px;filter:grayscale(1);opacity:.45;} .badge .n{font-weight:800;font-size:15px;} .badge .d{font-size:13px;color:var(--doux);}
+  .badge.got{background:#FFF8DC;border-color:var(--jaune);} .badge.got .e{filter:none;opacity:1;}
+
+  /* Jeu énoncés */
+  .enonce{background:#FFFDF5;border:3px solid #F1E3B5;border-radius:16px;padding:14px;font-size:20px;line-height:2.1;}
+  .tok{border-radius:8px;padding:2px 4px;cursor:pointer;border:2px solid transparent;}
+  .tok.sel{background:var(--bleu-c);border-color:var(--bleu);}
+  .tok.ok{background:#CDF0D8;border-color:var(--vert);} .tok.manque{border:2px dashed var(--orange);background:var(--orange-c);}
+  .tok.faux{background:var(--rose-c);border-color:var(--rose);}
+  .tok.n{background:var(--bleu-c);border-color:var(--bleu);font-weight:800;} .tok.k{background:#FFF0B8;border-color:var(--jaune);font-weight:800;}
+  .ops{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  @media(min-width:560px){.ops{grid-template-columns:repeat(4,1fr);}}
+  .op{background:#F4F5FB;border:3px solid #E1E4F2;border-radius:16px;padding:12px 6px;font-weight:800;text-align:center;font-size:16px;}
+  .op .s{display:block;font-size:34px;line-height:1.1;}
+  .op.on{border-color:var(--indigo);background:var(--indigo-c);}
+  .rep{display:block;width:100%;text-align:left;background:#F4F5FB;border:3px solid #E1E4F2;border-radius:14px;padding:12px;margin:8px 0;font-weight:700;}
+  .rep.on{border-color:var(--indigo);background:var(--indigo-c);}
+  input[type=text],input[type=number],input[type=password],input[type=email]{font-family:inherit;font-size:20px;padding:10px 12px;border:3px solid #CBD0E6;border-radius:14px;width:150px;}
+  input.large{width:100%;max-width:320px;}
+  .oeil{background:#F4F5FB;border:3px solid #CBD0E6;border-radius:14px;padding:8px 12px;font-size:20px;min-height:48px;}
+  .calc{font-size:34px;font-weight:900;text-align:center;margin:10px 0;color:var(--indigo);}
+  .fb{border-radius:14px;padding:10px 14px;margin-top:10px;font-weight:700;}
+  .fb.ok{background:var(--vert-c);border:2px solid var(--vert);} .fb.indice{background:var(--orange-c);border:2px solid var(--orange);}
+  .fb.corrige{background:var(--violet-c);border:2px solid var(--violet);}
+  .dots{display:flex;gap:6px;margin:6px 0 8px;} .dots i{flex:1;height:10px;border-radius:6px;background:#E1E4F2;} .dots i.fait{background:var(--vert);} .dots i.now{background:var(--jaune);}
+  .liste-pb{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+  .pb{background:#F4F5FB;border:3px solid #E1E4F2;border-radius:16px;padding:12px;text-align:left;font-weight:800;}
+  .pb.fait{background:var(--vert-c);border-color:var(--vert);}
+
+  /* Fenêtre + message */
+  #fond{position:fixed;inset:0;background:rgba(31,35,64,.55);display:none;align-items:center;justify-content:center;padding:14px;z-index:50;}
+  #fond.on{display:flex;}
+  #modal{background:#fff;border-radius:22px;padding:18px;max-width:520px;width:100%;max-height:92vh;overflow:auto;box-shadow:var(--ombre);}
+  #modal h2{margin:0 0 8px;}
+  .check{display:flex;gap:10px;align-items:center;background:#F4F5FB;border:3px solid #E1E4F2;border-radius:14px;padding:11px;margin:8px 0;font-weight:700;}
+  .check .b{width:28px;height:28px;border-radius:8px;border:3px solid #AAB0CC;background:#fff;flex:none;text-align:center;line-height:22px;font-weight:900;color:#fff;}
+  .check.on{border-color:var(--vert);background:var(--vert-c);} .check.on .b{background:var(--vert);border-color:var(--vert);}
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(80px);background:var(--texte);color:#fff;border-radius:30px;padding:11px 20px;
+         font-weight:700;opacity:0;transition:all .3s;z-index:60;max-width:92vw;text-align:center;}
+  #toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  footer{text-align:center;color:var(--doux);font-size:13px;margin-top:18px;}
+  label.f{display:block;font-weight:800;margin:10px 0 4px;}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+  @media print{
+    body{background:#fff;padding:0;} .tabs,.top .logo,a.accueil,.noprint,#fond,#toast,.btn{display:none!important;}
+    .card{box-shadow:none;border:1px solid #bbb;break-inside:avoid;} .tw{max-height:none;overflow:visible;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <a class="accueil" href="index.html">🏠 Accueil</a>
+
+  <header class="top">
+    <div class="logo">⏱️</div>
+    <div>
+      <h1>Chrono Devoirs</h1>
+      <div class="sous">Travaille malin, bats ton record !</div>
+    </div>
+    <div class="score" aria-live="polite">
+      <div class="l1" id="hNiveau">Niveau 1 · Apprenti</div>
+      <div class="xp"><i id="hXp" style="width:0%"></i></div>
+      <div class="l2" id="hPts">0 point · 🔥 0 jour</div>
+      <div class="l2" id="hSync"></div>
+    </div>
+  </header>
+
+  <nav class="tabs noprint" aria-label="Menu">
+    <button class="tab on" data-tab="chrono"><span class="ic">⏱️</span>Chrono</button>
+    <button class="tab" data-tab="histo"><span class="ic">📊</span>Historique</button>
+    <button class="tab" data-tab="astuces"><span class="ic">💡</span>Astuces</button>
+    <button class="tab" data-tab="enonces"><span class="ic">🔍</span>Énoncés</button>
+    <button class="tab" data-tab="trophees"><span class="ic">🏆</span>Trophées</button>
+    <button class="tab" data-tab="parent"><span class="ic">👪</span>Mode Parent</button>
+  </nav>
+
+  <section class="panel on" id="p-chrono"></section>
+  <section class="panel" id="p-histo"></section>
+  <section class="panel" id="p-astuces"></section>
+  <section class="panel" id="p-enonces"></section>
+  <section class="panel" id="p-trophees"></section>
+  <section class="panel" id="p-parent"></section>
+
+  <footer>Chrono Devoirs · v2.0 · 03/10/2026 · Synchronisé entre appareils quand la connexion le permet.</footer>
+</div>
+
+<div id="fond"><div id="modal" role="dialog" aria-modal="true"></div></div>
+<div id="toast" role="status"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+"use strict";
+/* ============================ DONNÉES DE BASE ============================ */
+var VERSION='2.0';
+var KEY='chronoDevoirs_v2';
+var MATIERES=[
+  {id:'maths',n:'Maths',e:'🧮'},{id:'francais',n:'Français',e:'📚'},{id:'lecture',n:'Lecture',e:'📖'},
+  {id:'histgeo',n:'Histoire-Géo',e:'🌍'},{id:'sciences',n:'Sciences',e:'🔬'},{id:'anglais',n:'Anglais',e:'🇬🇧'},{id:'autre',n:'Autre',e:'⭐'}
+];
+var TYPES=[{id:'exo',n:'Exercices',e:'✏️'},{id:'lecon',n:'Apprendre la leçon',e:'🧠'}];
+var DEFIS=[10,15,20,30,45,0];
+var NIVEAUX=['Apprenti','Explorateur','Aventurier','Champion','Super-Champion','Maître','Légende'];
+var CHECKS={
+  exo:['J\u2019ai lu chaque consigne en entier','Je me suis relu(e) et j\u2019ai vérifié','Mon travail est soigné et lisible'],
+  lecon:['Je sais la dire sans regarder','Je me suis testé(e) (à voix haute ou par écrit)','Je pourrais l\u2019expliquer à quelqu\u2019un']
+};
+
+/* ============================ STOCKAGE ============================ */
+/* P = ce qui est enregistré sur l'appareil (cache + file d'attente d'envoi).
+   S = vue calculée pour le joueur affiché (séances, points, badges…) : recalculée par recompute(). */
+var mem=null;
+var LOCAL='@appareil';
+function defaultsP(){return {joueur:'',roster:[],cache:{},run:null,code:{salt:'',hash:''}};}
+function loadP(){
+  var d=defaultsP();
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){var o=JSON.parse(raw);
+      if(o&&typeof o==='object'){
+        d.joueur=String(o.joueur||'');d.roster=Array.isArray(o.roster)?o.roster:[];
+        if(o.cache&&typeof o.cache==='object')d.cache=o.cache;
+        d.run=o.run&&o.run.m?o.run:null;
+        if(o.code){d.code.salt=String(o.code.salt||'');d.code.hash=String(o.code.hash||'');}
+      }}
+  }catch(e){ if(mem) d=mem; }
+  return d;
+}
+var P=loadP();
+var S={sessions:[],points:0,badges:[],jeu:{faits:[],sansFaute:0},parent:{recompense:'',cible:200,salt:'',hash:''},run:P.run};
+function fiche(nom){var c=P.cache[nom];if(!c)c=P.cache[nom]={sessions:[],jeux:[],reglages:{recompense:'',cible:200}};return c;}
+function recompute(){
+  var c=P.joueur?fiche(P.joueur):{sessions:[],jeux:[],reglages:{recompense:'',cible:200}};
+  S.sessions=c.sessions.slice();
+  var pts=0,faits=[],sf=0;
+  S.sessions.forEach(function(x){pts+=(+x.pts||0);});
+  c.jeux.forEach(function(j){pts+=(+j.gain||0);if(faits.indexOf(j.pid)<0)faits.push(j.pid);if(j.sf)sf++;});
+  S.points=pts;S.jeu={faits:faits,sansFaute:sf};
+  S.parent.recompense=String(c.reglages.recompense||'');S.parent.cible=+c.reglages.cible||200;
+  S.parent.salt=P.code.salt;S.parent.hash=P.code.hash;
+  S.badges=BADGES.filter(function(b){return b.f();}).map(function(b){return b.id;});
+}
+function save(){ P.run=S.run; mem=P; try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){} }
+function nouvelId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function ajouterSeance(x){
+  if(!P.joueur)return;
+  x.pending=(P.joueur!==LOCAL);fiche(P.joueur).sessions.push(x);save();recompute();pousserEnAttente();
+}
+function ajouterJeu(j){
+  if(!P.joueur)return;
+  j.pending=(P.joueur!==LOCAL);fiche(P.joueur).jeux.push(j);save();recompute();pousserEnAttente();
+}
+function nouveauxBadges(avant){return BADGES.filter(function(b){return S.badges.indexOf(b.id)>=0&&avant.indexOf(b.id)<0;});}
+
+/* ============================ OUTILS ============================ */
+function $(id){return document.getElementById(id);}
+function p2(n){return (n<10?'0':'')+n;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function mat(id){for(var i=0;i<MATIERES.length;i++)if(MATIERES[i].id===id)return MATIERES[i];return MATIERES[6];}
+function typ(id){return id==='lecon'?TYPES[1]:TYPES[0];}
+function clock(ms){var t=Math.max(0,Math.floor(ms/1000)),h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;return (h>0?h+':'+p2(m):p2(m))+':'+p2(s);}
+function dur(sec){sec=Math.round(sec);if(sec<60)return sec+' s';var m=Math.floor(sec/60),s=sec%60;return m+' min'+(s?' '+s+' s':'');}
+function dayKey(ts){var d=new Date(ts);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+function streak(){
+  var set={};S.sessions.forEach(function(s){set[dayKey(s.ts)]=1;});
+  var d=new Date();d.setHours(12,0,0,0);
+  if(!set[dayKey(d)])d.setDate(d.getDate()-1);
+  var n=0;while(set[dayKey(d)]){n++;d.setDate(d.getDate()-1);}
+  return n;
+}
+function statsFor(m,t){
+  var a=S.sessions.filter(function(s){return s.m===m&&s.t===t;});
+  if(!a.length)return null;
+  var best=Math.min.apply(null,a.map(function(s){return s.d;}));
+  var avg=Math.round(a.reduce(function(x,s){return x+s.d;},0)/a.length);
+  return {n:a.length,best:best,avg:avg};
+}
+var toastT=null;
+function toast(msg){var t=$('toast');t.textContent=msg;t.className='on';clearTimeout(toastT);toastT=setTimeout(function(){t.className='';},3200);}
+function openModal(html){$('modal').innerHTML=html;$('fond').className='on';}
+function closeModal(){$('fond').className='';$('modal').innerHTML='';}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+
+/* ============================ POINTS, NIVEAUX, BADGES ============================ */
+function updateHeader(){
+  var lv=Math.floor(S.points/100), nom=NIVEAUX[Math.min(lv,NIVEAUX.length-1)];
+  $('hNiveau').textContent='Niveau '+(lv+1)+' · '+nom;
+  $('hXp').style.width=(S.points%100)+'%';
+  var st=streak();
+  $('hPts').textContent=S.points+' point'+(S.points>1?'s':'')+' · 🔥 '+st+' jour'+(st>1?'s':'');
+  majStatut();
+}
+var BADGES=[
+  {id:'first',e:'🌱',n:'Premier pas',d:'Terminer ta 1re séance',f:function(){return S.sessions.length>=1;}},
+  {id:'s3',e:'🔥',n:'3 jours de suite',d:'Travailler 3 jours d\u2019affilée',f:function(){return streak()>=3;}},
+  {id:'s7',e:'🚀',n:'Semaine de feu',d:'Travailler 7 jours d\u2019affilée',f:function(){return streak()>=7;}},
+  {id:'touche',e:'🎨',n:'Touche-à-tout',d:'Travailler 3 matières différentes',f:function(){var o={};S.sessions.forEach(function(s){o[s.m]=1;});return Object.keys(o).length>=3;}},
+  {id:'record',e:'🥇',n:'Record battu',d:'Battre ton meilleur temps',f:function(){return S.sessions.some(function(s){return s.record;});}},
+  {id:'defi5',e:'🎯',n:'Maître des défis',d:'Réussir 5 défis temps',f:function(){return S.sessions.filter(function(s){return s.defiOk;}).length>=5;}},
+  {id:'maths5',e:'🧮',n:'Roi des maths',d:'5 séances de maths',f:function(){return S.sessions.filter(function(s){return s.m==='maths';}).length>=5;}},
+  {id:'lecon5',e:'🧠',n:'Cerveau en or',d:'5 leçons apprises',f:function(){return S.sessions.filter(function(s){return s.t==='lecon';}).length>=5;}},
+  {id:'soigne',e:'✨',n:'Travail soigné',d:'5 séances avec 3 auto-contrôles',f:function(){return S.sessions.filter(function(s){return s.checks===3;}).length>=5;}},
+  {id:'heure',e:'⏳',n:'1 heure de travail',d:'Cumuler 60 minutes',f:function(){return S.sessions.reduce(function(x,s){return x+s.d;},0)>=3600;}},
+  {id:'detective',e:'🕵️',n:'Détective des énoncés',d:'Réussir 3 problèmes du jeu',f:function(){return S.jeu.faits.length>=3;}},
+  {id:'sansfaute',e:'💎',n:'Sans-faute',d:'1 problème sans aucune erreur',f:function(){return S.jeu.sansFaute>=1;}}
+];
+/* ============================ ONGLETS ============================ */
+var tabCourant='chrono';
+function showTab(id){
+  tabCourant=id;
+  var t=document.querySelectorAll('.tab');for(var i=0;i<t.length;i++)t[i].className='tab'+(t[i].getAttribute('data-tab')===id?' on':'');
+  var p=document.querySelectorAll('.panel');for(var j=0;j<p.length;j++)p[j].className='panel'+(p[j].id==='p-'+id?' on':'');
+  if(id==='chrono')renderChrono(); if(id==='histo')renderHisto(); if(id==='astuces')renderAstuces();
+  if(id==='enonces')renderEnonces(); if(id==='trophees')renderTrophees(); if(id==='parent')renderParent();
+  window.scrollTo(0,0);
+}
+(function(){var t=document.querySelectorAll('.tab');for(var i=0;i<t.length;i++)(function(b){b.onclick=function(){showTab(b.getAttribute('data-tab'));};})(t[i]);})();
+
+/* ============================ CHRONO ============================ */
+var sel={m:null,t:null,defi:0};
+var ASTUCES_EXO=[
+  'Lis la consigne en entier, puis relis-la une 2e fois.','Souligne les verbes importants : calcule, recopie, justifie…',
+  'Commence par les exercices que tu sais faire : ça donne de l\u2019élan.','Bloqué(e) ? Passe au suivant et reviens-y après.',
+  'Écris proprement dès le début : te relire sera plus rapide.','Avant de finir, vérifie : ai-je répondu à la question posée ?'
+];
+var ASTUCES_LECON=[
+  'Découpe la leçon en petits morceaux.','Cache le texte et dis à voix haute ce que tu retiens.',
+  'Écris de mémoire les mots importants, les dates, les règles.','Un petit dessin ou schéma t\u2019aide à retenir.',
+  'Relis cette leçon demain 5 minutes : le cerveau retient mieux !','Explique la leçon à quelqu\u2019un (ou à un doudou) !'
+];
+function runElapsed(r){return (r.accum||0)+(r.since?Date.now()-r.since:0);}
+function renderChrono(){
+  var el=$('p-chrono');
+  if(S.run){ renderRun(el); return; }
+  if(!P.joueur){ el.innerHTML=chooserHTML(); return; }
+  var h='<div class="card"><div style="font-weight:800;font-size:18px">👤 '+esc(nomAff(P.joueur))+'</div><div class="row" style="margin-top:4px"><button class="chip" onclick="changerJoueur()">Changer de joueur</button></div></div>';
+  h+='<div class="card"><span class="etape">Étape 1</span><h2>Choisis ta matière</h2><div class="chips">';
+  MATIERES.forEach(function(m){h+='<button class="chip'+(sel.m===m.id?' on':'')+'" onclick="pickM(\''+m.id+'\')">'+m.e+' '+m.n+'</button>';});
+  h+='</div></div>';
+  h+='<div class="card"><span class="etape">Étape 2</span><h2>Que vas-tu faire ?</h2><div class="chips">';
+  TYPES.forEach(function(t){h+='<button class="chip'+(sel.t===t.id?' on':'')+'" onclick="pickT(\''+t.id+'\')">'+t.e+' '+t.n+'</button>';});
+  h+='</div></div>';
+  h+='<div class="card"><span class="etape">Étape 3</span><h2>Choisis ton défi temps</h2><div class="doux">Combien de minutes penses-tu mettre ? Vise juste, sans bâcler !</div><div class="chips">';
+  DEFIS.forEach(function(d){h+='<button class="chip'+(sel.defi===d?' on':'')+'" onclick="pickD('+d+')">'+(d?('⏳ '+d+' min'):'Sans défi')+'</button>';});
+  h+='</div>';
+  if(sel.m&&sel.t){
+    var st=statsFor(sel.m,sel.t);
+    h+='<div class="info">'+(st?('🏅 Ton record : <b>'+dur(st.best)+'</b> · Ta moyenne : <b>'+dur(st.avg)+'</b> · '+st.n+' séance'+(st.n>1?'s':'')
+       +'<br>Défi du jour : fais mieux que ton record, en gardant un travail propre !')
+       :'🌟 C\u2019est ta première fois ici : ton temps d\u2019aujourd\u2019hui deviendra ton temps à battre !')+'</div>';
+  }
+  h+='<div class="row"><button class="btn vert" id="go" '+((sel.m&&sel.t)?'':'disabled')+' onclick="demarrer()">▶ C\u2019est parti !</button>'
+    +'<span class="doux">'+((sel.m&&sel.t)?'Prépare ton cahier et ta trousse, puis lance le chrono.':'Choisis une matière et un type de travail pour commencer.')+'</span></div></div>';
+  el.innerHTML=h;
+}
+function pickM(id){sel.m=id;renderChrono();}
+function pickT(id){sel.t=id;renderChrono();}
+function pickD(d){sel.defi=d;renderChrono();}
+function demarrer(){
+  if(!sel.m||!sel.t)return;
+  S.run={m:sel.m,t:sel.t,defi:sel.defi,accum:0,since:Date.now(),finished:false,j:P.joueur};
+  save();renderChrono();
+}
+function renderRun(el){
+  var r=S.run,m=mat(r.m),t=typ(r.t),st=statsFor(r.m,r.t);
+  var h='<div class="card centre"><div class="doux">👤 '+esc(nomAff(P.joueur))+'</div><div style="font-weight:800;font-size:19px">'+m.e+' '+m.n+' · '+t.e+' '+t.n+'</div>'
+   +'<div class="big'+(r.since?'':' pause')+'" id="tBig">00:00</div>'
+   +'<div id="tPause" class="doux" style="font-weight:800;min-height:22px"></div>';
+  if(r.defi){h+='<div class="bar"><i id="tBar"></i></div><div id="tDefi" style="font-weight:700"></div>';}
+  else h+='<div class="doux">Pas de défi : concentre-toi et fais de ton mieux.</div>';
+  if(st)h+='<div class="doux" style="margin-top:4px">🏅 Record à battre : '+dur(st.best)+'</div>';
+  h+='<div class="astuce" id="tAstuce" aria-live="polite"></div>'+memoHTML(r)
+   +'<div class="row" style="justify-content:center">'
+   +'<button class="btn orange" id="bPause" onclick="basculePause()">'+(r.since?'⏸ Pause':'▶ Reprendre')+'</button>'
+   +'<button class="btn" onclick="ouvrirAstuces()">💡 Toutes les astuces</button>'
+   +'<button class="btn vert" onclick="terminer()">✅ J\u2019ai terminé</button>'
+   +'<button class="btn gris" onclick="demanderAbandon()">✖ Annuler</button></div></div>';
+  el.innerHTML=h; tick();
+}
+function tick(){
+  var r=S.run; if(!r||!$('tBig'))return;
+  var ms=runElapsed(r); $('tBig').textContent=clock(ms);
+  $('tBig').className='big'+(r.since?'':' pause'); $('tPause').textContent=r.since?'':'⏸ Chrono en pause';
+  if(r.defi&&$('tBar')){
+    var tot=r.defi*60000,pc=Math.min(100,ms/tot*100),b=$('tBar');
+    b.style.width=pc+'%'; b.className=ms>tot?'depasse':(pc>=75?'chaud':'');
+    $('tDefi').textContent=ms>tot?('Défi dépassé de '+clock(ms-tot)+' — pas grave, finis bien !'):('⏳ Défi '+r.defi+' min · il te reste '+clock(tot-ms));
+  }
+  var liste=r.t==='lecon'?ASTUCES_LECON:(CONSEILS[r.m]||[]).concat(ASTUCES_EXO);
+  $('tAstuce').textContent='💡 '+liste[Math.floor(ms/30000)%liste.length];
+}
+setInterval(tick,250);
+
+/* Mémo d'astuces visible pendant le travail (le chrono continue de tourner) */
+function memoHTML(r){
+  var h='';
+  if(r.t==='exo'&&r.m==='maths'){
+    h+='<details class="memo" open><summary>🧮 Rappel maths : je résous un problème</summary><ul>'
+     +'<li>① Je lis l\u2019énoncé 2 fois, j\u2019entoure les <b>nombres</b>.</li>'
+     +'<li>② Je souligne les <b>mots-clés</b> et la <b>question</b>.</li>'
+     +'<li>③ Je choisis l\u2019<b>opération</b> : gagne, reçoit → ➕ · perd, dépense, reste → ➖ · chaque, fois, identiques → ✖️ · partage, répartit → ➗</li>'
+     +'<li>④ J\u2019écris le calcul, puis je le fais. Je vérifie avec l\u2019opération inverse.</li>'
+     +'<li>⑤ J\u2019écris une <b>phrase-réponse</b> avec l\u2019unité (€, kg, billes…).</li></ul></details>';
+  }else if(r.t==='exo'){
+    h+='<details class="memo" open><summary>'+mat(r.m).e+' Rappel : ma méthode pour les exercices</summary><ul>';
+    METH.exo.etapes.forEach(function(e,i){h+='<li>'+e[0]+' <b>'+e[1]+'</b></li>';});
+    h+='</ul></details>';
+  }else{
+    h+='<details class="memo"><summary>🧠 Rappel : ma méthode pour apprendre</summary><ul>';
+    METH.lecon.etapes.forEach(function(e){h+='<li>'+e[0]+' <b>'+e[1]+'</b></li>';});
+    h+='</ul></details>';
+  }
+  return h;
+}
+function ouvrirAstuces(){
+  var r=S.run,m=r?r.m:'maths',t=r?r.t:'exo',M=METH[t];
+  var h='<h2>💡 Astuces '+mat(m).e+' '+mat(m).n+'</h2><p class="doux">Ton chrono continue de tourner. Lis, puis reviens à ton travail !</p>';
+  if(t==='exo'){
+    h+='<h3>'+M.titre+'</h3>';
+    M.etapes.forEach(function(e,i){h+='<div class="info" style="background:#EAF3FD">'+e[0]+' <b>'+(i+1)+'. '+e[1]+'</b><br><span style="font-weight:500">'+e[2]+'</span></div>';});
+    h+='<h3>Conseils pour '+mat(m).n+'</h3>';
+    (CONSEILS[m]||[]).forEach(function(c){h+='<div class="astuce">'+c+'</div>';});
+    if(m==='maths'){
+      h+='<h3>🔑 Mots magiques</h3><div class="tw" style="max-height:none"><table class="mots"><tr><th>Si tu vois…</th><th>Opération</th></tr>'
+       +'<tr><td>gagne, reçoit, ajoute, ensemble</td><td>➕ Addition</td></tr>'
+       +'<tr><td>perd, dépense, donne, enlève, il reste</td><td>➖ Soustraction</td></tr>'
+       +'<tr><td>chaque, fois, identiques, paquets de</td><td>✖️ Multiplication</td></tr>'
+       +'<tr><td>partage, répartit, équitablement</td><td>➗ Division</td></tr></table></div>'
+       +'<div class="astuce">⚠️ « en tout » peut être une addition OU une multiplication : regarde si la quantité est la même à chaque fois.</div>';
+    }
+  }else{
+    h+='<h3>'+M.titre+'</h3>';
+    M.etapes.forEach(function(e,i){h+='<div class="info" style="background:#F3EAFF">'+e[0]+' <b>'+(i+1)+'. '+e[1]+'</b><br><span style="font-weight:500">'+e[2]+'</span></div>';});
+  }
+  h+='<div class="row"><button class="btn vert" onclick="closeModal()">↩ Retour à mon travail</button></div>';
+  openModal(h);
+}
+function basculePause(){
+  var r=S.run;if(!r||r.finished)return;
+  if(r.since){r.accum+=Date.now()-r.since;r.since=null;}else{r.since=Date.now();}
+  save();renderChrono();
+}
+function demanderAbandon(){
+  openModal('<h2>Annuler la séance ?</h2><p>Cette séance ne sera pas enregistrée.</p><div class="row">'
+   +'<button class="btn gris" onclick="closeModal()">Continuer à travailler</button>'
+   +'<button class="btn orange" onclick="abandonner()">Oui, annuler</button></div>');
+}
+function abandonner(){S.run=null;save();closeModal();renderChrono();}
+var checksSel=[false,false,false];
+function terminer(){
+  var r=S.run;if(!r)return;
+  if(r.since){r.accum+=Date.now()-r.since;r.since=null;}
+  r.finished=true;save();
+  checksSel=[false,false,false];
+  var d=Math.round(runElapsed(r)/1000);
+  if(d<60){
+    openModal('<h2>Séance trop courte ⏱️</h2><p>Une séance doit durer au moins <b>1 minute</b> pour compter. Reprends le travail, tu y es presque !</p>'
+     +'<div class="row"><button class="btn vert" onclick="reprendreApresTerminer()">▶ Reprendre le travail</button><button class="btn gris" onclick="abandonner()">Annuler la séance</button></div>');
+    return;
+  }
+  openModal(modalChecks(d));
+}
+function modalChecks(d){
+  var r=S.run,L=CHECKS[r.t],h='<h2>Auto-contrôle ✅</h2><p>Tu as travaillé <b>'+dur(d)+'</b>. Être rapide, c\u2019est super… mais bien travailler compte autant ! Touche ce qui est vrai :</p>';
+  for(var i=0;i<3;i++)h+='<div class="check'+(checksSel[i]?' on':'')+'" onclick="toggleCheck('+i+')"><div class="b">'+(checksSel[i]?'✓':'')+'</div><div>'+L[i]+'</div></div>';
+  h+='<div class="row"><button class="btn vert" onclick="valider()">🏁 Valider ma séance</button><button class="btn gris" onclick="reprendreApresTerminer()">↩ Reprendre</button></div>';
+  return h;
+}
+function toggleCheck(i){checksSel[i]=!checksSel[i];openModal(modalChecks(Math.round(runElapsed(S.run)/1000)));}
+function reprendreApresTerminer(){var r=S.run;if(!r)return;r.finished=false;r.since=Date.now();save();closeModal();renderChrono();}
+function valider(){
+  var r=S.run;if(!r)return;
+  var d=Math.round(runElapsed(r)/1000), checks=checksSel.filter(Boolean).length;
+  var prev=statsFor(r.m,r.t);
+  var defiOk=!!(r.defi&&d<=r.defi*60);
+  var record=!!(prev&&d<prev.best&&checks>=2);
+  var lignes=[['Séance terminée',10],['Auto-contrôle ('+checks+'/3)',checks*5]];
+  if(defiOk&&checks>=2)lignes.push(['Défi temps réussi 🎯',10]);
+  if(record)lignes.push(['Record battu 🥇',15]);
+  var pts=lignes.reduce(function(x,l){return x+l[1];},0);
+  var s={id:nouvelId(),ts:Date.now(),m:r.m,t:r.t,d:d,defi:r.defi||0,defiOk:defiOk&&checks>=2,checks:checks,pts:pts,record:record};
+  var avant=S.badges.slice();
+  S.run=null;ajouterSeance(s);
+  var nb=nouveauxBadges(avant);save();updateHeader();
+  var msg;
+  if(record)msg='🥇 Nouveau record ! Tu es plus rapide que jamais, et en travaillant bien.';
+  else if(prev&&d<prev.avg)msg='🚀 Tu as été plus rapide que ta moyenne de '+dur(prev.avg-d)+' !';
+  else if(!prev)msg='🌟 Premier temps de référence enregistré. La prochaine fois, bats-le !';
+  else msg=pick(['💪 Bravo, tu as terminé ta séance !','👏 Belle régularité, continue comme ça !','🌈 Chaque séance te rend plus fort(e) !']);
+  if(checks<2&&prev)msg+=' (Pense à te relire : les bonus de vitesse demandent 2 auto-contrôles.)';
+  var h='<h2>Bravo ! 🎉</h2><p style="font-weight:800">'+msg+'</p><div class="tw" style="max-height:none"><table><tr><th>Bonus</th><th>Points</th></tr>';
+  lignes.forEach(function(l){h+='<tr><td class="wrap">'+l[0]+'</td><td>+'+l[1]+'</td></tr>';});
+  h+='<tr><td><b>Total</b></td><td><b>+'+pts+'</b></td></tr></table></div>';
+  if(nb.length){h+='<div class="info">';nb.forEach(function(b){h+='🏅 Nouveau badge : '+b.e+' <b>'+b.n+'</b><br>';});h+='</div>';}
+  h+='<div class="row"><button class="btn vert" onclick="closeModal();renderChrono()">OK</button><button class="btn" onclick="closeModal();showTab(\'histo\')">📊 Voir mon historique</button></div>';
+  openModal(h);
+}
+
+/* ============================ HISTORIQUE ============================ */
+var filtreH='tous';
+function renderHisto(){
+  var el=$('p-histo');
+  if(!S.sessions.length){el.innerHTML='<div class="card centre"><div style="font-size:50px">📊</div><h2>Ton historique est vide</h2><p class="doux">Termine une séance dans l\u2019onglet Chrono : elle apparaîtra ici avec ton temps.</p><button class="btn" onclick="showTab(\'chrono\')">⏱️ Aller au chrono</button></div>';return;}
+  var h='<div class="card"><h2>Mes 7 derniers jours</h2><div class="graph">';
+  var jours=[],i,d;
+  for(i=6;i>=0;i--){d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-i);jours.push({k:dayKey(d),l:d.toLocaleDateString('fr-FR',{weekday:'short'}),s:0});}
+  S.sessions.forEach(function(s){jours.forEach(function(j){if(j.k===dayKey(s.ts))j.s+=s.d;});});
+  var mx=Math.max.apply(null,jours.map(function(j){return j.s;}).concat([60]));
+  jours.forEach(function(j){var mn=Math.round(j.s/60);h+='<div><span>'+(mn?mn+' min':'')+'</span><b style="height:'+(j.s?Math.max(6,Math.round(j.s/mx*100)):0)+'px"></b>'+j.l+'</div>';});
+  h+='</div></div>';
+
+  h+='<div class="card"><h2>Mes temps par matière</h2><div class="tw"><table><tr><th>Matière</th><th>Séances</th><th>Temps total</th><th>✏️ Moy. exercices</th><th>🧠 Moy. leçons</th><th>🏅 Record</th></tr>';
+  MATIERES.forEach(function(m){
+    var a=S.sessions.filter(function(s){return s.m===m.id;});if(!a.length)return;
+    var tot=a.reduce(function(x,s){return x+s.d;},0),e=statsFor(m.id,'exo'),l=statsFor(m.id,'lecon');
+    var rec=Math.min.apply(null,a.map(function(s){return s.d;}));
+    h+='<tr><td>'+m.e+' '+m.n+'</td><td>'+a.length+'</td><td>'+dur(tot)+'</td><td>'+(e?dur(e.avg):'—')+'</td><td>'+(l?dur(l.avg):'—')+'</td><td>'+dur(rec)+'</td></tr>';
+  });
+  h+='</table></div></div>';
+
+  h+='<div class="card"><h2>Toutes mes séances</h2><div class="chips"><button class="chip'+(filtreH==='tous'?' on':'')+'" onclick="filtre(\'tous\')">Toutes</button>';
+  MATIERES.forEach(function(m){h+='<button class="chip'+(filtreH===m.id?' on':'')+'" onclick="filtre(\''+m.id+'\')">'+m.e+' '+m.n+'</button>';});
+  h+='</div><div class="tw"><table><tr><th>Date</th><th>Matière</th><th>Type</th><th>Durée</th><th>Défi</th><th>Soin</th><th>Points</th></tr>';
+  var liste=S.sessions.filter(function(s){return filtreH==='tous'||s.m===filtreH;}).slice().sort(function(a,b){return b.ts-a.ts;}).slice(0,100);
+  if(!liste.length)h+='<tr><td colspan="7" class="wrap">Aucune séance pour ce filtre.</td></tr>';
+  liste.forEach(function(s){
+    var dt=new Date(s.ts),m=mat(s.m),t=typ(s.t);
+    h+='<tr><td>'+p2(dt.getDate())+'/'+p2(dt.getMonth()+1)+' '+p2(dt.getHours())+'h'+p2(dt.getMinutes())+'</td><td>'+m.e+' '+m.n+'</td><td>'+t.e+' '+(s.t==='lecon'?'Leçon':'Exercices')+'</td><td><b>'+dur(s.d)+'</b>'+(s.record?' 🥇':'')+'</td><td>'
+      +(s.defi?('<span class="pill '+(s.defiOk?'ok':'no')+'">'+(s.defiOk?'✓ ':'')+s.defi+' min</span>'):'—')+'</td><td>'+('⭐'.repeat(s.checks)||'—')+'</td><td>+'+s.pts+'</td></tr>';
+  });
+  h+='</table></div><div class="row noprint"><button class="btn gris" onclick="window.print()">🖨️ Imprimer</button></div></div>';
+  el.innerHTML=h;
+}
+function filtre(f){filtreH=f;renderHisto();}
+
+/* ============================ ASTUCES ============================ */
+var tipM='maths';
+var METH={
+  exo:{titre:'✏️ Pour les exercices',etapes:[
+    ['👀','Je lis la consigne en entier','Deux fois ! Je ne commence jamais avant d\u2019avoir compris ce qu\u2019on me demande.'],
+    ['🖍️','Je souligne les mots importants','Les verbes (calcule, recopie, justifie…) et les nombres.'],
+    ['🚀','Je commence par le facile','Cela donne de l\u2019élan et fait gagner du temps. Je repère d\u2019une croix les exercices difficiles.'],
+    ['🔎','Je me relis et je vérifie','Ai-je répondu à la question posée ? Mon écriture est-elle lisible ?']]},
+  lecon:{titre:'🧠 Pour apprendre une leçon',etapes:[
+    ['🧩','Je découpe','Je lis la leçon en petits morceaux, un paragraphe à la fois.'],
+    ['🙈','Je cache et je répète','Je cache le texte et je dis à voix haute ce que je retiens.'],
+    ['✍️','Je m\u2019entraîne de mémoire','J\u2019écris ou je dis les mots importants, les dates, les règles, sans regarder.'],
+    ['📅','Je révise demain','Je relis 5 minutes le lendemain : mon cerveau retient bien mieux !']]}
+};
+var VITE=[
+  'Prépare tout avant de lancer le chrono : cahier, trousse, leçon.',
+  'Un seul travail à la fois : téléphone et jouets loin de la table.',
+  'Fais une pause de 5 minutes toutes les 20 à 25 minutes de travail.',
+  'Aller vite, c\u2019est rester concentré(e), pas écrire n\u2019importe comment : les points de soin comptent autant que la vitesse.',
+  'Bats TON record d\u2019hier, pas celui des autres !'
+];
+var CONSEILS={
+  maths:['Lis l\u2019énoncé 2 fois, puis entoure les nombres et souligne la question.','Cherche les mots-clés (voir l\u2019onglet Énoncés 🔍).','Fais un petit schéma ou un dessin si tu es perdu(e).','Écris le calcul AVANT de le faire.','Vérifie avec l\u2019opération inverse (+ ↔ −, × ↔ ÷).','Termine toujours par une phrase-réponse avec l\u2019unité (€, kg, billes…).'],
+  francais:['Grammaire : cherche d\u2019abord le verbe, puis le sujet (« qui est-ce qui… ? »).','Conjugaison : trouve l\u2019infinitif, le groupe, puis le temps.','Orthographe : relis en pointant chaque mot avec ton crayon.','Accords : vérifie le sujet pour le verbe, le nom pour l\u2019adjectif.','Mots à apprendre : je copie, je cache, j\u2019écris, je vérifie.'],
+  lecture:['Regarde d\u2019abord le titre et les images.','Lis à voix basse, un paragraphe à la fois.','Après chaque paragraphe : Qui ? Où ? Quand ? Que se passe-t-il ?','Pour répondre, retrouve la phrase du texte qui le prouve et surligne-la.','Mot inconnu ? Devine-le avec la phrase, puis cherche au dictionnaire.'],
+  histgeo:['Place les dates sur une frise.','Apprends en racontant, comme une histoire.','Retiens d\u2019abord les mots en gras.','Fais un mini-schéma ou une carte avec les lieux.','Cache la leçon et raconte-la de mémoire.'],
+  sciences:['Suis la démarche : j\u2019observe, je cherche, j\u2019expérimente, je conclus.','Fais un schéma avec des légendes.','Répète le vocabulaire scientifique à voix haute.','Relie la leçon à la vie de tous les jours.'],
+  anglais:['Répète les mots à voix haute.','Apprends 5 mots par jour, pas 30 la veille.','Associe chaque mot à une image dans ta tête.','Fais des phrases courtes et simples.'],
+  autre:['Découpe le travail en petites étapes.','Commence par le plus facile.','Fais une pause toutes les 20 minutes.','Vérifie ton travail avant de le rendre.']
+};
+function renderAstuces(){
+  var h='';
+  ['exo','lecon'].forEach(function(k){
+    var M=METH[k];h+='<div class="card"><h2>'+M.titre+'</h2><p class="doux">Ma méthode en 4 étapes :</p>';
+    M.etapes.forEach(function(e,i){h+='<div class="info" style="background:'+(k==='exo'?'#EAF3FD':'#F3EAFF')+'"><span style="font-size:24px">'+e[0]+'</span> <b>'+(i+1)+'. '+e[1]+'</b><br><span style="font-weight:500">'+e[2]+'</span></div>';});
+    h+='</div>';
+  });
+  h+='<div class="card"><h2>⚡ Aller plus vite, sans bâcler</h2>';
+  VITE.forEach(function(v){h+='<div class="astuce">'+v+'</div>';});
+  h+='</div><div class="card"><h2>🎒 Conseils par matière</h2><div class="chips">';
+  MATIERES.forEach(function(m){h+='<button class="chip'+(tipM===m.id?' on':'')+'" onclick="pickTip(\''+m.id+'\')">'+m.e+' '+m.n+'</button>';});
+  h+='</div>';
+  CONSEILS[tipM].forEach(function(c){h+='<div class="astuce">'+c+'</div>';});
+  h+='</div>';
+  $('p-astuces').innerHTML=h;
+}
+function pickTip(id){tipM=id;renderAstuces();}
+
+/* ============================ ÉNONCÉS : MOTS MAGIQUES + JEU ============================ */
+var PROBS=[
+  {id:'p1',t:'Les billes',niv:'⭐',txt:'Léa a 24 billes. À la récréation, elle *gagne* 15 billes. Combien de billes a-t-elle *maintenant*\u00A0?',
+   et:[{op:'+',a:24,b:15,r:39,ind:'« gagne » : le nombre de billes augmente. On ajoute.'}],
+   ph:['Léa a maintenant 39 billes.','Léa a maintenant 9 billes.','Léa a gagné 15 billes.']},
+  {id:'p2',t:'Les livres',niv:'⭐⭐',txt:'Un livre coûte 12\u00A0€. Tom *achète* 6 livres *identiques*. Combien paie-t-il *en* *tout*\u00A0?',
+   et:[{op:'×',a:12,b:6,r:72,ind:'6 livres identiques : le même prix est répété 6 fois. Attention, « en tout » ne veut pas toujours dire « ajouter » !'}],
+   ph:['Tom paie 72 € en tout.','Tom paie 18 € en tout.','Tom achète 6 livres.']},
+  {id:'p3',t:'Au marché',niv:'⭐',txt:'Maman a 50\u00A0€. Elle *dépense* 18\u00A0€ au marché. Combien lui *reste*-t-il\u00A0?',
+   et:[{op:'−',a:50,b:18,r:32,ind:'« dépense » et « reste » : de l\u2019argent part, on enlève.'}],
+   ph:['Il lui reste 32 €.','Il lui reste 68 €.','Maman a dépensé 32 €.']},
+  {id:'p4',t:'Les bonbons',niv:'⭐⭐',txt:'Papa *répartit* 45 bonbons *équitablement* entre 5 enfants. Combien de bonbons reçoit *chaque* enfant\u00A0?',
+   et:[{op:'÷',a:45,b:5,r:9,ind:'« répartit équitablement » et « chaque » : on partage en parts égales. On divise.'}],
+   ph:['Chaque enfant reçoit 9 bonbons.','Chaque enfant reçoit 50 bonbons.','Il y a 9 enfants.']},
+  {id:'p5',t:'L\u2019argent de poche',niv:'⭐⭐⭐',txt:'Sam a 8\u00A0€. Sa grand-mère lui *donne* 5\u00A0€, puis il *achète* un jeu à 9\u00A0€. Combien lui *reste*-t-il\u00A0?',
+   et:[{op:'+',a:8,b:5,r:13,ind:'Sa grand-mère lui donne de l\u2019argent : on ajoute.'},{op:'−',a:13,b:9,r:4,ind:'Il achète un jeu : de l\u2019argent part, on enlève.'}],
+   ph:['Il lui reste 4 €.','Il lui reste 22 €.','Il lui reste 13 €.']}
+];
+var OPS=[{s:'+',n:'Addition',e:'➕'},{s:'−',n:'Soustraction',e:'➖'},{s:'×',n:'Multiplication',e:'✖️'},{s:'÷',n:'Division',e:'➗'}];
+function parseTxt(txt){
+  return txt.split(' ').map(function(w){
+    var m=w.match(/^\*(.+?)\*(.*)$/);if(m)return{t:m[1],s:m[2],k:true,n:false};
+    m=w.match(/^(\d+)(.*)$/);if(m)return{t:m[1],s:m[2],k:false,n:true};
+    return{t:w,s:'',k:false,n:false};
+  });
+}
+var G=null;
+function renderEnonces(){
+  var h='<div class="card"><h2>🔑 Les mots magiques des problèmes</h2><p class="doux">Ces mots t\u2019aident à choisir l\u2019opération. Mais attention : relis toujours la question !</p><div class="tw" style="max-height:none"><table class="mots"><tr><th>Si tu vois…</th><th class="wrap">Ça veut dire…</th><th>Opération</th></tr>'
+   +'<tr><td>gagne, reçoit, ajoute, de plus, ensemble, réunit</td><td class="wrap">Le nombre augmente</td><td>➕ Addition</td></tr>'
+   +'<tr><td>perd, dépense, donne, enlève, mange, il reste, de moins</td><td class="wrap">Le nombre diminue, ou on cherche l\u2019écart</td><td>➖ Soustraction</td></tr>'
+   +'<tr><td>chaque (même nombre), paquets de, fois, identiques, par</td><td class="wrap">Le même nombre est répété</td><td>✖️ Multiplication</td></tr>'
+   +'<tr><td>partage, répartit, équitablement, chacun reçoit, combien de paquets</td><td class="wrap">On fait des parts égales</td><td>➗ Division</td></tr>'
+   +'</table></div><div class="astuce">⚠️ <b>Pièges :</b> « en tout » peut être une addition (quantités différentes) ou une multiplication (même quantité répétée). « Donne » peut ajouter ou enlever : regarde QUI donne à QUI !</div></div>';
+  h+='<div class="card"><h2>🧩 Ma méthode en 5 étapes</h2><div class="doux">① Je lis et je repère les nombres · ② Je cherche les mots-clés · ③ Je choisis l\u2019opération · ④ Je calcule · ⑤ J\u2019écris la phrase-réponse</div></div>';
+  h+='<div class="card" id="jeu"></div>';
+  $('p-enonces').innerHTML=h; renderJeu();
+}
+function renderJeu(){
+  var el=$('jeu');if(!el)return;
+  if(!G){
+    var h='<h2>🎮 Jeu : les énoncés étape par étape</h2><p class="doux">Choisis un problème. Le jeu te guide à chaque étape, avec une consigne claire. Si tu te trompes, tu reçois un indice !</p><div class="liste-pb">';
+    PROBS.forEach(function(p,i){var f=S.jeu.faits.indexOf(p.id)>=0;h+='<button class="pb'+(f?' fait':'')+'" onclick="lancerPb('+i+')">'+(f?'✅ ':'')+p.t+'<br><span class="doux">'+p.niv+(f?' · réussi':'')+'</span></button>';});
+    h+='</div>';el.innerHTML=h;return;
+  }
+  var p=PROBS[G.i],toks=G.toks,seq=G.seq,cur=seq[G.pos];
+  var h='<h2>🎮 '+p.t+'</h2><div class="dots">';
+  seq.forEach(function(x,k){h+='<i class="'+(k<G.pos?'fait':(k===G.pos?'now':''))+'"></i>';});
+  h+='</div><span class="etape">Étape '+(G.pos+1)+' sur '+seq.length+'</span>';
+  var motsRecap=(cur.t!=='nombres'&&cur.t!=='mots'),tapable=(cur.t==='nombres'||cur.t==='mots');
+  /* énoncé */
+  h+='<div class="enonce">';
+  toks.forEach(function(k,i){
+    var c='tok',oc='';
+    if(tapable){
+      var exp=(cur.t==='nombres')?k.n:k.k, on=G.sel[i];
+      if(G.verrou){ if(exp&&on)c+=' ok'; else if(exp&&!on)c+=' manque'; else if(!exp&&on)c+=' faux'; }
+      else if(on)c+=' sel';
+      if(/[A-Za-zÀ-ÿ0-9]/.test(k.t)&&!G.verrou)oc=' onclick="tapTok('+i+')"';
+    }else{ if(k.n)c+=' n'; else if(k.k)c+=' k'; }
+    h+='<span class="'+c+'"'+oc+'>'+k.t+'</span>'+k.s+' ';
+  });
+  h+='</div>';
+  if(motsRecap)h+='<div class="doux" style="margin-top:6px">🔵 nombres · 🟡 mots-clés</div>';
+  /* consigne + zone d'action */
+  var e=p.et[cur.i||0],multi=p.et.length>1;
+  if(cur.t==='nombres'){
+    h+='<div class="consigne">👆 Touche tous les <u>NOMBRES</u> de l\u2019énoncé, puis appuie sur « Valider ».</div>';
+    if(!G.verrou)h+='<button class="btn" onclick="validerSel()">Valider</button>';
+  }else if(cur.t==='mots'){
+    h+='<div class="consigne">🔑 Touche les <u>MOTS-CLÉS</u> : les mots qui t\u2019aident à choisir l\u2019opération (ce qui se passe, ce qu\u2019on cherche), puis « Valider ».</div>';
+    if(!G.verrou)h+='<button class="btn" onclick="validerSel()">Valider</button>';
+  }else if(cur.t==='op'){
+    h+='<div class="consigne">🧩 Quelle opération faut-il faire'+(multi?' pour le <u>calcul '+(cur.i+1)+' sur '+p.et.length+'</u>':'')+' ? Touche ta réponse.</div><div class="ops">';
+    OPS.forEach(function(o){h+='<button class="op'+(G.choix===o.s?' on':'')+'" onclick="choisirOp(\''+o.s+'\')"><span class="s">'+o.e+'</span>'+o.n+'</button>';});
+    h+='</div>';
+  }else if(cur.t==='calc'){
+    h+='<div class="consigne">🧮 Fais le calcul sur ton brouillon, puis écris le résultat.</div><div class="calc">'+e.a+' '+e.op+' '+e.b+' = ?</div>'
+      +'<div class="centre"><input type="number" inputmode="numeric" id="res" class="large" placeholder="Ton résultat" onkeydown="if(event.key===\'Enter\')validerCalc()"> <button class="btn" onclick="validerCalc()">Valider</button></div>';
+  }else if(cur.t==='phrase'){
+    h+='<div class="consigne">✍️ Choisis la bonne <u>PHRASE-RÉPONSE</u> : elle répond à la question et donne l\u2019unité.</div>';
+    G.phr.forEach(function(x,k){h+='<button class="rep'+(G.choix===k?' on':'')+'" onclick="choisirPhrase('+k+')">'+esc(x.t)+'</button>';});
+  }
+  if(G.fb)h+='<div class="fb '+G.fb.type+'" aria-live="polite">'+G.fb.msg+'</div>';
+  if(G.verrou&&!G.fini)h+='<div class="row"><button class="btn vert" onclick="suite()">Étape suivante ➜</button></div>';
+  if(G.fini){
+    h+='<div class="info">🎉 Problème terminé ! <b>+'+G.gain+' point'+(G.gain>1?'s':'')+'</b>'+(G.errTot===0?' · 💎 Sans-faute !':'')+(P.joueur?'':'<br>Choisis un joueur dans l\u2019onglet Chrono pour garder tes points.')+'</div>';
+    G.nouveaux.forEach(function(b){h+='<div class="info">🏅 Nouveau badge : '+b.e+' <b>'+b.n+'</b></div>';});
+    h+='<div class="row"><button class="btn vert" onclick="pbSuivant()">Problème suivant ➜</button><button class="btn gris" onclick="quitterPb()">Retour à la liste</button></div>';
+  }else h+='<div class="row"><button class="btn" onclick="astucesJeu()">💡 Astuces</button><button class="btn gris" onclick="quitterPb()">Quitter</button></div>';
+  el.innerHTML=h;
+}
+function lancerPb(i){
+  var p=PROBS[i],seq=[{t:'nombres'},{t:'mots'}];
+  p.et.forEach(function(x,k){seq.push({t:'op',i:k});seq.push({t:'calc',i:k});});
+  seq.push({t:'phrase'});
+  var ph=p.ph.map(function(t,k){return{t:t,ok:k===0};});
+  for(var a=ph.length-1;a>0;a--){var b=Math.floor(Math.random()*(a+1)),x=ph[a];ph[a]=ph[b];ph[b]=x;}
+  G={i:i,toks:parseTxt(p.txt),seq:seq,pos:0,sel:{},err:0,errTot:0,fb:null,verrou:false,choix:null,phr:ph,fini:false,gain:0,nouveaux:[]};
+  renderJeu();
+}
+function tapTok(i){if(!G||G.verrou)return;G.sel[i]=!G.sel[i];G.fb=null;renderJeu();}
+function echec(indice,corrige){
+  if(G.verrou)return;
+  G.err++;G.errTot++;
+  if(G.err===1){G.fb={type:'indice',msg:'💡 Pas tout à fait. Indice : '+indice};}
+  else{G.fb={type:'corrige',msg:'📘 Voici la correction : '+corrige};G.verrou=true;}
+  renderJeu();
+}
+function reussite(msg){G.fb={type:'ok',msg:'✅ '+msg};G.verrou=true;renderJeu();}
+function validerSel(){
+  if(G.verrou)return;
+  var cur=G.seq[G.pos],ok=true,nb=0;
+  G.toks.forEach(function(k,i){var exp=(cur.t==='nombres')?k.n:k.k;if(exp)nb++;if(!!G.sel[i]!==exp)ok=false;});
+  if(ok){reussite(cur.t==='nombres'?'Bravo, tu as trouvé les '+nb+' nombres !':'Bravo, tu as trouvé les '+nb+' mots-clés !');return;}
+  if(cur.t==='nombres')echec('Il y a '+nb+' nombres. Cherche les chiffres dans l\u2019énoncé.','les nombres sont marqués en vert ; ceux qui manquent sont entourés en orange.');
+  else echec('Il y a '+nb+' mots-clés. Cherche les verbes qui disent ce qui se passe, et les mots comme « en tout », « reste », « chaque ».','les mots-clés sont marqués en vert ; ceux qui manquent sont entourés en orange.');
+}
+function choisirOp(s){
+  if(G.verrou)return;
+  var cur=G.seq[G.pos],e=PROBS[G.i].et[cur.i];G.choix=s;
+  if(s===e.op){var o=OPS.filter(function(x){return x.s===s;})[0];reussite('Oui, il faut faire une '+o.n.toLowerCase()+' ('+s+').');}
+  else{G.err++;G.errTot++;
+    if(G.err===1){G.fb={type:'indice',msg:'💡 Pas tout à fait. Indice : '+e.ind};G.choix=null;renderJeu();}
+    else{var o2=OPS.filter(function(x){return x.s===e.op;})[0];G.choix=e.op;G.fb={type:'corrige',msg:'📘 Correction : il fallait une '+o2.n.toLowerCase()+' ('+e.op+'). '+e.ind};G.verrou=true;renderJeu();}
+  }
+}
+function validerCalc(){
+  if(G.verrou)return;
+  var cur=G.seq[G.pos],e=PROBS[G.i].et[cur.i],v=$('res').value;
+  if(v==='')return;
+  if(parseInt(v,10)===e.r)reussite('Exact : '+e.a+' '+e.op+' '+e.b+' = '+e.r+'.');
+  else echec('Reprends ton calcul sur ton brouillon. Pour vérifier, utilise l\u2019opération inverse.','le résultat est '+e.r+' ('+e.a+' '+e.op+' '+e.b+' = '+e.r+').');
+}
+function choisirPhrase(k){
+  if(G.verrou)return;
+  G.choix=k;
+  if(G.phr[k].ok){reussite('Super ! Cette phrase répond à la question et donne l\u2019unité.');}
+  else{G.err++;G.errTot++;
+    if(G.err===1){G.fb={type:'indice',msg:'💡 Pas tout à fait. Une bonne phrase-réponse reprend la question et donne le bon résultat avec son unité.'};G.choix=null;renderJeu();}
+    else{G.choix=G.phr.findIndex(function(x){return x.ok;});G.fb={type:'corrige',msg:'📘 La bonne phrase est celle qui est marquée en bleu.'};G.verrou=true;renderJeu();}
+  }
+}
+function suite(){
+  if(G.pos<G.seq.length-1){G.pos++;G.sel={};G.err=0;G.fb=null;G.verrou=false;G.choix=null;renderJeu();return;}
+  /* fin du problème */
+  var p=PROBS[G.i];
+  G.gain=P.joueur?(G.errTot===0?5:2):0;
+  var avant=S.badges.slice();
+  ajouterJeu({id:nouvelId(),ts:Date.now(),pid:p.id,gain:G.gain,sf:G.errTot===0});
+  G.nouveaux=nouveauxBadges(avant);updateHeader();G.fini=true;renderJeu();
+}
+function pbSuivant(){var n=(G.i+1)%PROBS.length;lancerPb(n);}
+function quitterPb(){G=null;renderJeu();}
+function astucesJeu(){var r=S.run;S.run=null;ouvrirAstuces();S.run=r;}
+
+/* ============================ TROPHÉES ============================ */
+function renderTrophees(){
+  var lv=Math.floor(S.points/100),nom=NIVEAUX[Math.min(lv,NIVEAUX.length-1)],reste=100-(S.points%100);
+  var h='<div class="card centre"><div style="font-size:50px">🏆</div><h2>Niveau '+(lv+1)+' · '+nom+'</h2><div class="xp" style="height:16px"><i style="width:'+(S.points%100)+'%"></i></div>'
+   +'<div class="doux">'+S.points+' points · encore '+reste+' point'+(reste>1?'s':'')+' pour le niveau suivant · 🔥 série de '+streak()+' jour'+(streak()>1?'s':'')+'</div></div>';
+  var pr=S.parent;
+  h+='<div class="card"><h2>🎁 Ma récompense</h2>';
+  if(pr.recompense){
+    var pc=Math.min(100,Math.round(S.points/pr.cible*100));
+    h+='<p style="font-weight:800">'+esc(pr.recompense)+'</p><div class="bar"><i style="width:'+pc+'%;"></i></div><div class="doux">'+S.points+' / '+pr.cible+' points'+(S.points>=pr.cible?' — 🎉 Bravo, récompense débloquée ! Montre ce message à tes parents.':'')+'</div>';
+  }else h+='<p class="doux">Demande à ton parent de choisir une récompense dans le Mode Parent 👪.</p>';
+  h+='</div><div class="card"><h2>🏅 Mes badges ('+S.badges.length+'/'+BADGES.length+')</h2><div class="badges">';
+  BADGES.forEach(function(b){var g=S.badges.indexOf(b.id)>=0;h+='<div class="badge'+(g?' got':'')+'"><div class="e">'+b.e+'</div><div class="n">'+b.n+'</div><div class="d">'+b.d+'</div></div>';});
+  h+='</div></div><div class="card"><h2>⭐ Comment gagner des points ?</h2><div class="tw" style="max-height:none"><table><tr><th>Action</th><th>Points</th></tr>'
+   +'<tr><td class="wrap">Terminer une séance (1 min minimum)</td><td>+10</td></tr>'
+   +'<tr><td class="wrap">Chaque auto-contrôle coché (3 max)</td><td>+5</td></tr>'
+   +'<tr><td class="wrap">Défi temps réussi (avec 2 auto-contrôles)</td><td>+10</td></tr>'
+   +'<tr><td class="wrap">Record battu (avec 2 auto-contrôles)</td><td>+15</td></tr>'
+   +'<tr><td class="wrap">Problème du jeu réussi (sans erreur)</td><td>+5 (sinon +2)</td></tr></table></div></div>';
+  $('p-trophees').innerHTML=h;
+}
+
+/* ============================ MODE PARENT ============================ */
+var parentOK=false;
+function renderParent(){
+  var el=$('p-parent');
+  if(firebaseOK){ if(!parentConnecte()){ el.innerHTML=formConnexionParent(); return; } }
+  else if(!parentOK){ el.innerHTML=S.parent.hash?formEntree():formCreation(); return; }
+  var debut=new Date();debut.setHours(0,0,0,0);debut.setDate(debut.getDate()-6);
+  var sem=S.sessions.filter(function(s){return s.ts>=debut.getTime();});
+  var tot=sem.reduce(function(x,s){return x+s.d;},0),par={};
+  sem.forEach(function(s){par[s.m]=(par[s.m]||0)+s.d;});
+  var h='<div class="card"><h2>👤 Joueur affiché</h2><div class="chips">';
+  P.roster.forEach(function(n,i){h+='<button class="chip'+(P.joueur===n?' on':'')+'" onclick="choisirJoueurIdx('+i+')">'+esc(n)+'</button>';});
+  if(P.joueur===LOCAL)h+='<button class="chip on">Cet appareil</button>';
+  h+='</div><div class="doux">'+(P.joueur?esc(nomAff(P.joueur))+' · ':'Aucun joueur choisi · ')+(firebaseOK?'🟢 synchronisé':(db?'🔴 hors ligne : les données seront envoyées au retour du réseau':'⚪ sans synchronisation'))+'</div></div>';
+  h+='<div class="card"><h2>📅 Résumé des 7 derniers jours</h2>';
+  if(!sem.length)h+='<p class="doux">Aucune séance cette semaine.</p>';
+  else{
+    var jours={};sem.forEach(function(s){jours[dayKey(s.ts)]=1;});
+    h+='<p><b>'+sem.length+'</b> séance'+(sem.length>1?'s':'')+' sur <b>'+Object.keys(jours).length+'</b> jour'+(Object.keys(jours).length>1?'s':'')+' · temps total <b>'+dur(tot)+'</b></p><div class="tw" style="max-height:none"><table><tr><th>Matière</th><th>Temps</th></tr>';
+    Object.keys(par).sort(function(a,b){return par[b]-par[a];}).forEach(function(k){h+='<tr><td>'+mat(k).e+' '+mat(k).n+'</td><td>'+dur(par[k])+'</td></tr>';});
+    h+='</table></div>';
+  }
+  h+='<div class="astuce">💬 Conseil : félicitez l\u2019effort et le soin autant que la vitesse. Un joueur qui bâcle pour battre son record ne progresse pas : demandez-lui de vous montrer son travail relu.</div></div>';
+  h+='<div class="card"><h2>🎁 Récompense du joueur</h2><label class="f" for="rTxt">Récompense proposée</label><input type="text" id="rTxt" class="large" style="width:100%;max-width:420px" maxlength="80" placeholder="Ex. : une soirée film en famille" value="'+esc(S.parent.recompense)+'">'
+   +'<label class="f" for="rPts">Points à atteindre</label><input type="number" id="rPts" inputmode="numeric" min="50" step="50" value="'+S.parent.cible+'">'
+   +'<div class="row"><button class="btn vert" onclick="saveRecompense()">Enregistrer</button></div></div>';
+  h+='<div class="card"><h2>🗂️ Données</h2><div class="row"><button class="btn" onclick="exportCsv()">⬇️ Télécharger l\u2019historique (CSV)</button>'+(firebaseOK?'':'<button class="btn" onclick="demanderChangeCode()">🔐 Changer le code</button>')+'<button class="btn orange" onclick="demanderReset()">🗑️ Effacer les données de ce joueur</button><button class="btn gris" onclick="quitterParent()">🔒 Quitter le Mode Parent</button></div></div>';
+  el.innerHTML=h;
+}
+/* --- Code parent (v1.2) --- */
+var essais=0,verrouJusqua=0;
+function cyrb53(str){var h1=0xdeadbeef,h2=0x41c6ce57;for(var i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);}
+function genSalt(){var a='';for(var i=0;i<12;i++)a+=Math.floor(Math.random()*36).toString(36);return a;}
+function hashCode(code,salt){return cyrb53('chrono|'+salt+'|'+code);}
+function codeJuste(c){return !!S.parent.hash&&hashCode(c,S.parent.salt)===S.parent.hash;}
+function codeValide(c){return typeof c==='string'&&c.length>=4&&c.length<=12;}
+function voirMdp(id){var c=$(id);if(c)c.type=(c.type==='password'?'text':'password');}
+function champMdp(id,ph,enter){return '<div style="display:flex;gap:8px;justify-content:center;align-items:center;margin:6px 0"><input type="password" id="'+id+'" class="large" placeholder="'+ph+'" autocomplete="off" maxlength="12"'+(enter?' onkeydown="if(event.key===\'Enter\')'+enter+'"':'')+'><button type="button" class="oeil" onclick="voirMdp(\''+id+'\')" aria-label="Afficher ou masquer le code">👁️</button></div>';}
+function formCreation(){
+  return '<div class="card centre"><div style="font-size:46px">👪</div><h2>Mode Parent : créez votre code</h2>'
+   +'<p class="doux">Choisissez un code de 4 à 12 caractères (lettres ou chiffres). Il sera demandé à chaque entrée dans le Mode Parent. Notez-le : il ne peut pas être retrouvé.</p>'
+   +champMdp('cNew','Votre code',null)+champMdp('cNew2','Confirmez le code','creerCode()')
+   +'<button class="btn" onclick="creerCode()">Enregistrer mon code</button><div id="gateMsg" class="doux" style="margin-top:8px;font-weight:700"></div></div>';
+}
+function formEntree(){
+  return '<div class="card centre"><div style="font-size:46px">👪</div><h2>Mode Parent</h2><p class="doux">Espace réservé aux adultes. Entrez votre code.</p>'
+   +champMdp('gate','Code parent','entrerParent()')+'<button class="btn" onclick="entrerParent()">Entrer</button>'
+   +'<div id="gateMsg" class="doux" style="margin-top:8px;font-weight:700"></div>'
+   +'<div style="margin-top:10px"><button class="chip" onclick="codeOublie()">Code oublié ?</button></div></div>';
+}
+function creerCode(){
+  var a=$('cNew').value,b=$('cNew2').value,m=$('gateMsg');
+  if(!codeValide(a)){m.textContent='Le code doit contenir entre 4 et 12 caractères.';return;}
+  if(a!==b){m.textContent='Les deux codes ne sont pas identiques.';return;}
+  P.code.salt=genSalt();P.code.hash=hashCode(a,P.code.salt);S.parent.salt=P.code.salt;S.parent.hash=P.code.hash;save();parentOK=true;essais=0;toast('✅ Code enregistré');renderParent();
+}
+function entrerParent(){
+  var m=$('gateMsg'),now=Date.now();
+  if(now<verrouJusqua){m.textContent='Trop d\u2019essais. Patientez '+Math.ceil((verrouJusqua-now)/1000)+' s.';return;}
+  if(codeJuste($('gate').value)){parentOK=true;essais=0;renderParent();return;}
+  essais++;
+  if(essais>=3){verrouJusqua=now+30000;essais=0;m.textContent='Code incorrect. Nouvel essai possible dans 30 s.';}
+  else m.textContent='Code incorrect. Ce mode est réservé aux parents 😉';
+}
+function codeOublie(){
+  openModal('<h2>Code oublié ?</h2><p>Le code ne peut pas être retrouvé. Pour en créer un nouveau, il faut <b>effacer toutes les données</b> de cet appareil (historique, points, badges).</p><div class="row"><button class="btn gris" onclick="closeModal()">Non, retour</button><button class="btn orange" onclick="reset()">Oui, tout effacer</button></div>');
+}
+function demanderChangeCode(){
+  openModal('<h2>🔐 Changer le code</h2>'+champMdp('cOld','Code actuel',null)+champMdp('cNew','Nouveau code',null)+champMdp('cNew2','Confirmez le nouveau code','changerCode()')
+   +'<div id="cMsg" class="doux" style="font-weight:700;min-height:22px"></div><div class="row"><button class="btn vert" onclick="changerCode()">Enregistrer</button><button class="btn gris" onclick="closeModal()">Annuler</button></div>');
+}
+function changerCode(){
+  var o=$('cOld').value,a=$('cNew').value,b=$('cNew2').value,m=$('cMsg');
+  if(!codeJuste(o)){m.textContent='Le code actuel est incorrect.';return;}
+  if(!codeValide(a)){m.textContent='Le nouveau code doit contenir entre 4 et 12 caractères.';return;}
+  if(a!==b){m.textContent='Les deux nouveaux codes ne sont pas identiques.';return;}
+  P.code.salt=genSalt();P.code.hash=hashCode(a,P.code.salt);S.parent.salt=P.code.salt;S.parent.hash=P.code.hash;save();closeModal();toast('✅ Code modifié');
+}
+function saveRecompense(){
+  if(!P.joueur){toast('Choisissez d\u2019abord un joueur');return;}
+  var c=parseInt($('rPts').value,10);if(!(c>=50))c=200;
+  var txt=$('rTxt').value.trim().slice(0,80),nom=P.joueur;
+  var fin=function(){fiche(nom).reglages={recompense:txt,cible:c};save();recompute();toast('✅ Récompense enregistrée');renderParent();};
+  if(firebaseOK&&nom!==LOCAL){
+    if(!parentConnecte()){toast('Connexion parent requise');return;}
+    refDoc(nom).set({recompense:txt,cible:c},{merge:true}).then(fin).catch(function(){toast('Enregistrement impossible pour le moment');});
+  }else fin();
+}
+function exportCsv(){
+  var L=['Date;Heure;Matière;Type;Durée (s);Défi (min);Défi réussi;Auto-contrôles;Points'];
+  S.sessions.slice().sort(function(a,b){return a.ts-b.ts;}).forEach(function(s){
+    var d=new Date(s.ts);
+    L.push([p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear(),p2(d.getHours())+':'+p2(d.getMinutes()),mat(s.m).n,typ(s.t).n,s.d,s.defi||'',s.defiOk?'oui':'non',s.checks,s.pts].join(';'));
+  });
+  try{
+    var b=new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+    a.href=URL.createObjectURL(b);a.download='historique-chrono-devoirs'+(P.joueur&&P.joueur!==LOCAL?'-'+P.joueur.replace(/[^A-Za-z0-9À-ÿ_-]/g,'_'):'')+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
+    toast('⬇️ Fichier téléchargé');
+  }catch(e){toast('Téléchargement impossible sur cet appareil');}
+}
+function demanderReset(){
+  var n=P.joueur?nomAff(P.joueur):'ce joueur';
+  openModal('<h2>Tout effacer ?</h2><p>L\u2019historique, les points et les badges de <b>'+esc(n)+'</b> seront supprimés '+((firebaseOK&&P.joueur!==LOCAL)?'<b>sur tous les appareils</b>':'sur cet appareil')+'. Cette action est définitive.</p><div class="row"><button class="btn gris" onclick="closeModal()">Non, garder</button><button class="btn orange" onclick="effacerJoueur()">Oui, tout effacer</button></div>');
+}
+function effacerJoueur(){
+  var nom=P.joueur;
+  var fin=function(){if(nom)delete P.cache[nom];save();recompute();closeModal();toast('Données effacées');rafraichir();};
+  if(firebaseOK&&nom&&nom!==LOCAL){
+    if(!parentConnecte()){closeModal();toast('Connexion parent requise');return;}
+    supprimerServeur(nom).then(fin).catch(function(){closeModal();toast('Suppression impossible pour le moment');});
+  }else fin();
+}
+/* Réinitialisation locale complète (code oublié) : le serveur restaure ensuite les données du joueur. */
+function reset(){
+  P=defaultsP();S.run=null;parentOK=false;desabonner();save();recompute();closeModal();sel={m:null,t:null,defi:0};G=null;
+  if(firebaseOK)ecouterRoster();
+  updateHeader();toast('Données de l\u2019appareil effacées');showTab(tabCourant);
+}
+
+/* ============================ SYNCHRONISATION FIREBASE (v2.0) ============================ */
+/* Même projet Firebase que Quiz Math Foot. Cette configuration n'est pas secrète : la protection des
+   données repose sur les règles Firestore (côté serveur). Aucune adresse email n'est écrite ici. */
+var firebaseConfig={
+  apiKey:"AIzaSyAP8dleVoF3ejPe4R4Q5ef8HpY1QQSIwtg",
+  authDomain:"quizz-multiplication.firebaseapp.com",
+  projectId:"quizz-multiplication",
+  storageBucket:"quizz-multiplication.firebasestorage.app",
+  messagingSenderId:"869707235327",
+  appId:"1:869707235327:web:cc122791ba8727687a71ca"
+};
+var db=null,firebaseOK=false,unsubs=[],unsubRoster=null,enVol={};
+try{ if(typeof firebase!=='undefined'){ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); } }catch(e){ db=null; }
+function nomDoc(n){return String(n).replace(/\//g,'_').trim();}
+function refDoc(nom){return db.collection('chrono').doc(nomDoc(nom));}
+function nomAff(n){return n===LOCAL?'Cet appareil':n;}
+function majStatut(){
+  var el=$('hSync');if(!el)return;
+  var j=P.joueur?('👤 '+nomAff(P.joueur)+' · '):'';
+  el.textContent=j+((P.joueur===LOCAL)?'⚪ cet appareil':(firebaseOK?'🟢 en ligne':(db?'🔴 hors ligne':'⚪ sans synchronisation')));
+}
+function parentConnecte(){return !!(firebaseOK&&firebase.auth().currentUser&&!firebase.auth().currentUser.isAnonymous);}
+function desabonner(){unsubs.forEach(function(u){try{u();}catch(e){}});unsubs=[];}
+function rafraichir(){
+  updateHeader();
+  if($('fond').className==='on')return;
+  var a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return;
+  if(tabCourant==='histo')renderHisto(); else if(tabCourant==='trophees')renderTrophees(); else if(tabCourant==='parent')renderParent();
+  else if(tabCourant==='chrono'&&!S.run)renderChrono(); else if(tabCourant==='enonces'&&!G)renderJeu();
+}
+function apresSync(nom){ if(nom!==P.joueur)return; save();recompute();rafraichir(); }
+function fusion(nom,cle,snap){
+  var c=fiche(nom),serveur=[],ids={};
+  snap.forEach(function(d){var o=d.data();o.id=d.id;serveur.push(o);ids[d.id]=1;});
+  var locaux=c[cle].filter(function(x){return x.pending&&!ids[x.id];});
+  c[cle]=serveur.concat(locaux);
+  apresSync(nom);
+}
+function ecouter(nom){
+  desabonner();
+  if(!firebaseOK||!nom||nom===LOCAL)return;
+  var base=refDoc(nom),err=function(){};
+  unsubs.push(base.collection('seances').onSnapshot(function(snap){fusion(nom,'sessions',snap);},err));
+  unsubs.push(base.collection('jeux').onSnapshot(function(snap){fusion(nom,'jeux',snap);},err));
+  unsubs.push(base.onSnapshot(function(doc){var d=doc.exists?doc.data():{};fiche(nom).reglages={recompense:String(d.recompense||''),cible:+d.cible||200};apresSync(nom);},err));
+}
+function ecouterRoster(){
+  if(!firebaseOK)return;
+  if(unsubRoster){try{unsubRoster();}catch(e){}}
+  unsubRoster=db.collection('classe').doc('liste').onSnapshot(function(doc){
+    P.roster=(doc.exists&&Array.isArray(doc.data().noms))?doc.data().noms:[];save();rafraichir();
+  },function(){});
+}
+function pousserEnAttente(){
+  if(!firebaseOK||!db)return;
+  Object.keys(P.cache).forEach(function(nom){
+    if(nom===LOCAL)return;
+    var c=P.cache[nom];
+    c.sessions.forEach(function(x){
+      var k=nom+'|s|'+x.id;if(!x.pending||enVol[k])return;enVol[k]=1;
+      refDoc(nom).collection('seances').doc(String(x.id)).set({ts:x.ts,m:x.m,t:x.t,d:x.d,defi:x.defi||0,defiOk:!!x.defiOk,checks:x.checks||0,pts:x.pts||0,record:!!x.record})
+        .then(function(){x.pending=false;delete enVol[k];save();}).catch(function(){delete enVol[k];});
+    });
+    c.jeux.forEach(function(j){
+      var k=nom+'|j|'+j.id;if(!j.pending||enVol[k])return;enVol[k]=1;
+      refDoc(nom).collection('jeux').doc(String(j.id)).set({ts:j.ts,pid:j.pid,gain:j.gain||0,sf:!!j.sf})
+        .then(function(){j.pending=false;delete enVol[k];save();}).catch(function(){delete enVol[k];});
+    });
+  });
+}
+function supprimerServeur(nom){
+  var base=refDoc(nom);
+  return Promise.all([base.collection('seances').get(),base.collection('jeux').get()]).then(function(r){
+    var refs=[];r.forEach(function(snap){snap.forEach(function(d){refs.push(d.ref);});});
+    refs.push(base);
+    var lots=[];for(var i=0;i<refs.length;i+=400)lots.push(refs.slice(i,i+400));
+    return lots.reduce(function(p,lot){return p.then(function(){var b=db.batch();lot.forEach(function(x){b.delete(x);});return b.commit();});},Promise.resolve());
+  });
+}
+function relancerEcoutes(){ if(firebaseOK){ecouterRoster();ecouter(P.joueur);} }
+function demarrerFirebase(){
+  if(!db){majStatut();return;}
+  firebase.auth().signInAnonymously().then(function(){
+    firebaseOK=true;majStatut();ecouterRoster();ecouter(P.joueur);pousserEnAttente();rafraichir();
+  }).catch(function(){firebaseOK=false;majStatut();});
+}
+try{
+  window.addEventListener('online',function(){ if(db&&!firebaseOK)demarrerFirebase(); else pousserEnAttente(); });
+  setInterval(pousserEnAttente,60000);
+}catch(e){}
+
+/* --- Choix du joueur --- */
+function chooserHTML(){
+  var h='<div class="card"><h2>👤 Qui travaille ?</h2><div class="doux">Touche ton prénom.</div><div class="chips">';
+  P.roster.forEach(function(n,i){h+='<button class="chip" onclick="choisirJoueurIdx('+i+')">'+esc(n)+'</button>';});
+  h+='</div>';
+  if(!P.roster.length)h+='<div class="info">'+(db&&!firebaseOK?'🔴 Pas de connexion pour l\u2019instant. ':'')+'Aucun joueur dans la liste. Le parent peut ajouter les joueurs dans Quiz Math Foot (Mode Parent → Gérer les joueurs).</div>';
+  h+='<div class="row"><button class="btn gris" onclick="choisirJoueur(LOCAL)">Continuer sans compte (cet appareil seulement)</button></div></div>';
+  return h;
+}
+function choisirJoueurIdx(i){choisirJoueur(P.roster[i]);}
+function choisirJoueur(nom){
+  if(!nom)return;
+  if(S.run){toast('Une séance est en cours sur cet appareil.');return;}
+  P.joueur=nom;fiche(nom);save();recompute();ecouter(nom);pousserEnAttente();
+  sel={m:null,t:null,defi:0};G=null;updateHeader();showTab(tabCourant);
+}
+function changerJoueur(){
+  if(S.run)return;
+  P.joueur='';desabonner();save();recompute();updateHeader();renderChrono();
+}
+
+/* --- Connexion parent (en ligne) --- */
+function formConnexionParent(){
+  return '<div class="card centre"><div style="font-size:46px">👪</div><h2>Mode Parent</h2><p class="doux">Connectez-vous avec le compte parent (le même que pour Quiz Math Foot).</p>'
+   +'<div style="margin:6px 0"><input type="email" id="pEmail" class="large" placeholder="Email" autocomplete="username" style="width:100%;max-width:340px"></div>'
+   +champMdp('pMdp','Mot de passe','connecterParent()')
+   +'<button class="btn" onclick="connecterParent()">Se connecter</button><div id="gateMsg" class="doux" style="margin-top:8px;font-weight:700"></div></div>';
+}
+function connecterParent(){
+  var m=$('gateMsg');
+  if(!firebaseOK){m.textContent='Pas de connexion internet.';return;}
+  var e=$('pEmail').value.trim(),p=$('pMdp').value;
+  if(!e||!p){m.textContent='Renseignez l\u2019email et le mot de passe.';return;}
+  m.textContent='Connexion…';
+  firebase.auth().signInWithEmailAndPassword(e,p).then(function(){renderParent();}).catch(function(err){
+    m.textContent=(err.code==='auth/invalid-credential'||err.code==='auth/wrong-password'||err.code==='auth/user-not-found')?'Email ou mot de passe incorrect.':'Connexion impossible ('+err.code+').';
+  });
+}
+function quitterParent(){
+  parentOK=false;
+  if(firebaseOK&&firebase.auth().currentUser&&!firebase.auth().currentUser.isAnonymous){
+    firebase.auth().signOut().then(function(){return firebase.auth().signInAnonymously();}).then(function(){relancerEcoutes();renderParent();}).catch(function(){renderParent();});
+  }else renderParent();
+}
+
+/* ============================ DÉMARRAGE ============================ */
+recompute();updateHeader();renderChrono();demarrerFirebase();
+</script>
+</body>
+</html>
