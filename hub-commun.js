@@ -1,6 +1,6 @@
-/* hub-commun.js - VERSION 1.0 (2026-11-07)
+/* hub-commun.js - VERSION 1.1 (2026-11-07)  [1.1 : barre fixe en haut avec « Retour aux jeux », adaptee PC/tablette/telephone]
    Partage entre tous les outils du hub « Mes jeux pour apprendre » :
-   1. bouton « 🚀 Mes jeux » (retour au hub) ;
+   1. barre fixe en HAUT avec le bouton « ← Retour aux jeux » (retour au hub) ;
    2. Mode Parent partage (code) pour les outils qui n'ont pas leur propre Mode Parent ;
    3. historique des evaluations (HubHistorique), consultable dans le Mode Parent.
    Les donnees restent dans le navigateur (localStorage) : rien n'est envoye sur internet.
@@ -13,7 +13,7 @@
 (function () {
   "use strict";
   if (window.HubCommun) return;
-  var VERSION = "1.0";
+  var VERSION = "1.1";
   var K_HIST = "hub:historique", K_CODE = "hub:codeParent", K_SESS = "hub:parentActif", MAX = 500;
   var enIframe = false;
   try { enIframe = window.self !== window.top; } catch (e) { enIframe = true; }
@@ -55,8 +55,13 @@
 
   /* ---------- styles ---------- */
   var CSS = [
-    ".hubc-btn{position:fixed;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:2147483000;display:flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:30px;border:2px solid #fff;background:#4B45D6;color:#fff;font:700 15px/1 system-ui,'Segoe UI',Arial,sans-serif;text-decoration:none;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer;opacity:.95}",
-    ".hubc-btn:active{transform:scale(.96)}.hubc-home{left:10px}.hubc-cadenas{right:10px;background:#5B6280}.hubc-cadenas.on{background:#2EAD5B}",
+    ":root{--hubc-h:calc(46px + env(safe-area-inset-top,0px))}",
+    "html.hubc-avec-barre{padding-top:var(--hubc-h);scroll-padding-top:var(--hubc-h)}",
+    ".hubc-bar{position:fixed;top:0;left:0;right:0;z-index:2147483000;box-sizing:border-box;min-height:var(--hubc-h);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(5px + env(safe-area-inset-top,0px)) calc(8px + env(safe-area-inset-right,0px)) 5px calc(8px + env(safe-area-inset-left,0px));background:linear-gradient(90deg,#4B45D6,#6C5CE7);box-shadow:0 2px 8px rgba(0,0,0,.25);font:700 15px/1.2 system-ui,'Segoe UI',Arial,sans-serif}",
+    ".hubc-btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:20px;border:2px solid rgba(255,255,255,.85);background:rgba(255,255,255,.18);color:#fff;font:inherit;text-decoration:none;cursor:pointer;white-space:nowrap}",
+    ".hubc-btn:active{transform:scale(.97)}.hubc-retour{background:#fff;color:#4B45D6;border-color:#fff}.hubc-cadenas.on{background:#2EAD5B;border-color:#2EAD5B}",
+    ".hubc-titre{color:#fff;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+    "@media (max-width:340px){.hubc-long{display:none}}",
     ".hubc-fond{position:fixed;inset:0;z-index:2147483600;background:rgba(20,20,40,.6);display:none;align-items:center;justify-content:center;padding:12px;font:16px/1.45 system-ui,'Segoe UI',Arial,sans-serif}",
     ".hubc-fond.on{display:flex}",
     ".hubc-boite{background:#fff;color:#1F2340;border-radius:18px;width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:14px 16px 16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}",
@@ -74,7 +79,7 @@
     ".hubc-l{cursor:pointer}.hubc-l:hover{background:#f6f6ff}.hubc-d td{background:#fffaf0;font-size:13.5px}",
     ".hubc-note{font-size:13px;color:#5B6280}.hubc-ok{color:#1b7a3d;font-weight:700}.hubc-ko{color:#C0501A;font-weight:700}",
     ".hubc-d ul{margin:4px 0 8px;padding-left:18px}",
-    "@media print{.hubc-btn,.hubc-fond{display:none!important}}"
+    "@media print{.hubc-bar,.hubc-fond{display:none!important}html.hubc-avec-barre{padding-top:0!important}}"
   ].join("");
 
   /* ---------- panneau ---------- */
@@ -201,28 +206,51 @@
     $("hubc-verr").onclick = function () { Parent.verrouiller(); };
   }
 
-  /* ---------- boutons flottants ---------- */
+  /* ---------- barre du haut ---------- */
   var cadenas = null;
   function majCadenas() { if (cadenas) { var on = Parent.actif(); cadenas.className = "hubc-btn hubc-cadenas" + (on ? " on" : ""); cadenas.innerHTML = (on ? "🔓" : "🔒") + "<span>Parent</span>"; } }
+  function decalerFixes() {
+    /* elements deja fixes pres du haut de la page (ex. 14 px) : on les descend sous la barre */
+    var H = document.querySelector(".hubc-bar").offsetHeight, els = document.body.querySelectorAll("*");
+    for (var i = 0; i < els.length; i++) {
+      var e = els[i];
+      if (e.closest(".hubc-bar") || e.closest(".hubc-fond")) continue;
+      var cs = getComputedStyle(e);
+      if (cs.position !== "fixed") continue;
+      var t = parseFloat(cs.top);
+      if (t > 0 && t < H) e.style.top = (t + H) + "px";
+    }
+  }
   function boutons() {
     if (enIframe) return;
     var meta = document.querySelector("meta[name=\"hub-parent\"]"), mode = meta ? meta.getAttribute("content") : "auto";
     var propre = (mode === "propre" || mode === "aucun") || (mode === "auto" && /Mode Parent/i.test(document.documentElement.textContent));
     construire();
     var estHub = /(^|\/)(index\.html)?$/.test(location.pathname);
-    var aDejaLien = !!document.querySelector("a[href=\"index.html\"],a[href=\"./index.html\"]");
-    if (!estHub && !aDejaLien) {
-      var a = document.createElement("a"); a.className = "hubc-btn hubc-home"; a.href = "index.html"; a.title = "Retour à Mes jeux"; a.setAttribute("aria-label", "Retour à Mes jeux");
-      a.innerHTML = "🚀<span>Mes jeux</span>"; document.body.appendChild(a);
+    /* anciens liens vers le hub (ex. « 🏠 Accueil ») : remplaces par le bouton Retour de la barre */
+    if (!estHub) {
+      var anciens = document.querySelectorAll("a[href=\"index.html\"],a[href=\"./index.html\"]");
+      for (var i = 0; i < anciens.length; i++) anciens[i].style.display = "none";
     }
-    if (document.documentElement.scrollHeight > window.innerHeight + 10) {
-      var sp = document.createElement("div"); sp.className = "hubc-espace"; sp.style.cssText = "height:64px"; sp.setAttribute("aria-hidden", "true"); document.body.appendChild(sp);
+    var bar = document.createElement("div"); bar.className = "hubc-bar"; bar.setAttribute("role", "navigation"); bar.setAttribute("aria-label", "Navigation du hub");
+    if (estHub) {
+      var t = document.createElement("span"); t.className = "hubc-titre"; t.textContent = "🚀 Mes jeux pour apprendre"; bar.appendChild(t);
+    } else {
+      var a = document.createElement("a"); a.className = "hubc-btn hubc-retour"; a.href = "index.html"; a.title = "Retour au hub Mes jeux pour apprendre"; a.setAttribute("aria-label", "Retour aux jeux");
+      a.innerHTML = "⬅<span>Retour<span class=\"hubc-long\"> aux jeux</span></span>"; bar.appendChild(a);
     }
     if (!propre) {
       cadenas = document.createElement("button"); cadenas.type = "button"; cadenas.setAttribute("aria-label", "Mode Parent");
       cadenas.onclick = function () { Parent.ouvrir("historique"); };
-      document.body.appendChild(cadenas); majCadenas();
+      bar.appendChild(cadenas); majCadenas();
+    } else if (!estHub) {
+      var vide = document.createElement("span"); bar.appendChild(vide);
     }
+    document.body.insertBefore(bar, document.body.firstChild);
+    document.documentElement.classList.add("hubc-avec-barre");
+    var cs = getComputedStyle(document.body);
+    if (Math.abs(parseFloat(cs.minHeight) - window.innerHeight) < 2) document.body.style.minHeight = "calc(100vh - var(--hubc-h))";
+    decalerFixes();
   }
 
   window.HubHistorique = Hist;

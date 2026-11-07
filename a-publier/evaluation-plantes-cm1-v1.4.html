@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="hub" content='{"titre":"Évaluation Sciences","texte":"Graines et plantes : réponds aux questions et découvre ton score !","emoji":"🌱","couleur":"vert","section":"lecons","section_titre":"🔬 Je vérifie mes leçons","pastille":"sciences","avant":"devoirs","etiquette":"Évaluation","bouton":"▶ Commencer"}'>
+<meta name="hub-parent" content="partage">
+<title>Évaluation Sciences CM1 — Graines et plantes — v1.4</title>
+<!-- Évaluation Sciences CM1 : les besoins des graines et des plantes — VERSION 1.4 -->
+<style>
+:root{--vert:#2e7d32;--vert-clair:#e8f5e9;--vert-bord:#81c784;--bleu:#1e5fa8;--bleu-clair:#e3f0fc;--ambre:#fff3e0;--ambre-bord:#f0a35e;--encre:#1f2d3d;--papier:#fffef9}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#eef6e6;color:var(--encre);font-size:18px;line-height:1.45}
+#app{max-width:760px;margin:0 auto;padding:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 4px}
+.top h1{font-family:'Segoe Script','Bradley Hand','Comic Sans MS',cursive;font-size:1.15rem;margin:0;color:var(--vert)}
+.ver{font-size:.75rem;color:#5b6b5b;background:#fff;border:1px solid #cfe0c3;border-radius:10px;padding:2px 8px;white-space:nowrap}
+.foot{text-align:center;font-size:.75rem;color:#6b7b6b;margin:14px 0 4px}
+.progress{height:10px;background:#d9e8cf;border-radius:6px;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,#66bb6a,#2e7d32);transition:width .3s}
+.pcount{font-size:.85rem;color:#4a5d4a;margin:4px 2px 8px}
+.card{background:linear-gradient(to right,transparent 34px,#e57373 34px,#e57373 36px,transparent 36px),repeating-linear-gradient(var(--papier) 0 29px,#d6e6f5 29px 30px);border:2px solid #b9d3ee;border-radius:14px;padding:16px 14px 16px 50px;box-shadow:0 3px 0 #c9d9c0}
+.tag{display:inline-block;background:var(--vert-clair);border:1px solid var(--vert-bord);color:var(--vert);border-radius:999px;padding:2px 12px;font-size:.85rem;font-weight:600}
+.consigne{font-weight:700;color:var(--bleu);margin:10px 0 8px;font-size:1.05rem}
+.qtext{background:#fff;border:2px dashed #b9d3ee;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:1.1rem}
+.mini{font-size:.85rem;color:#5b6b5b}
+.opt{display:flex;gap:10px;align-items:center;background:#fff;border:2px solid #d3dce6;border-radius:12px;padding:12px;margin:8px 0;cursor:pointer;user-select:none;-webkit-user-select:none;min-height:48px}
+.opt .box{flex:0 0 26px;height:26px;border:2px solid #9bb0c4;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.95rem}
+.opt.round .box{border-radius:50%}
+.opt.sel{border-color:var(--bleu);background:var(--bleu-clair)}
+.opt.sel .box{background:var(--bleu);border-color:var(--bleu)}
+.opt.good{border-color:#43a047;background:#e8f5e9}
+.opt.good .box{background:#43a047;border-color:#43a047}
+.opt.soft{border-color:var(--ambre-bord);background:var(--ambre)}
+.opt.soft .box{background:var(--ambre-bord);border-color:var(--ambre-bord)}
+.vf{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vf .opt{justify-content:center;font-weight:700;font-size:1.2rem;min-height:56px}
+.center{background:#fff;border:3px solid var(--bleu);border-radius:50%/40%;padding:14px 18px;text-align:center;font-weight:700;color:var(--bleu);margin:10px auto;max-width:420px}
+.bubs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bubs .opt{border-radius:999px;justify-content:center;margin:2px 0}
+input.blank{font:inherit;text-align:center;border:2px solid #b9d3ee;border-radius:8px;padding:4px 6px;background:#f7fbff;max-width:100%}
+input.blank.good{border-color:#43a047;background:#e8f5e9}
+input.blank.soft{border-color:var(--ambre-bord);background:var(--ambre)}
+.fillp{background:#fff;border:2px dashed #b9d3ee;border-radius:10px;padding:14px 12px;line-height:2.4;font-size:1.1rem}
+textarea.zt{width:100%;min-height:110px;font:inherit;border:2px solid #b9d3ee;border-radius:10px;padding:10px;background:#fff}
+.pool{display:flex;flex-wrap:wrap;gap:8px;min-height:52px;padding:8px;background:#fff;border:2px dashed #b9d3ee;border-radius:10px}
+.chip{background:#fff7d6;border:2px solid #e6c34d;border-radius:999px;padding:8px 14px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.chip.picked{outline:3px solid var(--bleu);background:#fff0a8}
+.chip.good{background:#e8f5e9;border-color:#43a047}
+.chip.soft{background:var(--ambre);border-color:var(--ambre-bord)}
+.bins{display:grid;gap:8px;margin-top:10px}
+.bin{border:2px solid #b9d3ee;border-radius:12px;padding:8px;min-height:76px;background:#fff}
+.bin h4{margin:0 0 6px;font-size:.95rem}
+.bin.g{border-color:#81c784}.bin.r{border-color:#64a8e8}.bin.n{border-color:#b0b8c0}
+.bin.target{box-shadow:0 0 0 3px #bcd9f7;cursor:pointer}
+.binitems{display:flex;flex-wrap:wrap;gap:6px}
+.scroll{overflow-x:auto}
+table.exp,table.bilan{width:100%;border-collapse:collapse;background:#fff;font-size:.92rem;margin:8px 0}
+.exp caption,.bilan caption{font-weight:700;text-align:left;padding:4px 0;color:var(--bleu)}
+.exp th,.exp td,.bilan th,.bilan td{border:1px solid #b9d3ee;padding:6px 8px;text-align:left;vertical-align:middle}
+.exp th,.bilan th{background:var(--bleu-clair)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.btn{font:inherit;font-weight:700;border:none;border-radius:12px;padding:12px 18px;cursor:pointer;background:var(--vert);color:#fff;box-shadow:0 3px 0 #1b5e20}
+.btn.sec{background:#fff;color:var(--vert);border:2px solid var(--vert);box-shadow:none}
+.btn.hint{background:#fff8e1;color:#8a6d00;border:2px solid #f0d36b;box-shadow:none}
+.fb{margin:12px 0 0;padding:10px 12px;border-radius:10px;font-weight:600}
+.fb.good{background:#e8f5e9;border:2px solid #81c784;color:#1b5e20}
+.fb.soft{background:var(--ambre);border:2px solid var(--ambre-bord);color:#5d3a0a}
+.fb.info{background:#fff8e1;border:2px solid #f0d36b;color:#5b4a00;font-weight:500}
+.fb ul{margin:6px 0 0;padding-left:20px}
+.card label{display:block;margin-top:6px}
+.namein{font:inherit;width:100%;border:2px solid #b9d3ee;border-radius:10px;padding:10px;background:#fff;margin:6px 0}
+.score{font-size:2.6rem;font-weight:800;color:var(--vert);text-align:center;margin:4px 0}
+.msg{text-align:center;font-weight:700;color:var(--bleu);margin-bottom:8px}
+.bar{height:12px;background:#e3e8ee;border-radius:6px;overflow:hidden;min-width:70px}
+.bar div{height:100%;background:#66bb6a}
+.bar.mid div{background:#f2b84b}.bar.low div{background:var(--ambre-bord)}
+.lvl{font-weight:700;font-size:.85rem}
+.lvl.ok{color:#1b5e20}.lvl.mid{color:#8a5a00}.lvl.low{color:#a24d0a}
+.revoir{margin:10px 0;padding:0;list-style:none}
+.revoir li{background:#fff3e0;border:2px solid #f0a35e;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:.95rem}
+.revoir .corr{display:block;margin-top:4px;color:#1b5e20;font-weight:600}
+.retiens{background:#fff8e1;border-left:5px solid #f0d36b;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:.95rem}
+#printArea{display:none}
+@media (max-width:480px){body{font-size:17px}.card{padding:14px 10px 14px 44px}.bubs{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff;font-size:11.5pt;color:#000}
+  #app{display:none}
+  #printArea{display:block}
+  .phead h1{font-size:17pt;margin:0}.phead h2{font-size:13pt;margin:2pt 0 8pt;font-weight:600}
+  .pline{margin:6pt 0;font-size:11pt}.pver{font-size:9pt;color:#444;margin-bottom:8pt}
+  .pq{break-inside:avoid;margin:0 0 11pt;padding-bottom:6pt;border-bottom:1px dotted #999}
+  .pqh{margin-bottom:4pt}
+  .pl{border-bottom:1px solid #000;height:20pt}
+  .pbins{display:grid;grid-template-columns:repeat(3,1fr);gap:6pt;margin-top:4pt}
+  .pbin{border:1px solid #000;min-height:55pt;padding:4pt;font-size:10pt}
+  .ans{color:#1b5e20;font-weight:700;border-bottom:1px solid #1b5e20;padding:0 4pt}
+  .blankp{display:inline-block;min-width:110pt;border-bottom:1px solid #000}
+  .exp,.bilan{font-size:10pt}
+  .exp th,.exp td,.bilan th,.bilan td{border:1px solid #000;padding:3pt 5pt}
+  .exp th,.bilan th{background:#eee}
+  .pbreak{break-before:page}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><h1>🌱 Sciences : graines et plantes</h1><span class="ver">v1.4</span></div>
+  <div id="screen"></div>
+  <p class="foot">Évaluation de sciences CM1 · version 1.4</p>
+</div>
+<div id="printArea"></div>
+
+<script src="hub-commun.js"></script>
+<script>
+var VERSION='v1.4';
+var NB='\u00a0';
+function fr(s){return String(s).replace(/ ([?!:;»])/g,NB+'$1').replace(/(«) /g,'$1'+NB);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function norm(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim();}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function $(id){return document.getElementById(id);}
+
+var COMP={
+ A:{short:'Germer',icon:'🌰',label:`Je sais de quoi une graine a besoin pour germer`,retiens:`Pour germer, la graine a besoin d'un sol humide, de chaleur, d'eau et de temps. Elle n'a pas besoin de lumière.`},
+ B:{short:'Grandir',icon:'🌿',label:`Je sais de quoi une plante a besoin pour grandir`,retiens:`Pour grandir, une plante a besoin d'eau, de lumière, de chaleur et de sels minéraux.`},
+ C:{short:'Sels minéraux',icon:'🧪',label:`Je sais d'où viennent les sels minéraux`,retiens:`Les sels minéraux sont dans la terre, ou ils sont apportés par l'homme grâce à des engrais ou du fumier.`},
+ D:{short:'Expérience',icon:'🔬',label:`Je sais tirer une conclusion d'une expérience`,retiens:`Pour savoir si un besoin est nécessaire, on compare deux situations qui ne changent que d'une seule chose.`},
+ E:{short:'Je rédige',icon:'✏️',label:`Je sais expliquer avec une phrase`,retiens:`Une bonne réponse est une phrase complète qui cite les besoins : « Pour germer, la graine a besoin de… ».`}
+};
+
+var EXP=`<div class="scroll"><table class="exp"><caption>Expérience : 4 pots avec une graine (version v1.4)</caption>
+<tr><th>Pot</th><th>Eau</th><th>Température</th><th>Lumière</th><th>Résultat</th></tr>
+<tr><td>A</td><td>oui</td><td>chaude</td><td>placard noir</td><td>✅ germe</td></tr>
+<tr><td>B</td><td>oui</td><td>chaude</td><td>près de la fenêtre</td><td>✅ germe</td></tr>
+<tr><td>C</td><td>non (terre sèche)</td><td>chaude</td><td>placard noir</td><td>❌ ne germe pas</td></tr>
+<tr><td>D</td><td>oui</td><td>froide (réfrigérateur)</td><td>placard noir</td><td>❌ ne germe pas</td></tr></table></div>`;
+
+var Q=[
+ {comp:'A',type:'vf',consigne:`Lis la phrase. Est-elle vraie ou fausse ?`,text:`Pour germer, une graine a besoin de lumière.`,answer:false,
+  expl:`C'est faux. La graine n'a pas besoin de lumière pour germer : elle peut germer dans le noir.`,hint:`Une graine est enfouie dans la terre. Reçoit-elle de la lumière ?`},
+ {comp:'A',type:'vf',consigne:`Lis la phrase. Est-elle vraie ou fausse ?`,text:`Une graine a besoin d'eau pour germer.`,answer:true,
+  expl:`C'est vrai. Pour germer, la graine a besoin d'eau et d'un sol humide.`,hint:`Que fais-tu après avoir planté une graine ?`},
+ {comp:'A',type:'vf',consigne:`Lis la phrase. Est-elle vraie ou fausse ?`,text:`Une graine germe très bien quand il fait très froid.`,answer:false,
+  expl:`C'est faux. Pour germer, la graine a besoin d'une bonne température : elle a besoin de chaleur.`,hint:`Pense à la saison où l'on sème les graines.`},
+ {comp:'B',type:'vf',consigne:`Lis la phrase. Est-elle vraie ou fausse ?`,text:`Pour grandir, une plante a besoin de sels minéraux.`,answer:true,
+  expl:`C'est vrai. Pour grandir, une plante a besoin d'eau, de lumière, de chaleur et de sels minéraux.`,hint:`Les sels minéraux sont dans la terre.`},
+ {comp:'A',type:'multi',consigne:`Coche TOUS les besoins d'une graine pour germer.`,
+  opts:[{t:`un sol humide`,ok:true},{t:`de la chaleur`,ok:true},{t:`de l'eau`,ok:true},{t:`du temps`,ok:true},{t:`de la lumière`,ok:false},{t:`de la musique`,ok:false}],
+  expl:`Pour germer, la graine a besoin d'un sol humide, de chaleur, d'eau et de temps. Elle n'a pas besoin de lumière.`,hint:`Il y a 4 bonnes réponses.`},
+ {comp:'C',type:'single',consigne:`Choisis la bonne réponse.`,text:`Où la plante trouve-t-elle les sels minéraux ?`,
+  opts:[{t:`Dans la terre, ou ils sont apportés par l'homme (engrais, fumier)`,ok:true},{t:`Dans l'air uniquement`,ok:false},{t:`Dans la lumière du soleil`,ok:false},{t:`Dans les nuages`,ok:false}],
+  expl:`Les sels minéraux sont dans la terre, ou l'homme les apporte grâce à des engrais ou du fumier.`,hint:`Regarde la carte mentale de la leçon : terre, engrais, fumier.`},
+ {comp:'B',type:'fill',consigne:`Complète la phrase avec les bons mots.`,
+  parts:[`Pour grandir, une plante a besoin d'eau, de `,0,`, de chaleur et de `,1,`.`],accept:[['lumiere'],['sels mineraux','sel mineral','sels mineral']],show:[`lumière`,`sels minéraux`],
+  expl:`Il fallait écrire : « Pour grandir, une plante a besoin d'eau, de lumière, de chaleur et de sels minéraux. »`,hint:`Les 2 mots manquants sont dans la leçon du 5 octobre.`},
+ {comp:'C',type:'fill',consigne:`Complète la phrase avec les bons mots.`,
+  parts:[`L'homme apporte des sels minéraux avec des `,0,` ou du `,1,`.`],anyOrder:true,accept:[['engrais','fumier']],show:[`engrais`,`fumier`],
+  expl:`Il fallait écrire : « L'homme apporte des sels minéraux avec des engrais ou du fumier. »`,hint:`Un mot est pluriel (des…), l'autre est singulier (du…).`},
+ {comp:'B',type:'sort',consigne:`Touche un mot, puis touche la bonne case pour le ranger.`,
+  cats:[{id:'g',cls:'g',t:`Besoin pour germer ET pour grandir`},{id:'r',cls:'r',t:`Besoin seulement pour grandir`},{id:'n',cls:'n',t:`Pas un besoin d'une plante`}],
+  items:[{t:`l'eau`,cat:'g'},{t:`la chaleur`,cat:'g'},{t:`la lumière`,cat:'r'},{t:`les sels minéraux`,cat:'r'},{t:`la télévision`,cat:'n'},{t:`les bonbons`,cat:'n'}],
+  expl:`L'eau et la chaleur servent pour germer et pour grandir. La lumière et les sels minéraux servent seulement pour grandir. La télévision et les bonbons ne sont pas des besoins d'une plante.`,hint:`La lumière n'est pas utile pour germer, mais elle l'est pour grandir.`},
+ {comp:'D',type:'single',ctx:EXP,consigne:`Regarde le tableau. Compare les pots A et B. Que montrent-ils ?`,
+  opts:[{t:`La graine n'a pas besoin de lumière pour germer.`,ok:true},{t:`La graine a besoin de lumière pour germer.`,ok:false},{t:`La graine n'a pas besoin d'eau pour germer.`,ok:false},{t:`La graine germe seulement au froid.`,ok:false}],
+  expl:`Les pots A et B sont identiques sauf pour la lumière, et les deux graines germent : la lumière n'est pas nécessaire pour germer.`,hint:`Cherche ce qui change entre A et B.`},
+ {comp:'D',type:'single',ctx:EXP,consigne:`Regarde le tableau. Pourquoi la graine du pot C ne germe-t-elle pas ?`,
+  opts:[{t:`Elle n'a pas d'eau.`,ok:true},{t:`Elle n'a pas de lumière.`,ok:false},{t:`Il fait trop chaud.`,ok:false},{t:`Elle n'a pas de fumier.`,ok:false}],
+  expl:`Entre les pots A et C, seule l'eau change : sans eau, la graine ne germe pas. Le pot A est aussi dans le noir et pourtant il germe.`,hint:`Compare le pot C avec le pot A.`},
+ {comp:'B',type:'multi',exact:4,bubbles:true,consigne:`Carte mentale : touche les 4 bulles qui sont des besoins d'une plante pour grandir.`,
+  center:`De quoi les plantes ont-elles besoin pour grandir ?`,
+  opts:[{t:`l'eau`,ok:true},{t:`la lumière`,ok:true},{t:`la chaleur`,ok:true},{t:`les sels minéraux`,ok:true},{t:`la musique`,ok:false},{t:`les jouets`,ok:false},{t:`le bruit`,ok:false}],
+  expl:`Les 4 besoins sont : l'eau, la lumière, la chaleur et les sels minéraux.`,hint:`Relis la phrase de la leçon : « Pour grandir, une plante a besoin de… »`},
+ {comp:'E',type:'text',consigne:`Écris une phrase complète pour expliquer de quoi une graine a besoin pour germer.`,
+  model:`Pour germer, la graine a besoin d'un sol humide, de chaleur, d'eau et de temps. Elle n'a pas besoin de lumière.`,
+  check:[`La phrase est complète (majuscule, verbe, point).`,`Elle cite au moins 3 besoins : sol humide, chaleur, eau, temps.`,`Elle ne dit pas que la lumière est nécessaire pour germer.`],
+  expl:``,hint:`Commence par : « Pour germer, la graine a besoin de… »`}
+];
+var PRAISE=[`✅ Bravo !`,`✅ Exact, bien joué !`,`✅ Très bien !`,`✅ Parfait !`,`✅ C'est ça !`];
+
+var S={name:'',parent:false,i:0,res:[],done:false,cur:null,order:{}};
+
+function showStart(){
+  var last='';
+  try{var l=JSON.parse(localStorage.getItem('evalPlantesCM1_last')||'null');if(l){last='<p class="mini">Dernier score : '+l.score+'/'+Q.length+' ('+esc(l.name||'joueur')+', '+esc(l.date)+')</p>';}}catch(e){}
+  $('screen').innerHTML=fr(`<section class="card">
+    <span class="tag">🌱 Sciences · CM1</span>
+    <p class="consigne">Les besoins des graines et des plantes</p>
+    <p>Tu vas répondre à ${Q.length} questions pour vérifier ce que tu as retenu de la leçon.</p>
+    <ul>
+      <li>Lis bien la consigne.</li>
+      <li>Réponds, puis touche <b>Valider</b>.</li>
+      <li>Il n'y a pas d'aide pendant l'évaluation.</li>
+    </ul>
+    <label for="pname"><b>Ton prénom :</b></label>
+    <input id="pname" class="namein" type="text" autocomplete="off" placeholder="Écris ton prénom">
+    ${parentBloc()}
+    <div class="actions"><button class="btn" onclick="startEval()">▶ Je commence</button></div>
+    <div class="actions"><button class="btn sec" onclick="doPrint(false)">🖨️ Version papier</button><button class="btn sec" onclick="doPrint(true)">🖨️ Corrigé (parent)</button></div>
+    ${last}
+  </section>`);
+  if(window.HubParent){majParentInfo();}else if(S.parent){$('ptog').classList.add('sel');$('pbox').textContent='✓';}
+}
+function parentOn(){return window.HubParent?window.HubParent.actif():S.parent;}
+function parentBloc(){
+  if(window.HubParent)return '<p class="mini" id="pinfo"></p>';
+  return '<div class="opt" id="ptog" onclick="toggleParent()"><span class="box" id="pbox"></span><span>Mode Parent (active les indices)</span></div>';
+}
+function majParentInfo(){var e=$('pinfo');if(e)e.textContent=fr(parentOn()?'🔓 Mode Parent actif : indices disponibles, historique consultable.':'🔒 Mode Parent : touche le cadenas « Parent » en haut à droite (indices et historique).');}
+document.addEventListener('hub:parent',function(){majParentInfo();var a=$('act');if(a&&$('zone')&&!S.done&&Q[S.i])a.innerHTML=actBtns();});
+function toggleParent(){S.parent=!S.parent;$('ptog').classList.toggle('sel',S.parent);$('pbox').textContent=S.parent?'✓':'';}
+function startEval(){S.name=($('pname').value||'').trim();S.i=0;S.res=[];S.order={};S.saved=false;showQ();}
+
+function stateCls(isSel,isOk){if(!S.done)return isSel?'sel':'';if(isOk)return 'good';if(isSel)return 'soft';return '';}
+function boxTxt(isSel,isOk){if(!S.done)return isSel?'✓':'';if(isOk)return '✓';if(isSel)return '✗';return '';}
+
+function showQ(){
+  var q=Q[S.i];
+  S.done=false;
+  S.cur={val:null,set:{},pool:[],bins:{},picked:null};
+  if(q.opts)S.order[S.i]=shuffle(q.opts.map(function(_,k){return k;}));
+  if(q.type==='sort'){S.cur.pool=shuffle(q.items.map(function(_,k){return k;}));q.cats.forEach(function(c){S.cur.bins[c.id]=[];});}
+  var c=COMP[q.comp];
+  var h='<div class="progress"><div class="pf" style="width:'+(S.i/Q.length*100)+'%"></div></div><div class="pcount">Question '+(S.i+1)+' sur '+Q.length+'</div>';
+  h+='<section class="card"><span class="tag">'+c.icon+' '+c.short+'</span><p class="consigne">'+q.consigne+'</p>'+(q.ctx||'')+'<div id="zone">'+zoneHTML(q)+'</div><div id="fb"></div><div class="actions" id="act">'+actBtns()+'</div></section>';
+  $('screen').innerHTML=fr(h);
+  window.scrollTo(0,0);
+}
+function actBtns(){return '<button class="btn" onclick="validate()">Valider</button>'+(parentOn()?'<button class="btn hint" onclick="showHint()">💡 Indice</button>':'');}
+function nextBtn(){return '<button class="btn" onclick="nextQ()">'+(S.i<Q.length-1?'Suivant ➜':'Voir mon résultat 🏁')+'</button>';}
+
+function optHTML(q,k,fn,round){
+  var o=q.opts[k];var isSel=!!S.cur.set[k];
+  if(q.type==='single')isSel=(S.cur.val===k);
+  return '<div class="opt '+(round?'round ':'')+stateCls(isSel,o.ok)+'" onclick="'+fn+'('+k+')"><span class="box">'+boxTxt(isSel,o.ok)+'</span><span>'+o.t+'</span></div>';
+}
+function zoneHTML(q){
+  var c=S.cur,h='',k;
+  if(q.type==='vf'){
+    h='<div class="qtext">'+q.text+'</div><div class="vf">';
+    [true,false].forEach(function(v){
+      var sel=(c.val===v);
+      h+='<div class="opt '+stateCls(sel,v===q.answer)+'" onclick="pickVF('+v+')">'+(v?'Vrai':'Faux')+'</div>';
+    });
+    return h+'</div>';
+  }
+  if(q.type==='single'){
+    h=q.text?'<div class="qtext">'+q.text+'</div>':'';
+    S.order[S.i].forEach(function(k){h+=optHTML(q,k,'pickSingle',true);});
+    return h;
+  }
+  if(q.type==='multi'){
+    if(q.center)h+='<div class="center">'+q.center+'</div>';
+    h+=q.bubbles?'<div class="bubs">':'';
+    S.order[S.i].forEach(function(k){h+=optHTML(q,k,'toggleMulti',false);});
+    return h+(q.bubbles?'</div>':'');
+  }
+  if(q.type==='fill'){
+    h='<div class="fillp">';
+    q.parts.forEach(function(p){
+      if(typeof p==='number'){var w=Math.max(8,(q.show[p]||'').length+3);h+='<input class="blank" id="in'+p+'" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:'+w+'ch">';}
+      else h+=p;
+    });
+    return h+'</div>';
+  }
+  if(q.type==='sort'){
+    h='<div class="pool">';
+    c.pool.forEach(function(k){h+='<div class="chip'+(c.picked===k?' picked':'')+'" onclick="pickChip('+k+')">'+q.items[k].t+'</div>';});
+    if(!c.pool.length)h+='<span class="mini">Tous les mots sont rangés.</span>';
+    h+='</div><div class="bins">';
+    q.cats.forEach(function(cat){
+      h+='<div class="bin '+cat.cls+(c.picked!==null?' target':'')+'" onclick="dropTo(\''+cat.id+'\')"><h4>'+cat.t+'</h4><div class="binitems">';
+      c.bins[cat.id].forEach(function(k){
+        var cl='';if(S.done)cl=(q.items[k].cat===cat.id)?' good':' soft';
+        h+='<div class="chip'+cl+'" onclick="event.stopPropagation();backToPool('+k+')">'+q.items[k].t+'</div>';
+      });
+      h+='</div></div>';
+    });
+    return h+'</div>';
+  }
+  if(q.type==='text'){
+    return '<textarea class="zt" id="zt" placeholder="Écris ta phrase ici…"></textarea>';
+  }
+  return '';
+}
+function redrawZone(){var q=Q[S.i];if(q.type==='fill'||q.type==='text')return;$('zone').innerHTML=fr(zoneHTML(q));}
+function need(m){$('fb').innerHTML=fr('<div class="fb info">'+m+'</div>');}
+function showHint(){var q=Q[S.i];$('fb').innerHTML=fr('<div class="fb info">💡 '+q.hint+'</div>');}
+
+function pickVF(v){if(S.done)return;S.cur.val=v;redrawZone();}
+function pickSingle(k){if(S.done)return;S.cur.val=k;redrawZone();}
+function toggleMulti(k){if(S.done)return;if(S.cur.set[k])delete S.cur.set[k];else S.cur.set[k]=true;redrawZone();}
+function pickChip(k){if(S.done)return;S.cur.picked=(S.cur.picked===k)?null:k;redrawZone();}
+function dropTo(id){
+  if(S.done||S.cur.picked===null)return;
+  var k=S.cur.picked;
+  S.cur.pool=S.cur.pool.filter(function(x){return x!==k;});
+  S.cur.bins[id].push(k);S.cur.picked=null;redrawZone();
+}
+function backToPool(k){
+  if(S.done)return;
+  Object.keys(S.cur.bins).forEach(function(id){S.cur.bins[id]=S.cur.bins[id].filter(function(x){return x!==k;});});
+  if(S.cur.pool.indexOf(k)<0)S.cur.pool.push(k);
+  S.cur.picked=null;redrawZone();
+}
+
+function validate(){
+  var q=Q[S.i];if(S.done)return;
+  var ok=false;
+  if(q.type==='vf'){
+    if(S.cur.val===null)return need('Choisis Vrai ou Faux.');
+    ok=(S.cur.val===q.answer);
+  }else if(q.type==='single'){
+    if(S.cur.val===null)return need('Choisis une réponse.');
+    ok=q.opts[S.cur.val].ok;
+  }else if(q.type==='multi'){
+    var n=Object.keys(S.cur.set).length;
+    if(n===0)return need('Choisis au moins une réponse.');
+    if(q.exact&&n!==q.exact)return need('Choisis exactement '+q.exact+' bulles.');
+    ok=q.opts.every(function(o,k){return o.ok===!!S.cur.set[k];});
+  }else if(q.type==='fill'){
+    var vals=[],empty=false,oks=[];
+    q.show.forEach(function(_,p){var v=norm($('in'+p).value);vals.push(v);if(!v)empty=true;});
+    if(empty)return need('Complète tous les trous.');
+    if(q.anyOrder){
+      var allowed=q.accept[0];
+      var distinct=vals.length===2&&vals[0]!==vals[1];
+      vals.forEach(function(v){oks.push(distinct&&allowed.indexOf(v)>=0);});
+    }else{
+      vals.forEach(function(v,p){oks.push(q.accept[p].indexOf(v)>=0);});
+    }
+    ok=oks.every(function(x){return x;});
+    oks.forEach(function(o,p){var el=$('in'+p);el.disabled=true;el.classList.add(o?'good':'soft');});
+  }else if(q.type==='sort'){
+    if(S.cur.pool.length)return need('Range tous les mots dans une case.');
+    ok=q.cats.every(function(cat){return S.cur.bins[cat.id].every(function(k){return q.items[k].cat===cat.id;});});
+  }else if(q.type==='text'){
+    if(($('zt').value||'').trim().length<5)return need('Écris ta phrase avant de valider.');
+    $('zt').disabled=true;S.done=true;
+    var li=q.check.map(function(x){return '<li>'+x+'</li>';}).join('');
+    $('fb').innerHTML=fr('<div class="fb info"><b>Phrase modèle :</b> '+q.model+'<br><br><b>Le parent vérifie :</b><ul>'+li+'</ul></div>');
+    $('act').innerHTML='<button class="btn" onclick="rateText(true)">✅ Réussi</button><button class="btn sec" onclick="rateText(false)">🌱 À revoir</button>';
+    return;
+  }
+  finish(ok);
+}
+function finish(ok){
+  var q=Q[S.i];
+  S.res[S.i]=ok;S.done=true;
+  $('fb').innerHTML=fr(ok?'<div class="fb good">'+PRAISE[Math.floor(Math.random()*PRAISE.length)]+'</div>':'<div class="fb soft">🌱 Pas tout à fait. '+q.expl+'</div>');
+  redrawZone();
+  $('act').innerHTML=nextBtn();
+}
+function rateText(ok){S.res[S.i]=ok;$('act').innerHTML=nextBtn();}
+function nextQ(){if(S.i<Q.length-1){S.i++;showQ();}else showResult();}
+
+function compStats(){
+  var st={};
+  Q.forEach(function(q,i){
+    if(!st[q.comp])st[q.comp]={n:0,ok:0};
+    st[q.comp].n++;if(S.res[i])st[q.comp].ok++;
+  });
+  return st;
+}
+function level(p){return p>=0.75?{c:'ok',t:'Acquis ✅'}:(p>=0.5?{c:'mid',t:'En cours d\'acquisition 🟡'}:{c:'low',t:'À revoir 🌱'});}
+function showResult(){
+  var score=S.res.filter(function(x){return x;}).length;
+  var msg=score>=11?`Bravo, tu maîtrises la leçon !`:(score>=8?`Très bien ! Encore un petit effort sur quelques points.`:(score>=5?`Tu es sur la bonne voie : relis la leçon puis recommence.`:`Courage ! Relis la leçon et réessaie.`));
+  try{localStorage.setItem('evalPlantesCM1_last',JSON.stringify({name:S.name,score:score,date:new Date().toLocaleDateString('fr-FR')}));}catch(e){}
+  var st=compStats(),rows='',retiens='',rev='';
+  Q.forEach(function(q,i){
+    if(S.res[i])return;
+    var corr=q.expl||('Phrase modèle : '+q.model);
+    rev+='<li><b>Question '+(i+1)+'</b> ('+COMP[q.comp].icon+' '+COMP[q.comp].short+') — '+(q.text||q.consigne)+'<span class="corr">➜ '+corr+'</span></li>';
+  });
+  var nbKo=Q.length-score;
+  if(window.HubHistorique&&!S.saved){
+    S.saved=true;
+    var comps=Object.keys(COMP).filter(function(k){return st[k];}).map(function(k){return {label:COMP[k].label,ok:st[k].ok,n:st[k].n};});
+    var rv=[];Q.forEach(function(q,i){if(!S.res[i])rv.push({q:i+1,texte:q.text||q.consigne,correction:q.expl||('Phrase modèle : '+q.model)});});
+    HubHistorique.enregistrer({outil:'evaluation-plantes-cm1',titre:'Évaluation Sciences (graines et plantes)',version:VERSION,joueur:S.name||'joueur',score:score,total:Q.length,competences:comps,aRevoir:rv});
+  }
+  Object.keys(COMP).forEach(function(k){
+    var s=st[k];if(!s)return;
+    var p=s.ok/s.n,lv=level(p);
+    rows+='<tr><td>'+COMP[k].icon+' '+COMP[k].label+'</td><td>'+s.ok+'/'+s.n+'</td><td><div class="bar '+(lv.c==='ok'?'':lv.c)+'"><div style="width:'+Math.round(p*100)+'%"></div></div><span class="lvl '+lv.c+'">'+lv.t+'</span></td></tr>';
+    if(lv.c!=='ok')retiens+='<div class="retiens"><b>À retenir ('+COMP[k].short+') :</b> '+COMP[k].retiens+'</div>';
+  });
+  $('screen').innerHTML=fr(`<div class="progress"><div class="pf" style="width:100%"></div></div>
+  <section class="card" style="margin-top:8px">
+    <span class="tag">🏁 Résultat${S.name?' de '+esc(S.name):''}</span>
+    <div class="score">${score} / ${Q.length}</div>
+    <div class="msg">${msg}</div>
+    <div class="scroll"><table class="bilan"><caption>Bilan des compétences (version ${VERSION})</caption>
+      <tr><th>Compétence</th><th>Score</th><th>Bilan</th></tr>${rows}</table></div>
+    <p class="consigne">${nbKo?'À revoir : '+nbKo+' question'+(nbKo>1?'s':''):'Rien à revoir 🌟'}</p>
+    ${rev?'<ul class="revoir">'+rev+'</ul>':''}
+    ${retiens||'<div class="retiens">Toutes les compétences sont acquises. Bravo ! 🌟</div>'}
+    ${window.HubHistorique?"<p class=\"mini\">✅ Résultat enregistré dans l’historique du Mode Parent.</p>":""}
+    <div class="actions">
+      <button class="btn" onclick="showStart()">🔁 Recommencer</button>
+      ${window.HubParent?'<button class="btn sec" onclick="HubParent.ouvrir(\'historique\')">👨‍👩‍👧 Historique (Mode Parent)</button>':''}
+      <button class="btn sec" onclick="doPrint(false)">🖨️ Version papier</button>
+      <button class="btn sec" onclick="doPrint(true)">🖨️ Corrigé (parent)</button>
+    </div>
+  </section>`);
+  window.scrollTo(0,0);
+}
+
+/* ---------- Version imprimable ---------- */
+function box(ok){return ok?'☑':'☐';}
+function buildPrint(key){
+  var h='<div class="phead"><h1>Évaluation de sciences — CM1</h1><h2>Les besoins des graines et des plantes</h2><div class="pline">Nom : ____________________ &nbsp;&nbsp; Date : ______________ &nbsp;&nbsp; Note : ______ / '+Q.length+'</div><div class="pver">'+(key?'CORRIGÉ — réservé au parent · ':'')+'Version '+VERSION+'</div></div>';
+  Q.forEach(function(q,i){
+    h+='<div class="pq"><div class="pqh"><b>'+(i+1)+'.</b> <i>'+q.consigne+'</i></div>';
+    if(q.ctx)h+=q.ctx;
+    if(q.type==='vf'){
+      h+='<div>'+q.text+'</div><div>'+box(key&&q.answer===true)+' Vrai &nbsp;&nbsp;&nbsp; '+box(key&&q.answer===false)+' Faux</div>';
+    }else if(q.type==='single'||q.type==='multi'){
+      if(q.text)h+='<div>'+q.text+'</div>';
+      if(q.center)h+='<div><b>'+q.center+'</b></div>';
+      q.opts.forEach(function(o){h+='<div>'+box(key&&o.ok)+' '+o.t+'</div>';});
+    }else if(q.type==='fill'){
+      h+='<div style="line-height:2.2">';
+      q.parts.forEach(function(p){
+        if(typeof p==='number')h+=key?'<span class="ans">'+q.show[p]+'</span>':'<span class="blankp"></span>';
+        else h+=p;
+      });
+      h+='</div>';
+    }else if(q.type==='sort'){
+      if(!key){h+='<div>Mots à ranger : '+q.items.map(function(it){return '<b>'+it.t+'</b>';}).join(' · ')+'</div>';}
+      h+='<div class="pbins">'+q.cats.map(function(cat){
+        var inner=key?q.items.filter(function(it){return it.cat===cat.id;}).map(function(it){return '<div class="ans">'+it.t+'</div>';}).join(''):'';
+        return '<div class="pbin"><b>'+cat.t+'</b>'+inner+'</div>';
+      }).join('')+'</div>';
+    }else if(q.type==='text'){
+      if(key){h+='<div class="ans">'+q.model+'</div><div style="margin-top:4pt;font-size:10pt">'+q.check.join(' · ')+'</div>';}
+      else h+='<div class="pl"></div><div class="pl"></div><div class="pl"></div>';
+    }
+    h+='</div>';
+  });
+  var rows='';
+  Object.keys(COMP).forEach(function(k){rows+='<tr><td>'+COMP[k].label+'</td><td>☐ Acquis</td><td>☐ En cours</td><td>☐ À revoir</td></tr>';});
+  h+='<div class="pq"><table class="bilan"><caption>Bilan des compétences (version '+VERSION+')</caption><tr><th>Compétence</th><th>Acquis</th><th>En cours</th><th>À revoir</th></tr>'+rows+'</table></div>';
+  $('printArea').innerHTML=fr(h);
+}
+function doPrint(key){buildPrint(key);try{window.print();}catch(e){}}
+
+showStart();
+</script>
+</body>
+</html>
