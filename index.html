@@ -6,6 +6,7 @@
   HISTORIQUE DES VERSIONS
   | Version | Date       | Modifications                                                                  |
   |---------|------------|--------------------------------------------------------------------------------|
+  | 2.1     | 2026-11-07 | Ajout de la carte « Évaluation Sciences » (evaluation-plantes-cm1.html)        |
   | 2.0     | 2026-10-03 | Version en ligne : ajout de Chrono Devoirs. Cartes générées depuis la liste TOOLS. |
   | 1.0     | 2026-09-27 | Création : 5 cartes (3 « Je m'entraîne », 2 « Ma routine »), message d'accueil   |
   |         |            | selon l'heure, badge « Dernier jeu ouvert »                                      |
@@ -217,7 +218,7 @@
     <div id="sections-e"></div>
   </div>
 
-  <footer>Mes jeux pour apprendre — v2.0 (en ligne)</footer>
+  <footer>Mes jeux pour apprendre — v2.1 (en ligne)</footer>
 </div>
 
 <script>
@@ -228,6 +229,7 @@
   /* ===================== LISTE DES OUTILS (1 ligne = 1 carte) ===================== */
   var SECTIONS = [
     { id:"entrainement", esp:"e", titre:"🎯 Je m'entraîne", pastille:"maths" },
+    { id:"lecons", esp:"e", titre:"🔬 Je vérifie mes leçons", pastille:"sciences" },
     { id:"devoirs",      esp:"e", titre:"⏱️ Mes devoirs",   pastille:"chrono & méthode" },
     { id:"routine",      esp:"e", titre:"☀️ Ma routine",    pastille:"missions du jour" }
   ];
@@ -237,7 +239,8 @@
     { esp:"e", sec:"entrainement", emoji:"📝", titre:"Évaluation Repères CM2", texte:"Pose tes opérations en colonne et résous les problèmes. Montre ce que tu sais faire !", couleur:"orange", href:"evaluation-reperes-cm1.html", etiquette:"Évaluation", bouton:"▶ Commencer" },
     { esp:"e", sec:"devoirs", emoji:"⏱️", titre:"Chrono Devoirs", texte:"Chronomètre tes devoirs, bats ton record, gagne des points et des badges. Avec des astuces pour bien travailler !", couleur:"bleu", href:"chrono-devoirs.html", etiquette:"Devoirs", bouton:"▶ C'est parti" },
     { esp:"e", sec:"routine", emoji:"💍", titre:"Sonic Quest du Matin", texte:"Chaque tâche accomplie rapporte des anneaux dorés. Débloque tes récompenses !", couleur:"bleu", href:"sonic-quest-du-matin.html", etiquette:"Matin", bouton:"▶ C'est parti" },
-    { esp:"e", sec:"routine", emoji:"⚡", titre:"Level Up Zone", texte:"Accomplis tes missions, gagne de l'XP et monte de niveau.", couleur:"violet", href:"level-up-zone.html", etiquette:"XP", bouton:"▶ C'est parti" }
+    { esp:"e", sec:"routine", emoji:"⚡", titre:"Level Up Zone", texte:"Accomplis tes missions, gagne de l'XP et monte de niveau.", couleur:"violet", href:"level-up-zone.html", etiquette:"XP", bouton:"▶ C'est parti" },
+    { esp:"e", sec:"lecons", emoji:"🌱", titre:"Évaluation Sciences", texte:"Graines et plantes : réponds aux questions et découvre ton score !", couleur:"vert", href:"evaluation-plantes-cm1.html", etiquette:"Évaluation", bouton:"▶ Commencer" }
 
   ];
 
