@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-auto.py - VERSION 1.0 (2026-11-07)
+auto.py - VERSION 1.1 (2026-11-07)  [1.1 : injection de hub-commun.js dans chaque outil publie]
 Publication automatique des outils deposes dans a-publier/ (lance par GitHub Actions).
 
 Principe : TOUT est controle d'abord. Si un seul controle echoue, le script s'arrete avec
@@ -182,8 +182,12 @@ def main():
     # ---------- phase 2 : application (dans l'espace de travail du robot)
     titres, nouveaux = [], []
     for f, base, nom_pub, meta, deja in plans:
-        shutil.copyfile(f, os.path.join(RACINE, nom_pub))
+        cible = os.path.join(RACINE, nom_pub)
+        shutil.copyfile(f, cible)
         os.remove(f)
+        nouveau_txt, change = publier.injecter_hub_commun(publier.lire(cible))
+        if change:
+            publier.ecrire(cible, nouveau_txt)
         if not deja:
             publier.mettre_a_jour_index(INDEX, namespace(meta), nom_pub, date)
             nouveaux.append(nom_pub)
@@ -203,6 +207,8 @@ def main():
             err.append(e)
     _, tools = publier.lire_liste(idx, "TOOLS")
     avert = []
+    if not os.path.isfile(os.path.join(RACINE, "hub-commun.js")):
+        avert.append("hub-commun.js est absent de la racine : bouton Mes jeux et Mode Parent partage inactifs")
     for l in tools:
         m = re.search(r'href\s*:\s*"([^"]+)"', l)
         if m and not os.path.isfile(os.path.join(RACINE, m.group(1))):

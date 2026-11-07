@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-publier.py - VERSION 1.0 (2026-11-07)
+publier.py - VERSION 1.1 (2026-11-07)  [1.1 : injecter_hub_commun]
 Publie un outil HTML dans le depot du hub « Mes jeux pour apprendre ».
 
 Ce que fait le script :
@@ -31,6 +31,19 @@ import sys
 
 COULEURS = ["vert", "indigo", "orange", "bleu", "violet"]
 DOMAINES_OK = ("exemple.fr", "exemple.com", "example.com", "example.org", "example.fr")
+
+
+TAG_HUB = '<script src="hub-commun.js"></script>'
+
+
+def injecter_hub_commun(txt):
+    """Ajoute la balise hub-commun.js avant le dernier </body>. Retourne (texte, modifie)."""
+    if "hub-commun.js" in txt:
+        return txt, False
+    i = txt.lower().rfind("</body>")
+    if i < 0:
+        return txt, False
+    return txt[:i] + "<!-- hub-commun v1.0 : bouton Mes jeux + Mode Parent partage -->\n" + TAG_HUB + "\n" + txt[i:], True
 
 
 class Erreur(Exception):
