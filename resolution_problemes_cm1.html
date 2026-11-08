@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <!--
   Résolution de problèmes — CM1/CM2
+  v1.8 (08/11/2026) : Mode Parent > Analyse / Réglages : bouton « Rapport pour analyse » (rapport lisible + JSON versionné,
+                      à copier et transmettre à Claude ; nécessite hub-commun.js ; données et clés de stockage inchangées)
   v1.7 (27/09/2026) : vocabulaire harmonisé — « Mode Parent », « Espace parent », « joueur(s) »
                       (textes affichés uniquement ; clés de stockage rp_v1_* inchangées, données conservées)
   v1.6 : version précédente
@@ -311,7 +313,7 @@
 
   <header class="top">
     <span class="titre-app">🧮 Résolution de problèmes</span>
-    <span class="version-badge">v1.7</span>
+    <span class="version-badge">v1.8</span>
   </header>
 
   <!-- ÉCRAN ACCUEIL / SÉLECTION DU JOUEUR -->
@@ -475,6 +477,7 @@
 
       <div id="sous-analyse" class="sous-ecran">
         <p class="soustitre">Analyse détaillée des sessions par joueur.</p>
+        <button class="btn btn-primaire" onclick="ouvrirRapport()">📋 Rapport pour analyse (à transmettre à Claude)</button>
         <div id="zone-analyse"></div>
       </div>
 
@@ -484,14 +487,15 @@
         <input type="text" id="input-nouveau-code" class="champ-texte" placeholder="Nouveau code">
         <button class="btn btn-secondaire" onclick="changerCodeProf()">Enregistrer le code</button>
         <label class="lbl">Export / maintenance</label>
-        <button class="btn btn-secondaire" onclick="exporterDonnees()">📤 Exporter les données (JSON)</button>
+        <button class="btn btn-secondaire" onclick="ouvrirRapport()">📋 Rapport pour analyse</button>
+        <button class="btn btn-secondaire" style="margin-top:10px;" onclick="exporterDonnees()">📤 Exporter les données (JSON)</button>
         <button class="btn btn-danger" style="margin-top:10px;" onclick="reinitialiserDonnees()">🗑️ Réinitialiser toutes les données</button>
       </div>
     </div>
     <button class="btn btn-ghost" onclick="allerEcranAccueil()">← Quitter le Mode Parent</button>
   </section>
 
-  <footer class="pied">Outil Résolution de problèmes — CM1/CM2 · v1.7 · fonctionne hors-ligne, aucune donnée envoyée sur internet</footer>
+  <footer class="pied">Outil Résolution de problèmes — CM1/CM2 · v1.8 · fonctionne hors-ligne, aucune donnée envoyée sur internet</footer>
 </div>
 
 <!-- MODALE AIDE -->
@@ -1451,6 +1455,47 @@ function construireAnalyse(){
     }
     fiche.innerHTML = html;
     zone.appendChild(fiche);
+  });
+}
+
+/* ---------- Rapport pour analyse (hub-commun.js) ---------- */
+function passagesRapport(){
+  return chargerSessions().map(function(s){
+    const pbs = s.problemes || [];
+    const ok = function(cle){ return pbs.filter(function(pb){ return pb[cle]; }).length; };
+    const t = Date.parse(s.date);
+    return {
+      id: s.date, date: isNaN(t) ? 0 : t, joueur: s.eleve, score: s.score, total: s.total,
+      dureeSec: pbs.reduce(function(a, pb){ return a + (pb.tempsSec || 0); }, 0),
+      competences: [
+        { label: "Calcul juste", ok: ok("calculCorrect"), n: pbs.length },
+        { label: "Phrase réponse juste", ok: ok("phraseCorrect"), n: pbs.length }
+      ],
+      extras: { theme: s.theme, niveau: s.niveau, aideAutorisee: s.aideAutorisee },
+      questions: pbs.map(function(pb, i){
+        const ref = BANQUE.find(function(p){ return p.id === pb.id; }) || {};
+        return {
+          n: i + 1, ref: pb.id, comp: ref.operation || "", compLabel: ref.operation || pb.theme || "",
+          type: "probleme",
+          enonce: ((ref.enonce || pb.titre || "") + " " + (ref.question || "")).trim(),
+          reponse: "Calcul : " + (pb.dernierCalculSaisi || "—") + " | Phrase : " + (pb.dernierePhraseSaisie || "—"),
+          attendu: ref.expected !== undefined ? (ref.expected + " " + (ref.unite || "")).trim() : "",
+          ok: !!pb.valide, tempsSec: pb.tempsSec, tentatives: pb.tentatives, aide: pb.aideOuvertures || 0,
+          extras: { calculCorrect: pb.calculCorrect, phraseCorrect: pb.phraseCorrect, aideEtapeMax: pb.aideEtapeMax,
+                    tempsAideSec: pb.tempsAideSec, theme: pb.theme, niveau: pb.niveau, operation: ref.operation }
+        };
+      })
+    };
+  });
+}
+function ouvrirRapport(){
+  if(!window.HubRapport){
+    afficherToast("Le rapport est disponible quand l'outil est ouvert depuis le hub (fichier hub-commun.js manquant ici).", "erreur");
+    return;
+  }
+  HubRapport.ouvrir({
+    outil: { id: "resolution_problemes_cm1", titre: "Résolution de problèmes CM1/CM2", version: "v1.8" },
+    passages: passagesRapport()
   });
 }
 
