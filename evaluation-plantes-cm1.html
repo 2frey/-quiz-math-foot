@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="hub" content='{"titre":"Évaluation Sciences","texte":"Graines et plantes : réponds aux questions et découvre ton score !","emoji":"🌱","couleur":"vert","section":"lecons","section_titre":"🔬 Je vérifie mes leçons","pastille":"sciences","avant":"devoirs","etiquette":"Évaluation","bouton":"▶ Commencer"}'>
-<title>Évaluation Sciences CM1 — Graines et plantes — v1.2</title>
-<!-- Évaluation Sciences CM1 : les besoins des graines et des plantes — VERSION 1.2 -->
+<meta name="hub-parent" content="partage">
+<title>Évaluation Sciences CM1 — Graines et plantes — v1.5</title>
+<!-- Évaluation Sciences CM1 : les besoins des graines et des plantes — VERSION 1.5 -->
 <style>
 :root{--vert:#2e7d32;--vert-clair:#e8f5e9;--vert-bord:#81c784;--bleu:#1e5fa8;--bleu-clair:#e3f0fc;--ambre:#fff3e0;--ambre-bord:#f0a35e;--encre:#1f2d3d;--papier:#fffef9}
 *{box-sizing:border-box}
@@ -104,14 +105,15 @@ table.exp,table.bilan{width:100%;border-collapse:collapse;background:#fff;font-s
 </head>
 <body>
 <div id="app">
-  <div class="top"><h1>🌱 Sciences : graines et plantes</h1><span class="ver">v1.2</span></div>
+  <div class="top"><h1>🌱 Sciences : graines et plantes</h1><span class="ver">v1.5</span></div>
   <div id="screen"></div>
-  <p class="foot">Évaluation de sciences CM1 · version 1.2</p>
+  <p class="foot">Évaluation de sciences CM1 · version 1.5</p>
 </div>
 <div id="printArea"></div>
 
+<script src="hub-commun.js"></script>
 <script>
-var VERSION='v1.2';
+var VERSION='v1.5';
 var NB='\u00a0';
 function fr(s){return String(s).replace(/ ([?!:;»])/g,NB+'$1').replace(/(«) /g,'$1'+NB);}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -127,7 +129,7 @@ var COMP={
  E:{short:'Je rédige',icon:'✏️',label:`Je sais expliquer avec une phrase`,retiens:`Une bonne réponse est une phrase complète qui cite les besoins : « Pour germer, la graine a besoin de… ».`}
 };
 
-var EXP=`<div class="scroll"><table class="exp"><caption>Expérience : 4 pots avec une graine (version v1.2)</caption>
+var EXP=`<div class="scroll"><table class="exp"><caption>Expérience : 4 pots avec une graine (version v1.5)</caption>
 <tr><th>Pot</th><th>Eau</th><th>Température</th><th>Lumière</th><th>Résultat</th></tr>
 <tr><td>A</td><td>oui</td><td>chaude</td><td>placard noir</td><td>✅ germe</td></tr>
 <tr><td>B</td><td>oui</td><td>chaude</td><td>près de la fenêtre</td><td>✅ germe</td></tr>
@@ -192,22 +194,29 @@ function showStart(){
     </ul>
     <label for="pname"><b>Ton prénom :</b></label>
     <input id="pname" class="namein" type="text" autocomplete="off" placeholder="Écris ton prénom">
-    <div class="opt" id="ptog" onclick="toggleParent()"><span class="box" id="pbox"></span><span>Mode Parent (active les indices)</span></div>
+    ${parentBloc()}
     <div class="actions"><button class="btn" onclick="startEval()">▶ Je commence</button></div>
     <div class="actions"><button class="btn sec" onclick="doPrint(false)">🖨️ Version papier</button><button class="btn sec" onclick="doPrint(true)">🖨️ Corrigé (parent)</button></div>
     ${last}
   </section>`);
-  if(S.parent){$('ptog').classList.add('sel');$('pbox').textContent='✓';}
+  if(window.HubParent){majParentInfo();}else if(S.parent){$('ptog').classList.add('sel');$('pbox').textContent='✓';}
 }
+function parentOn(){return window.HubParent?window.HubParent.actif():S.parent;}
+function parentBloc(){
+  if(window.HubParent)return '<p class="mini" id="pinfo"></p>';
+  return '<div class="opt" id="ptog" onclick="toggleParent()"><span class="box" id="pbox"></span><span>Mode Parent (active les indices)</span></div>';
+}
+function majParentInfo(){var e=$('pinfo');if(e)e.textContent=fr(parentOn()?'🔓 Mode Parent actif : indices disponibles, historique consultable.':'🔒 Mode Parent : touche le cadenas « Parent » en haut à droite (indices et historique).');}
+document.addEventListener('hub:parent',function(){majParentInfo();var a=$('act');if(a&&$('zone')&&!S.done&&Q[S.i])a.innerHTML=actBtns();});
 function toggleParent(){S.parent=!S.parent;$('ptog').classList.toggle('sel',S.parent);$('pbox').textContent=S.parent?'✓':'';}
-function startEval(){S.name=($('pname').value||'').trim();S.i=0;S.res=[];S.order={};showQ();}
+function startEval(){S.name=($('pname').value||'').trim();S.i=0;S.res=[];S.order={};S.saved=false;S.det=[];showQ();}
 
 function stateCls(isSel,isOk){if(!S.done)return isSel?'sel':'';if(isOk)return 'good';if(isSel)return 'soft';return '';}
 function boxTxt(isSel,isOk){if(!S.done)return isSel?'✓':'';if(isOk)return '✓';if(isSel)return '✗';return '';}
 
 function showQ(){
   var q=Q[S.i];
-  S.done=false;
+  S.done=false;S.t0=Date.now();S.indice=false;
   S.cur={val:null,set:{},pool:[],bins:{},picked:null};
   if(q.opts)S.order[S.i]=shuffle(q.opts.map(function(_,k){return k;}));
   if(q.type==='sort'){S.cur.pool=shuffle(q.items.map(function(_,k){return k;}));q.cats.forEach(function(c){S.cur.bins[c.id]=[];});}
@@ -217,7 +226,7 @@ function showQ(){
   $('screen').innerHTML=fr(h);
   window.scrollTo(0,0);
 }
-function actBtns(){return '<button class="btn" onclick="validate()">Valider</button>'+(S.parent?'<button class="btn hint" onclick="showHint()">💡 Indice</button>':'');}
+function actBtns(){return '<button class="btn" onclick="validate()">Valider</button>'+(parentOn()?'<button class="btn hint" onclick="showHint()">💡 Indice</button>':'');}
 function nextBtn(){return '<button class="btn" onclick="nextQ()">'+(S.i<Q.length-1?'Suivant ➜':'Voir mon résultat 🏁')+'</button>';}
 
 function optHTML(q,k,fn,round){
@@ -276,7 +285,7 @@ function zoneHTML(q){
 }
 function redrawZone(){var q=Q[S.i];if(q.type==='fill'||q.type==='text')return;$('zone').innerHTML=fr(zoneHTML(q));}
 function need(m){$('fb').innerHTML=fr('<div class="fb info">'+m+'</div>');}
-function showHint(){var q=Q[S.i];$('fb').innerHTML=fr('<div class="fb info">💡 '+q.hint+'</div>');}
+function showHint(){var q=Q[S.i];S.indice=true;$('fb').innerHTML=fr('<div class="fb info">💡 '+q.hint+'</div>');}
 
 function pickVF(v){if(S.done)return;S.cur.val=v;redrawZone();}
 function pickSingle(k){if(S.done)return;S.cur.val=k;redrawZone();}
@@ -297,6 +306,7 @@ function backToPool(k){
 
 function validate(){
   var q=Q[S.i];if(S.done)return;
+  S.tq=Math.round((Date.now()-S.t0)/1000);
   var ok=false;
   if(q.type==='vf'){
     if(S.cur.val===null)return need('Choisis Vrai ou Faux.');
@@ -337,12 +347,29 @@ function validate(){
 }
 function finish(ok){
   var q=Q[S.i];
-  S.res[S.i]=ok;S.done=true;
+  S.res[S.i]=ok;S.done=true;S.det[S.i]=detail(q,ok);
   $('fb').innerHTML=fr(ok?'<div class="fb good">'+PRAISE[Math.floor(Math.random()*PRAISE.length)]+'</div>':'<div class="fb soft">🌱 Pas tout à fait. '+q.expl+'</div>');
   redrawZone();
   $('act').innerHTML=nextBtn();
 }
-function rateText(ok){S.res[S.i]=ok;$('act').innerHTML=nextBtn();}
+function rateText(ok){S.res[S.i]=ok;S.det[S.i]=detail(Q[S.i],ok);$('act').innerHTML=nextBtn();}
+function detail(q,ok){
+  var rep='',att='',cur=S.cur;
+  var bons=q.opts?q.opts.filter(function(o){return o.ok;}).map(function(o){return o.t;}).join(' ; '):'';
+  if(q.type==='vf'){rep=cur.val===null?'':(cur.val?'Vrai':'Faux');att=q.answer?'Vrai':'Faux';}
+  else if(q.type==='single'){rep=cur.val===null?'':q.opts[cur.val].t;att=bons;}
+  else if(q.type==='multi'){rep=q.opts.filter(function(o,k){return cur.set[k];}).map(function(o){return o.t;}).join(' ; ');att=bons;}
+  else if(q.type==='fill'){rep=q.show.map(function(_,p){var e=$('in'+p);return e?e.value.trim():'';}).join(' / ');att=q.show.join(' / ');}
+  else if(q.type==='sort'){
+    var parts=[];q.cats.forEach(function(c){cur.bins[c.id].forEach(function(k){parts.push(q.items[k].t+' → '+c.t);});});
+    rep=parts.join(' ; ');
+    att=q.items.map(function(it){var c=q.cats.filter(function(c2){return c2.id===it.cat;})[0];return it.t+' → '+c.t;}).join(' ; ');
+  }
+  else if(q.type==='text'){var zt=$('zt');rep=zt?zt.value.trim():'';att=q.model;}
+  var d={n:S.i+1,ref:'Q'+(S.i+1),comp:q.comp,compLabel:COMP[q.comp].short,type:q.type,enonce:(q.text||q.consigne),reponse:rep,attendu:att,ok:!!ok,tempsSec:S.tq||0,indice:!!S.indice};
+  if(q.ctx)d.contexte='Tableau de l’expérience (pots A à D)';
+  return d;
+}
 function nextQ(){if(S.i<Q.length-1){S.i++;showQ();}else showResult();}
 
 function compStats(){
@@ -365,6 +392,12 @@ function showResult(){
     rev+='<li><b>Question '+(i+1)+'</b> ('+COMP[q.comp].icon+' '+COMP[q.comp].short+') — '+(q.text||q.consigne)+'<span class="corr">➜ '+corr+'</span></li>';
   });
   var nbKo=Q.length-score;
+  if(window.HubHistorique&&!S.saved){
+    S.saved=true;
+    var comps=Object.keys(COMP).filter(function(k){return st[k];}).map(function(k){return {label:COMP[k].label,ok:st[k].ok,n:st[k].n};});
+    var rv=[];Q.forEach(function(q,i){if(!S.res[i])rv.push({q:i+1,texte:q.text||q.consigne,correction:q.expl||('Phrase modèle : '+q.model)});});
+    HubHistorique.enregistrer({outil:'evaluation-plantes-cm1',titre:'Évaluation Sciences (graines et plantes)',version:VERSION,joueur:S.name||'joueur',score:score,total:Q.length,dureeSec:S.det.reduce(function(a,d){return a+(d?d.tempsSec:0);},0),competences:comps,aRevoir:rv,questions:S.det});
+  }
   Object.keys(COMP).forEach(function(k){
     var s=st[k];if(!s)return;
     var p=s.ok/s.n,lv=level(p);
@@ -381,8 +414,10 @@ function showResult(){
     <p class="consigne">${nbKo?'À revoir : '+nbKo+' question'+(nbKo>1?'s':''):'Rien à revoir 🌟'}</p>
     ${rev?'<ul class="revoir">'+rev+'</ul>':''}
     ${retiens||'<div class="retiens">Toutes les compétences sont acquises. Bravo ! 🌟</div>'}
+    ${window.HubHistorique?"<p class=\"mini\">✅ Résultat enregistré dans l’historique du Mode Parent.</p>":""}
     <div class="actions">
       <button class="btn" onclick="showStart()">🔁 Recommencer</button>
+      ${window.HubParent?'<button class="btn sec" onclick="HubParent.ouvrir(\'historique\')">👨‍👩‍👧 Historique (Mode Parent)</button><button class="btn sec" onclick="HubParent.ouvrir(\'rapport\')">📋 Rapport pour analyse</button>':''}
       <button class="btn sec" onclick="doPrint(false)">🖨️ Version papier</button>
       <button class="btn sec" onclick="doPrint(true)">🖨️ Corrigé (parent)</button>
     </div>
@@ -431,7 +466,5 @@ function doPrint(key){buildPrint(key);try{window.print();}catch(e){}}
 
 showStart();
 </script>
-<!-- hub-commun v1.0 : bouton Mes jeux + Mode Parent partage -->
-<script src="hub-commun.js"></script>
 </body>
 </html>
