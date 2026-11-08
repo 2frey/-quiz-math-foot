@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-publier.py - VERSION 1.2 (2026-11-08)  [1.2 : detection exacte de la balise hub-commun ; 1.1 : injecter_hub_commun]
+publier.py - VERSION 1.3 (2026-11-08)  [1.3 : champ ajout (badge Nouveau) ; 1.2 : detection exacte de la balise hub-commun ; 1.1 : injecter_hub_commun]
 Publie un outil HTML dans le depot du hub « Mes jeux pour apprendre ».
 
 Ce que fait le script :
@@ -137,7 +137,7 @@ def mettre_a_jour_index(chemin, a, nom_pub, date):
     # 3. carte
     ligne_t = ("{ esp:\"e\", sec:" + js(a.section) + ", emoji:" + js(a.emoji) + ", titre:" + js(a.titre)
                + ", texte:" + js(a.texte) + ", couleur:" + js(a.couleur) + ", href:" + js(nom_pub)
-               + ", etiquette:" + js(a.etiquette) + ", bouton:" + js(a.bouton) + " }")
+               + ", etiquette:" + js(a.etiquette) + ", bouton:" + js(a.bouton) + ", ajout:" + js(date) + " }")
     pos = len(tools)
     for i, l in enumerate(tools):
         if re.search(r'sec\s*:\s*"' + re.escape(a.section) + '"', l):

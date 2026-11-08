@@ -1,4 +1,4 @@
-/* hub-commun.js - VERSION 1.2 (2026-11-08)  [1.2 : rapport pour analyse (HubRapport) ; 1.1 : barre « Retour aux jeux »]
+/* hub-commun.js - VERSION 1.2 (2026-11-08)  [1.2 : rapport pour analyse (HubRapport) ; lien d'evitement « Aller au contenu » respecte ; 1.1 : barre « Retour aux jeux »]
    Partage entre tous les outils du hub « Mes jeux pour apprendre » :
    1. barre fixe en HAUT avec le bouton « ← Retour aux jeux » (retour au hub) ;
    2. Mode Parent partage (code) pour les outils qui n'ont pas leur propre Mode Parent ;
@@ -417,7 +417,8 @@
     } else if (!estHub) {
       var vide = document.createElement("span"); bar.appendChild(vide);
     }
-    document.body.insertBefore(bar, document.body.firstChild);
+    var saut = document.querySelector("a.saut");
+    document.body.insertBefore(bar, saut ? saut.nextSibling : document.body.firstChild);
     document.documentElement.classList.add("hubc-avec-barre");
     var cs = getComputedStyle(document.body);
     if (Math.abs(parseFloat(cs.minHeight) - window.innerHeight) < 2) document.body.style.minHeight = "calc(100vh - var(--hubc-h))";

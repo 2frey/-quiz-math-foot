@@ -1,4 +1,4 @@
-# Dossier a-publier (version 1.3)
+# Dossier a-publier (version 1.4)
 
 Depose ici un fichier `.html` : le robot GitHub le controle, le publie a la racine
 (sans numero de version dans le nom), ajoute sa carte au hub et monte la version du hub.
@@ -21,6 +21,8 @@ Rapport pour analyse : `HubHistorique.enregistrer({... questions:[{n,ref,comp,co
 alimente l'onglet « Rapport » du Mode Parent (format `hub-rapport` v1, evolutif : tout champ en plus est conserve).
 Un outil qui a son propre Mode Parent appelle `HubRapport.ouvrir({outil:{id,titre,version}, passages:[...]})` (voir resolution_problemes_cm1-v1.8.html).
 Reglage facultatif : `<meta name="hub-parent" content="propre|partage">`.
+
+Le robot ajoute aussi la date d'ajout (`ajout`) : la carte du hub porte le badge « Nouveau » pendant 14 jours.
 
 ## Controles automatiques (si un seul echoue, RIEN n'est publie)
 - aucun e-mail ni mot de passe ; aucun « Mode Prof »
