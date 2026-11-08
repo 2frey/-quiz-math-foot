@@ -6,6 +6,8 @@
   HISTORIQUE DES VERSIONS
   | Version | Date       | Modifications                                                                  |
   |---------|------------|--------------------------------------------------------------------------------|
+  | 3.1     | 2026-11-08 | Ajout de la rubrique « English » et de la carte English Quest                    |
+  |         |            | (revision-anglais-cm2.html, test n°6 d'anglais CM2). Rien d'autre ne change.     |
   | 3.0     | 2026-11-08 | Refonte : accessibilité (contrastes, repères de page, clavier), en-tête compact,|
   |         |            | « Reprendre » (3 derniers jeux), série de jours, « ouvert aujourd'hui », badge    |
   |         |            | « Nouveau », menu des rubriques, résumé de la semaine dans le Mode Parent,        |
@@ -191,7 +193,7 @@
     <div id="sections-e"></div>
   </main>
 
-  <footer>Mes jeux pour apprendre — v3.0 (en ligne)</footer>
+  <footer>Mes jeux pour apprendre — v3.1 (en ligne)</footer>
 </div>
 
 <script>
@@ -204,6 +206,7 @@
   /* ===================== LISTE DES OUTILS (1 ligne = 1 carte) ===================== */
   var SECTIONS = [
     { id:"entrainement", esp:"e", titre:"🎯 Je m'entraîne", pastille:"maths" },
+    { id:"anglais", esp:"e", titre:"🗣️ English", pastille:"anglais" },
     { id:"lecons", esp:"e", titre:"🔬 Je vérifie mes leçons", pastille:"sciences" },
     { id:"devoirs", esp:"e", titre:"⏱️ Mes devoirs", pastille:"chrono & méthode" },
     { id:"routine", esp:"e", titre:"☀️ Ma routine", pastille:"missions du jour" }
@@ -212,6 +215,7 @@
     { esp:"e", sec:"entrainement", emoji:"⚽", titre:"Quiz Math Foot", texte:"Marque des buts en révisant tes tables de multiplication !", couleur:"vert", href:"quiz-math-foot.html", etiquette:"Tables ×", bouton:"▶ Jouer" },
     { esp:"e", sec:"entrainement", emoji:"🧮", titre:"Résolution de problèmes", texte:"Pokémon, foot, voitures… Résous 3 problèmes et écris ta phrase réponse.", couleur:"indigo", href:"resolution_problemes_cm1.html", etiquette:"Problèmes", bouton:"▶ Jouer" },
     { esp:"e", sec:"entrainement", emoji:"📝", titre:"Évaluation Repères CM2", texte:"Pose tes opérations en colonne et résous les problèmes. Montre ce que tu sais faire !", couleur:"orange", href:"evaluation-reperes-cm1.html", etiquette:"Évaluation", bouton:"▶ Commencer" },
+    { esp:"e", sec:"anglais", emoji:"🗣️", titre:"English Quest", texte:"10 missions pour réviser les jours, la date, to be, les pays et les nationalités avant le test !", couleur:"bleu", href:"revision-anglais-cm2.html", etiquette:"Test n°6", bouton:"▶ Jouer", ajout:"2026-11-08" },
     { esp:"e", sec:"lecons", emoji:"🌱", titre:"Évaluation Sciences", texte:"Graines et plantes : réponds aux questions et découvre ton score !", couleur:"vert", href:"evaluation-plantes-cm1.html", etiquette:"Évaluation", bouton:"▶ Commencer", ajout:"2026-11-07" },
     { esp:"e", sec:"devoirs", emoji:"⏱️", titre:"Chrono Devoirs", texte:"Chronomètre tes devoirs, bats ton record, gagne des points et des badges. Avec des astuces pour bien travailler !", couleur:"bleu", href:"chrono-devoirs.html", etiquette:"Devoirs", bouton:"▶ C'est parti" },
     { esp:"e", sec:"routine", emoji:"💍", titre:"Sonic Quest du Matin", texte:"Chaque tâche accomplie rapporte des anneaux dorés. Débloque tes récompenses !", couleur:"bleu", href:"sonic-quest-du-matin.html", etiquette:"Matin", bouton:"▶ C'est parti" },

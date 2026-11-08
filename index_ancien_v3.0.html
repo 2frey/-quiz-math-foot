@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<!--
+  PAGE D'ACCUEIL (VERSION EN LIGNE) — Mes jeux pour apprendre
+  Cette copie ne contient PAS l'Espace adulte : elle est destinée au dépôt GitHub public.
+  La version complète est dans « index-complet-local.html » (à garder sur votre PC).
+  HISTORIQUE DES VERSIONS
+  | Version | Date       | Modifications                                                                  |
+  |---------|------------|--------------------------------------------------------------------------------|
+  | 3.0     | 2026-11-08 | Refonte : accessibilité (contrastes, repères de page, clavier), en-tête compact,|
+  |         |            | « Reprendre » (3 derniers jeux), série de jours, « ouvert aujourd'hui », badge    |
+  |         |            | « Nouveau », menu des rubriques, résumé de la semaine dans le Mode Parent,        |
+  |         |            | carte grisée « Bientôt disponible » si la page est absente, icône et métadonnées. |
+  | 2.1     | 2026-11-07 | Ajout de la carte « Évaluation Sciences » (evaluation-plantes-cm1.html)        |
+  | 2.0     | 2026-10-03 | Version en ligne : ajout de Chrono Devoirs. Cartes générées depuis la liste TOOLS. |
+  | 1.0     | 2026-09-27 | Création : 5 cartes (3 « Je m'entraîne », 2 « Ma routine »), message d'accueil   |
+  |         |            | selon l'heure, badge « Dernier jeu ouvert »                                      |
+
+  POUR AJOUTER / MODIFIER UN OUTIL :
+  ajouter ou changer UNE ligne dans la liste TOOLS (en bas du fichier) : esp = 'e',
+  sec = identifiant de section, puis emoji, titre, texte, couleur, href, etiquette et bouton.
+  Facultatif : ajout:"AAAA-MM-JJ" (badge « Nouveau » pendant 14 jours).
+  Les liens sont relatifs : chaque fichier doit être à côté de ce index.html.
+  Le robot GitHub (dossier a-publier) respecte ce format : ne pas changer la forme des listes SECTIONS et TOOLS.
+
+  -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#4B45D6">
+<meta name="hub-parent" content="partage">
+<meta name="description" content="Mes jeux pour apprendre : jeux et évaluations de maths, sciences et méthode pour le CM1 et le CM2.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
+<title>Mes jeux pour apprendre</title>
+<style>
+  :root{
+    --fond1:#FFF7E6; --fond2:#E8F4FF;
+    --texte:#1F2340; --texte-doux:#4A5170; --blanc:#FFFFFF;
+    --ombre:0 6px 0 rgba(31,35,64,.12), 0 10px 24px rgba(31,35,64,.10);
+    --jaune:#FFC93C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  [hidden]{display:none !important;}
+  body{
+    font-family:"Segoe UI","Trebuchet MS",Verdana,Arial,sans-serif;
+    color:var(--texte);
+    background:
+      radial-gradient(circle at 10% 5%, rgba(255,201,60,.35), transparent 40%),
+      radial-gradient(circle at 90% 95%, rgba(75,69,214,.18), transparent 45%),
+      linear-gradient(160deg, var(--fond1), var(--fond2));
+    min-height:100vh;
+    padding:14px 14px 40px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .page{max-width:1040px;margin:0 auto;}
+  .saut{position:absolute;left:-999px;top:8px;background:#fff;color:var(--texte);padding:10px 14px;border-radius:10px;font-weight:800;z-index:3000000000;}
+  .saut:focus{left:8px;}
+  a:focus-visible,button:focus-visible{outline:4px solid #1F2340;outline-offset:3px;}
+
+  /* ---------- En-tête compact ---------- */
+  header{text-align:center;margin:4px 0 14px;}
+  .mascotte{font-size:44px;line-height:1;display:inline-block;animation:rebond 2.4s ease-in-out infinite;}
+  @keyframes rebond{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-6px) rotate(4deg);}}
+  h1{
+    margin:4px 0 2px;font-size:clamp(26px,6vw,40px);font-weight:900;letter-spacing:.5px;
+    background:linear-gradient(90deg,#C2410C,#7C3AED,#1565C0);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .salut{font-size:clamp(16px,3.6vw,20px);font-weight:800;margin:0;}
+  .motiv{font-size:15px;color:var(--texte-doux);margin:4px 0 0;min-height:20px;}
+  .stats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0 0;}
+  .stat{background:var(--blanc);border-radius:20px;padding:6px 14px;font-weight:800;font-size:14.5px;box-shadow:0 2px 0 rgba(31,35,64,.10);}
+
+  /* ---------- Reprendre ---------- */
+  .reprise{margin:0 0 16px;text-align:center;}
+  .reprise h2{font-size:15px;margin:0 0 8px;color:var(--texte-doux);font-weight:800;}
+  .puces{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+  .puce{
+    display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;
+    background:var(--blanc);border:2px solid #1B7A38;border-radius:30px;
+    color:var(--texte);text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 3px 0 rgba(31,35,64,.10);
+  }
+  .puce:active{transform:scale(.97);}
+
+  /* ---------- Menu des rubriques ---------- */
+  .rubriques{
+    position:sticky;top:var(--hubc-h,0px);z-index:20;
+    display:flex;gap:8px;overflow-x:auto;padding:8px 2px;margin:0 0 10px;
+    background:linear-gradient(180deg,rgba(255,247,230,.96),rgba(255,247,230,.85));
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  .rubriques::-webkit-scrollbar{display:none;}
+  .rubriques a{
+    flex:0 0 auto;min-height:40px;display:inline-flex;align-items:center;padding:6px 14px;
+    background:var(--blanc);border:2px solid #CBD0E6;border-radius:24px;
+    color:var(--texte);text-decoration:none;font-weight:800;font-size:14.5px;
+  }
+  .rubriques a:active{transform:scale(.97);}
+
+  /* ---------- Résumé parent ---------- */
+  .parent{
+    background:#FFFFFF;border:3px solid #4338CA;border-radius:20px;padding:14px 16px;margin:0 0 22px;
+    box-shadow:var(--ombre);
+  }
+  .parent h2{margin:0 0 6px;font-size:18px;}
+  .parent p{margin:4px 0;font-size:15px;line-height:1.45;}
+  .parent .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .bouton{
+    font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;min-height:44px;
+    background:#4338CA;color:#fff;border:none;border-radius:30px;padding:10px 18px;box-shadow:0 3px 0 #2E2790;
+  }
+  .bouton.clair{background:#fff;color:#4338CA;border:2px solid #4338CA;box-shadow:none;}
+
+  /* ---------- Consigne ---------- */
+  .consigne{
+    background:var(--blanc);border:3px dashed var(--jaune);border-radius:18px;
+    padding:10px 16px;text-align:center;font-weight:800;font-size:16px;margin:0 auto 18px;max-width:560px;
+  }
+
+  /* ---------- Sections ---------- */
+  section.rub{margin-bottom:28px;scroll-margin-top:calc(var(--hubc-h,0px) + 64px);}
+  .titre-section{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:21px;font-weight:900;margin:0 0 12px 4px;}
+  .titre-section .pastille{font-size:12.5px;font-weight:800;color:var(--texte-doux);background:var(--blanc);border-radius:20px;padding:3px 10px;}
+  .grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+
+  /* ---------- Cartes ---------- */
+  .carte{
+    --c:#4338CA;--c-clair:#ECEBFF;
+    position:relative;display:flex;flex-direction:column;
+    background:var(--blanc);border:3px solid var(--c-clair);border-radius:22px;
+    padding:18px 18px 16px;text-decoration:none;color:var(--texte);
+    box-shadow:var(--ombre);transition:transform .15s ease, border-color .15s ease;min-height:190px;
+  }
+  .carte:hover{transform:translateY(-4px);border-color:var(--c);}
+  .carte:active{transform:scale(.97);}
+  .carte .icone{width:64px;height:64px;border-radius:18px;background:var(--c-clair);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:12px;}
+  .carte h3{margin:0 0 6px;font-size:19px;font-weight:900;}
+  .carte p{margin:0 0 14px;font-size:14.5px;line-height:1.45;color:var(--texte-doux);flex:1;}
+  .pied-carte{display:flex;align-items:center;flex-wrap:wrap;gap:10px;}
+  .carte .jouer{background:var(--c);color:#fff;font-weight:800;font-size:15px;padding:10px 18px;border-radius:30px;box-shadow:0 3px 0 rgba(0,0,0,.2);}
+  .carte .vu{font-size:13px;font-weight:800;color:#1B5E20;}
+  .carte .etiquette{position:absolute;top:14px;right:14px;font-size:12px;font-weight:800;color:var(--c);background:var(--c-clair);padding:4px 10px;border-radius:20px;}
+  .nouveau{display:inline-block;margin-left:8px;vertical-align:middle;font-size:11.5px;font-weight:900;color:#7A2E00;background:#FFD27A;border-radius:12px;padding:2px 8px;}
+  .carte.vert{--c:#1B7A38;--c-clair:#E3F7EA;}
+  .carte.indigo{--c:#4338CA;--c-clair:#ECEBFF;}
+  .carte.orange{--c:#B45309;--c-clair:#FFF0E0;}
+  .carte.bleu{--c:#1565C0;--c-clair:#E3F1FD;}
+  .carte.violet{--c:#7C3AED;--c-clair:#F3EAFF;}
+  .carte.indisponible{opacity:.62;filter:grayscale(.55);cursor:not-allowed;}
+  .carte.indisponible:hover{transform:none;border-color:var(--c-clair);}
+
+  footer{text-align:center;font-size:12.5px;color:var(--texte-doux);margin-top:10px;}
+  noscript .consigne{border-color:#C2410C;}
+
+  @media (min-width:900px){body{padding:20px 24px 48px;}.grille{gap:20px;}}
+  @media (max-width:420px){
+    body{padding:10px 10px 32px;}
+    .grille{grid-template-columns:1fr;}
+    .carte{min-height:0;}
+  }
+  @media (prefers-reduced-motion:reduce){.mascotte{animation:none;}.carte{transition:none;}}
+</style>
+</head>
+<body>
+<a class="saut" href="#contenu">Aller au contenu</a>
+<div class="page">
+
+  <header>
+    <div class="mascotte" aria-hidden="true">🚀</div>
+    <h1>Mes jeux pour apprendre</h1>
+    <p class="salut" id="salut">Bonjour, champion !</p>
+    <p class="motiv" id="motiv"></p>
+    <div class="stats" id="stats" aria-live="polite"></div>
+  </header>
+
+  <main id="contenu">
+    <noscript><div class="consigne">⚠️ Pour afficher les jeux, il faut activer JavaScript dans le navigateur.</div></noscript>
+
+    <section class="parent" id="zone-parent" aria-label="Résumé pour le parent" hidden></section>
+
+    <section class="reprise" id="zone-reprise" aria-labelledby="t-reprise" hidden>
+      <h2 id="t-reprise">▶️ Reprendre où tu t'es arrêté</h2>
+      <div class="puces" id="puces"></div>
+    </section>
+
+    <nav class="rubriques" id="rubriques" aria-label="Aller à une rubrique" hidden></nav>
+
+    <div class="consigne">👆 Touche une carte pour lancer le jeu de ton choix.</div>
+    <div id="sections-e"></div>
+  </main>
+
+  <footer>Mes jeux pour apprendre — v3.0 (en ligne)</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var CLE_DERNIER = "accueil:dernierJeu";      /* ancienne clé (conservée) */
+  var CLE_DERNIERS = "accueil:derniersJeux";    /* 3 derniers jeux */
+  var CLE_VUS = "hub:vus";                      /* jours où un jeu a été ouvert */
+
+  /* ===================== LISTE DES OUTILS (1 ligne = 1 carte) ===================== */
+  var SECTIONS = [
+    { id:"entrainement", esp:"e", titre:"🎯 Je m'entraîne", pastille:"maths" },
+    { id:"lecons", esp:"e", titre:"🔬 Je vérifie mes leçons", pastille:"sciences" },
+    { id:"devoirs", esp:"e", titre:"⏱️ Mes devoirs", pastille:"chrono & méthode" },
+    { id:"routine", esp:"e", titre:"☀️ Ma routine", pastille:"missions du jour" }
+  ];
+  var TOOLS = [
+    { esp:"e", sec:"entrainement", emoji:"⚽", titre:"Quiz Math Foot", texte:"Marque des buts en révisant tes tables de multiplication !", couleur:"vert", href:"quiz-math-foot.html", etiquette:"Tables ×", bouton:"▶ Jouer" },
+    { esp:"e", sec:"entrainement", emoji:"🧮", titre:"Résolution de problèmes", texte:"Pokémon, foot, voitures… Résous 3 problèmes et écris ta phrase réponse.", couleur:"indigo", href:"resolution_problemes_cm1.html", etiquette:"Problèmes", bouton:"▶ Jouer" },
+    { esp:"e", sec:"entrainement", emoji:"📝", titre:"Évaluation Repères CM2", texte:"Pose tes opérations en colonne et résous les problèmes. Montre ce que tu sais faire !", couleur:"orange", href:"evaluation-reperes-cm1.html", etiquette:"Évaluation", bouton:"▶ Commencer" },
+    { esp:"e", sec:"lecons", emoji:"🌱", titre:"Évaluation Sciences", texte:"Graines et plantes : réponds aux questions et découvre ton score !", couleur:"vert", href:"evaluation-plantes-cm1.html", etiquette:"Évaluation", bouton:"▶ Commencer", ajout:"2026-11-07" },
+    { esp:"e", sec:"devoirs", emoji:"⏱️", titre:"Chrono Devoirs", texte:"Chronomètre tes devoirs, bats ton record, gagne des points et des badges. Avec des astuces pour bien travailler !", couleur:"bleu", href:"chrono-devoirs.html", etiquette:"Devoirs", bouton:"▶ C'est parti" },
+    { esp:"e", sec:"routine", emoji:"💍", titre:"Sonic Quest du Matin", texte:"Chaque tâche accomplie rapporte des anneaux dorés. Débloque tes récompenses !", couleur:"bleu", href:"sonic-quest-du-matin.html", etiquette:"Matin", bouton:"▶ C'est parti" },
+    { esp:"e", sec:"routine", emoji:"⚡", titre:"Level Up Zone", texte:"Accomplis tes missions, gagne de l'XP et monte de niveau.", couleur:"violet", href:"level-up-zone.html", etiquette:"XP", bouton:"▶ C'est parti" }
+  ];
+
+  function $(id){ return document.getElementById(id); }
+  function z2(n){ return (n < 10 ? "0" : "") + n; }
+  function cleJour(d){ return d.getFullYear() + "-" + z2(d.getMonth() + 1) + "-" + z2(d.getDate()); }
+  function jourPrecedent(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1); }
+  function parseJour(s){ var p = String(s).split("-"); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
+  function lire(k, def){ try{ var v = JSON.parse(localStorage.getItem(k)); return (v === null || v === undefined) ? def : v; }catch(e){ return def; } }
+  function ecrire(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  function pluriel(n, mot){ return n + " " + mot + (n > 1 ? "s" : ""); }
+
+  /* ===================== CONSTRUCTION DES CARTES ===================== */
+  function estNouveau(o){
+    if(!o.ajout) return false;
+    var t = new Date(); var auj = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    var age = Math.floor((auj.getTime() - parseJour(o.ajout).getTime()) / 86400000);
+    return age >= 0 && age <= 14;
+  }
+  function creerCarte(o){
+    var a = document.createElement("a");
+    a.className = "carte " + o.couleur;
+    a.setAttribute("href", o.href);
+    a.setAttribute("data-nom", o.titre);
+    var e = document.createElement("span"); e.className = "etiquette"; e.textContent = o.etiquette; a.appendChild(e);
+    var i = document.createElement("div"); i.className = "icone"; i.setAttribute("aria-hidden", "true"); i.textContent = o.emoji; a.appendChild(i);
+    var h = document.createElement("h3"); h.textContent = o.titre;
+    if(estNouveau(o)){ var n = document.createElement("span"); n.className = "nouveau"; n.textContent = "✨ Nouveau"; h.appendChild(n); }
+    a.appendChild(h);
+    var p = document.createElement("p"); p.textContent = o.texte; a.appendChild(p);
+    var pied = document.createElement("div"); pied.className = "pied-carte";
+    var b = document.createElement("span"); b.className = "jouer"; b.textContent = o.bouton; pied.appendChild(b);
+    var v = document.createElement("span"); v.className = "vu"; v.textContent = "✅ ouvert aujourd'hui"; v.hidden = true; pied.appendChild(v);
+    a.appendChild(pied);
+    return a;
+  }
+  function construire(){
+    var nav = $("rubriques"), nb = 0;
+    SECTIONS.forEach(function(s){
+      var outils = TOOLS.filter(function(t){ return t.sec === s.id && t.esp === s.esp; });
+      if(!outils.length) return;
+      nb++;
+      var sec = document.createElement("section"); sec.className = "rub"; sec.id = "sec-" + s.id; sec.setAttribute("aria-labelledby", "h-" + s.id);
+      var h2 = document.createElement("h2"); h2.className = "titre-section"; h2.id = "h-" + s.id;
+      h2.appendChild(document.createTextNode(s.titre + " "));
+      var pa = document.createElement("span"); pa.className = "pastille"; pa.textContent = s.pastille; h2.appendChild(pa);
+      sec.appendChild(h2);
+      var g = document.createElement("div"); g.className = "grille";
+      outils.forEach(function(t){ g.appendChild(creerCarte(t)); });
+      sec.appendChild(g);
+      $("sections-e").appendChild(sec);
+      var lien = document.createElement("a"); lien.href = "#sec-" + s.id; lien.textContent = s.titre; nav.appendChild(lien);
+    });
+    if(nb >= 3) nav.hidden = false;
+  }
+
+  /* ===================== SUIVI : jours, ouverts aujourd'hui, derniers jeux ===================== */
+  function enregistrerOuverture(nom, href){
+    var auj = cleJour(new Date());
+    var vus = lire(CLE_VUS, {});
+    if(!vus[auj]) vus[auj] = [];
+    if(vus[auj].indexOf(nom) < 0) vus[auj].push(nom);
+    var cles = Object.keys(vus).sort();
+    while(cles.length > 60){ delete vus[cles.shift()]; }
+    ecrire(CLE_VUS, vus);
+    var l = lire(CLE_DERNIERS, []).filter(function(x){ return x.nom !== nom; });
+    l.unshift({ nom: nom, href: href });
+    ecrire(CLE_DERNIERS, l.slice(0, 3));
+    ecrire(CLE_DERNIER, { nom: nom, href: href });
+  }
+  function serieJours(vus){
+    var d = new Date(), n = 0;
+    if(!vus[cleJour(d)]) d = jourPrecedent(d);
+    while(vus[cleJour(d)]){ n++; d = jourPrecedent(d); }
+    return n;
+  }
+  function majStats(){
+    var vus = lire(CLE_VUS, {}), auj = vus[cleJour(new Date())] || [], serie = serieJours(vus), z = $("stats");
+    z.innerHTML = "";
+    var add = function(t){ var s = document.createElement("span"); s.className = "stat"; s.textContent = t; z.appendChild(s); };
+    if(serie > 0) add("🔥 " + pluriel(serie, "jour") + " de suite");
+    if(auj.length > 0) add("✅ " + auj.length + (auj.length > 1 ? " jeux ouverts" : " jeu ouvert") + " aujourd'hui");
+    if(serie === 0 && auj.length === 0) add("🌟 Ouvre un jeu pour lancer ta série !");
+    var cartes = document.querySelectorAll(".carte");
+    for(var i = 0; i < cartes.length; i++){
+      var vu = cartes[i].querySelector(".vu");
+      vu.hidden = auj.indexOf(cartes[i].getAttribute("data-nom")) < 0;
+    }
+  }
+  function majReprise(){
+    var l = lire(CLE_DERNIERS, []);
+    if(!l.length){ var d = lire(CLE_DERNIER, null); if(d && d.nom && d.href) l = [d]; }
+    l = l.filter(function(x){ return TOOLS.some(function(t){ return t.href === x.href; }); });
+    var z = $("puces"); z.innerHTML = "";
+    l.forEach(function(x){
+      var t = TOOLS.filter(function(t){ return t.href === x.href; })[0];
+      var a = document.createElement("a"); a.className = "puce"; a.href = x.href;
+      a.textContent = t.emoji + " " + x.nom;
+      a.addEventListener("click", function(){ enregistrerOuverture(x.nom, x.href); });
+      z.appendChild(a);
+    });
+    $("zone-reprise").hidden = l.length === 0;
+  }
+  function brancherClics(){
+    var cartes = document.querySelectorAll(".carte");
+    for(var i = 0; i < cartes.length; i++){
+      cartes[i].addEventListener("click", function(ev){
+        if(this.classList.contains("indisponible")){ ev.preventDefault(); return; }
+        enregistrerOuverture(this.getAttribute("data-nom"), this.getAttribute("href"));
+      });
+    }
+  }
+
+  /* ===================== PAGES ABSENTES : carte grisée ===================== */
+  function verifierDisponibilite(){
+    if(!window.fetch || location.protocol === "file:") return;
+    var cartes = document.querySelectorAll(".carte");
+    Array.prototype.forEach.call(cartes, function(c){
+      fetch(c.getAttribute("href"), { method:"HEAD", cache:"no-cache" }).then(function(r){
+        if(r.status === 404){
+          c.classList.add("indisponible"); c.setAttribute("aria-disabled", "true");
+          c.querySelector(".jouer").textContent = "🚧 Bientôt disponible";
+        }
+      }).catch(function(){});
+    });
+  }
+
+  /* ===================== RÉSUMÉ DE LA SEMAINE (Mode Parent déverrouillé) ===================== */
+  function majParent(){
+    var z = $("zone-parent");
+    if(!window.HubParent || !window.HubHistorique || !window.HubParent.actif()){ z.hidden = true; return; }
+    var l = window.HubHistorique.lister().filter(function(e){ return e.date >= Date.now() - 7 * 86400000; });
+    z.innerHTML = ""; z.hidden = false;
+    var h = document.createElement("h2"); h.textContent = "👨‍👩‍👧 Résumé de la semaine"; z.appendChild(h);
+    var p = function(t){ var e = document.createElement("p"); e.textContent = t; z.appendChild(e); };
+    if(!l.length){ p("Aucune évaluation terminée ces 7 derniers jours."); }
+    else {
+      var somme = 0, nb = 0, comp = {};
+      l.forEach(function(e){
+        if(e.total){ somme += e.score / e.total; nb++; }
+        (e.competences || []).forEach(function(c){ comp[c.label] = comp[c.label] || { ok:0, n:0 }; comp[c.label].ok += c.ok; comp[c.label].n += c.n; });
+      });
+      p(pluriel(l.length, "évaluation") + " terminée" + (l.length > 1 ? "s" : "") + (nb ? " · moyenne " + Math.round(100 * somme / nb) + " %" : "") + ".");
+      var faibles = Object.keys(comp).filter(function(k){ return comp[k].n >= 2 && comp[k].ok / comp[k].n < 0.75; })
+        .sort(function(a, b){ return comp[a].ok / comp[a].n - comp[b].ok / comp[b].n; }).slice(0, 2);
+      p(faibles.length ? "À revoir en priorité : " + faibles.map(function(k){ return k + " (" + Math.round(100 * comp[k].ok / comp[k].n) + " %)"; }).join(" ; ") + "." : "Aucune compétence en difficulté cette semaine. 🌟");
+    }
+    var act = document.createElement("div"); act.className = "actions";
+    var b1 = document.createElement("button"); b1.type = "button"; b1.className = "bouton"; b1.textContent = "📊 Historique";
+    b1.addEventListener("click", function(){ window.HubParent.ouvrir("historique"); });
+    var b2 = document.createElement("button"); b2.type = "button"; b2.className = "bouton clair"; b2.textContent = "📋 Rapport pour analyse";
+    b2.addEventListener("click", function(){ window.HubParent.ouvrir("rapport"); });
+    act.appendChild(b1); act.appendChild(b2); z.appendChild(act);
+  }
+
+  /* ===================== MESSAGE D'ACCUEIL ===================== */
+  function accueil(){
+    var h = new Date().getHours();
+    $("salut").textContent = h < 12 ? "Bonjour, champion ! ☀️" : (h < 18 ? "Bon après-midi, champion ! 🌤️" : "Bonsoir, champion ! 🌙");
+    var PHRASES = [
+      "Chaque bonne réponse te rend plus fort 💪", "Aujourd'hui, on vise le niveau supérieur ! 🏆",
+      "Se tromper, c'est apprendre. Vas-y ! 🌟", "Un petit peu chaque jour, et tu deviens imbattable 🚀", "Prêt à relever le défi ? 🎯"
+    ];
+    $("motiv").textContent = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+  }
+
+  /* ===================== DÉMARRAGE ===================== */
+  construire(); accueil(); brancherClics(); majStats(); majReprise(); verifierDisponibilite();
+  window.addEventListener("load", majParent);
+  document.addEventListener("hub:parent", majParent);
+  window.addEventListener("pageshow", function(e){ if(e.persisted){ majStats(); majReprise(); } });
+})();
+</script>
+<!-- hub-commun v1.0 : bouton Mes jeux + Mode Parent partage -->
+<script src="hub-commun.js"></script>
+</body>
+</html>

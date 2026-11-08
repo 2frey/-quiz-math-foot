@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<!--
+  ENGLISH QUEST — Révision du test n°6 (anglais CM2)
+  HISTORIQUE DES VERSIONS
+  | Version | Date       | Modifications                                                          |
+  |---------|------------|------------------------------------------------------------------------|
+  | 1.0     | 2026-11-08 | Création : 10 missions (jours, ordinaux, date, to be, pays et          |
+  |         |            | nationalités, phrases du cahier, traduction, ordre des mots, dialogue, |
+  |         |            | présentation), Mode Parent (historique + rapport évolutif), fiche      |
+  |         |            | imprimable + corrigé, bouton Retour vers le hub.                       |
+
+  POUR AJOUTER UNE MISSION OU UNE QUESTION : modifier uniquement le tableau MISSIONS
+  (types disponibles : choix, ecrire, ordre, associer, presentation). Le rapport du
+  Mode Parent, la carte et l'impression se mettent à jour tout seuls.
+  Fichier à déposer à la racine du dépôt, à côté de index.html.
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>English Quest — Révision du test n°6</title>
+<style>
+  :root{
+    --fond1:#FFF7E6; --fond2:#E8F4FF;
+    --texte:#1F2340; --texte-doux:#5B6280; --blanc:#FFFFFF;
+    --ombre:0 6px 0 rgba(31,35,64,.12), 0 10px 24px rgba(31,35,64,.10);
+    --vert:#2EAD5B; --vert-clair:#E3F7EA;
+    --indigo:#4B45D6; --indigo-clair:#ECEBFF;
+    --orange:#FF8A1F; --orange-clair:#FFF0E0;
+    --bleu:#1E88E5; --bleu-fonce:#1565C0; --bleu-clair:#E3F1FD;
+    --violet:#8B3FE0; --jaune:#FFC93C; --bord:#DCE3F2;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:"Segoe UI","Trebuchet MS",Verdana,Arial,sans-serif;
+    color:var(--texte);
+    background:
+      radial-gradient(circle at 10% 5%, rgba(255,201,60,.35), transparent 40%),
+      radial-gradient(circle at 90% 95%, rgba(75,69,214,.18), transparent 45%),
+      linear-gradient(160deg, var(--fond1), var(--fond2));
+    background-attachment:fixed;
+    min-height:100vh;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ---------- Barre du haut ---------- */
+  .barre-haut{
+    position:sticky; top:0; z-index:30;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 14px; background:rgba(255,255,255,.94);
+    border-bottom:3px solid var(--bleu-clair);
+  }
+  .btn-retour{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--blanc); color:var(--bleu-fonce);
+    border:2px solid var(--bleu); border-radius:30px;
+    font-weight:800; font-size:14px; padding:8px 16px;
+    text-decoration:none; box-shadow:0 3px 0 rgba(21,101,192,.25);
+  }
+  .btn-retour:active{transform:scale(.96);}
+  .titre-barre{font-weight:900; font-size:15px; color:var(--bleu-fonce); letter-spacing:.3px;}
+  .badge-version{font-size:11px; color:var(--texte-doux); background:#fff; border:1px solid var(--bord); padding:2px 9px; border-radius:20px;}
+
+  .app{max-width:820px; margin:0 auto; padding:18px 14px 50px;}
+  .ecran{display:none;}
+  .ecran.actif{display:block; animation:fondu .25s ease;}
+  @keyframes fondu{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+  /* ---------- Héros ---------- */
+  .hero{text-align:center; margin-bottom:16px;}
+  .mascotte{font-size:54px; line-height:1; display:inline-block; animation:rebond 2.4s ease-in-out infinite;}
+  @keyframes rebond{0%,100%{transform:translateY(0) rotate(-4deg);} 50%{transform:translateY(-8px) rotate(4deg);}}
+  h1{margin:8px 0 4px; font-size:clamp(28px,6vw,40px); font-weight:900;
+     background:linear-gradient(90deg,var(--bleu),var(--indigo),var(--violet));
+     -webkit-background-clip:text; background-clip:text; color:transparent;}
+  h2{font-size:20px; margin:0 0 10px;}
+  .sous{margin:0; color:var(--texte-doux); font-size:15px; font-weight:600;}
+
+  .consigne{
+    background:var(--blanc); border:3px dashed var(--jaune); border-radius:18px;
+    padding:12px 16px; text-align:center; font-weight:800; font-size:16px;
+    margin:0 auto 18px; max-width:620px;
+  }
+  .carte-blanche{background:var(--blanc); border:3px solid var(--bleu-clair); border-radius:22px; padding:18px; box-shadow:var(--ombre); margin-bottom:16px;}
+
+  /* ---------- Boutons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border:none; border-radius:30px; padding:13px 22px; font-size:15.5px; font-weight:800;
+    cursor:pointer; font-family:inherit; box-shadow:0 3px 0 rgba(0,0,0,.18);
+  }
+  .btn:active{transform:scale(.97);}
+  .btn:disabled{opacity:.45; cursor:not-allowed; box-shadow:none;}
+  .btn-prim{background:var(--bleu); color:#fff;}
+  .btn-vert{background:var(--vert); color:#fff;}
+  .btn-sec{background:#fff; color:var(--bleu-fonce); border:2px solid var(--bleu-clair);}
+  .btn-orange{background:var(--orange); color:#fff;}
+  .btn-ghost{background:transparent; color:var(--texte-doux); box-shadow:none; font-weight:700;}
+  .btn-danger{background:#C0392B; color:#fff;}
+  .btn-bloc{display:flex; width:100%;}
+  .rang{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .rang > input{flex:1; min-width:140px;}
+  .espace{height:12px;}
+
+  .lbl{display:block; font-weight:800; font-size:14px; color:var(--texte-doux); margin:12px 0 6px;}
+  input.champ, textarea.champ{
+    width:100%; padding:13px 14px; border-radius:14px; border:3px solid var(--bord);
+    font-size:17px; font-family:inherit; background:#fff; color:var(--texte);
+  }
+  input.champ:focus, textarea.champ:focus{outline:none; border-color:var(--bleu);}
+  input.champ:disabled{background:#F3F5FA;}
+
+  /* ---------- Joueurs ---------- */
+  .pills{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;}
+  .pill{
+    background:var(--bleu-clair); color:var(--bleu-fonce); border:3px solid transparent;
+    padding:11px 18px; border-radius:30px; font-weight:800; font-size:15px; cursor:pointer; font-family:inherit;
+  }
+  .pill.actif{border-color:var(--bleu); background:#fff;}
+  .lien-parent{
+    display:block; margin:26px auto 0; background:none; border:none; cursor:pointer;
+    color:var(--texte-doux); font-size:13px; font-weight:700; text-decoration:underline; font-family:inherit;
+  }
+
+  /* ---------- Carte des missions ---------- */
+  .entete-carte{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .total-etoiles{background:#fff; border:2px solid var(--jaune); border-radius:30px; padding:6px 14px; font-weight:900;}
+  .grille-m{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-bottom:18px;}
+  .m-carte{
+    position:relative; text-align:left; background:#fff; border:3px solid var(--bleu-clair); border-radius:22px;
+    padding:16px; cursor:pointer; box-shadow:var(--ombre); font-family:inherit; color:var(--texte);
+    display:flex; flex-direction:column; gap:4px; min-height:132px;
+  }
+  .m-carte:hover{border-color:var(--bleu);}
+  .m-carte:active{transform:scale(.97);}
+  .m-emoji{font-size:30px;}
+  .m-titre{font-weight:900; font-size:16.5px;}
+  .m-etoiles{font-size:20px; letter-spacing:2px; color:var(--jaune);}
+  .m-etoiles .vide{color:#D5DAE8;}
+  .m-score{font-size:13px; color:var(--texte-doux); font-weight:700;}
+  .actions-carte{display:flex; gap:10px; flex-wrap:wrap;}
+
+  /* ---------- Question ---------- */
+  .progression{background:#fff; border-radius:20px; height:14px; overflow:hidden; border:2px solid var(--bleu-clair);}
+  .progression > div{height:100%; width:0; background:linear-gradient(90deg,var(--vert),var(--bleu)); transition:width .3s;}
+  .ligne-q{display:flex; justify-content:space-between; font-size:13.5px; font-weight:800; color:var(--texte-doux); margin:8px 4px 12px; gap:8px;}
+  .contexte{margin:0 0 10px; font-size:14.5px; color:var(--texte-doux); font-style:italic;}
+  .invite{margin:0 0 10px; font-size:18px; font-weight:800;}
+  .phrase{font-size:clamp(20px,4.6vw,26px); font-weight:800; margin:6px 0 16px; line-height:1.6;}
+  .phrase-en{font-size:clamp(20px,4.6vw,26px); font-weight:800; margin:6px 0 14px;}
+  .trou{display:inline-block; min-width:84px; border-bottom:4px dashed var(--bleu); text-align:center; padding:0 8px; color:var(--bleu-fonce);}
+  .trou.ok{border-bottom:4px solid var(--vert); color:var(--vert);}
+  .trou.ko{border-bottom:4px solid var(--orange); color:var(--orange);}
+  .bulle{display:inline-block; max-width:92%; padding:10px 16px; border-radius:20px; font-size:17px; font-weight:700; margin-bottom:10px;}
+  .bulle-avant{background:#EEF0F6; color:var(--texte-doux); border-bottom-left-radius:4px;}
+  .bulle-moi{background:var(--bleu-clair); border-bottom-right-radius:4px; display:block; max-width:100%;}
+
+  .choix-grille{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;}
+  .choix-btn{
+    background:#fff; border:3px solid var(--bord); border-radius:18px; padding:16px 12px;
+    font-size:19px; font-weight:800; cursor:pointer; font-family:inherit; color:var(--texte);
+    box-shadow:0 4px 0 rgba(31,35,64,.10);
+  }
+  .choix-btn:active{transform:scale(.97);}
+  .choix-btn.ok{background:var(--vert-clair); border-color:var(--vert); color:#1B6B3A;}
+  .choix-btn.ko{background:var(--orange-clair); border-color:var(--orange); color:#9A4D00;}
+  .choix-btn:disabled{cursor:default;}
+
+  /* Ordre des mots */
+  .rep-ordre{
+    min-height:66px; background:#fff; border:3px dashed var(--bleu); border-radius:18px;
+    padding:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px;
+  }
+  .rep-ordre .vide-info{color:var(--texte-doux); font-size:14px; font-weight:700; padding:0 6px;}
+  .banque{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; min-height:56px;}
+  .tuile{
+    background:var(--bleu-clair); color:var(--bleu-fonce); border:3px solid var(--bleu);
+    border-radius:14px; padding:10px 16px; font-size:19px; font-weight:800; cursor:pointer; font-family:inherit;
+    box-shadow:0 3px 0 rgba(21,101,192,.25);
+  }
+  .tuile:active{transform:scale(.96);}
+  .tuile.placee{background:#fff;}
+  .tuile.ok{background:var(--vert-clair); border-color:var(--vert); color:#1B6B3A;}
+  .tuile.ko{background:var(--orange-clair); border-color:var(--orange); color:#9A4D00;}
+  .tuile:disabled{cursor:default;}
+
+  /* Associer */
+  .assoc{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .assoc-col{display:flex; flex-direction:column; gap:10px;}
+  .assoc-btn{
+    background:#fff; border:3px solid var(--bord); border-radius:16px; padding:13px 10px;
+    font-size:17px; font-weight:800; cursor:pointer; font-family:inherit; color:var(--texte);
+    box-shadow:0 3px 0 rgba(31,35,64,.10);
+  }
+  .assoc-btn.sel{border-color:var(--bleu); background:var(--bleu-clair);}
+  .assoc-btn.ok{background:var(--vert-clair); border-color:var(--vert); color:#1B6B3A; cursor:default;}
+  .assoc-btn.ko{background:var(--orange-clair); border-color:var(--orange);}
+
+  /* Présentation */
+  .ligne-pres{margin-bottom:12px;}
+
+  /* Feedback */
+  .fb{margin-top:16px; border-radius:18px; padding:14px 16px; font-size:15.5px; line-height:1.5;}
+  .fb.ok{background:var(--vert-clair); border:3px solid var(--vert);}
+  .fb.ko{background:var(--orange-clair); border:3px solid var(--orange);}
+  .fb.maj{background:#FFF8DC; border:3px solid var(--jaune);}
+  .fb-titre{font-weight:900; font-size:18px; margin-bottom:4px;}
+  .fb-ligne{margin-top:4px;}
+  .fb-expl{font-weight:700;}
+  .fb-fr{color:var(--texte-doux); font-size:14.5px;}
+  .btn-son{margin-top:10px; background:#fff; border:2px solid var(--bleu); color:var(--bleu-fonce); border-radius:30px; padding:7px 14px; font-weight:800; font-size:14px; cursor:pointer; font-family:inherit;}
+  .zone-actions{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+  .zone-actions .btn{flex:1; min-width:160px;}
+
+  /* Résultat */
+  .score-central{text-align:center; margin:6px 0 4px;}
+  .score-central .chiffre{font-size:64px; font-weight:900; color:var(--bleu-fonce);}
+  .score-central .sur{font-size:26px; font-weight:800; color:var(--texte-doux);}
+  .etoiles-grandes{text-align:center; font-size:42px; letter-spacing:6px; color:var(--jaune);}
+  .etoiles-grandes .vide{color:#D5DAE8;}
+  .message-res{text-align:center; font-weight:800; font-size:17px; margin:8px 0 14px;}
+  .err{background:var(--orange-clair); border-left:6px solid var(--orange); border-radius:12px; padding:10px 12px; margin-bottom:8px; font-size:14.5px;}
+  .err-q{font-weight:800; margin-bottom:2px;}
+  .conseil{background:var(--bleu-clair); border-radius:14px; padding:12px 14px; font-weight:700; font-size:14.5px; margin:12px 0;}
+
+  /* Mode Parent */
+  .onglets{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  .onglet{flex:1; min-width:110px; text-align:center; padding:10px; border-radius:14px; background:#EEF0F6; font-weight:800; font-size:13.5px; color:var(--texte-doux); cursor:pointer; border:none; font-family:inherit;}
+  .onglet.actif{background:var(--bleu); color:#fff;}
+  .sous-ecran{display:none;}
+  .sous-ecran.actif{display:block;}
+  .ligne-joueur{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--bord);}
+  .ligne-joueur:last-child{border-bottom:none;}
+  .tableau-defil{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  table.tbl{width:100%; border-collapse:collapse; font-size:13.5px; min-width:480px;}
+  table.tbl th{background:var(--bleu-clair); color:var(--bleu-fonce); padding:8px 6px; text-align:left; position:sticky; top:0;}
+  table.tbl td{padding:8px 6px; border-bottom:1px solid var(--bord);}
+  .hist{border:2px solid var(--bord); border-radius:14px; padding:10px 12px; margin-bottom:8px; background:#fff;}
+  .hist summary{cursor:pointer; font-weight:700; font-size:14px;}
+  .vide-txt{color:var(--texte-doux); text-align:center; padding:18px 0; font-size:14px;}
+  textarea.rapport{width:100%; min-height:260px; font-family:Consolas,Menlo,monospace; font-size:12.5px; border:2px solid var(--bord); border-radius:12px; padding:10px;}
+  .pastille-maj{display:inline-block; background:#FFF8DC; border:2px solid var(--jaune); border-radius:20px; padding:4px 12px; font-weight:800; font-size:13px;}
+
+  footer.pied{text-align:center; font-size:12px; color:var(--texte-doux); opacity:.8; margin-top:20px;}
+
+  /* Modale + toast */
+  .voile{display:none; position:fixed; inset:0; background:rgba(31,35,64,.55); z-index:80; align-items:center; justify-content:center; padding:16px;}
+  .voile.visible{display:flex;}
+  .modale{background:#fff; border-radius:22px; padding:22px; max-width:420px; width:100%; box-shadow:var(--ombre);}
+  .modale h3{margin:0 0 8px; font-size:19px;}
+  .modale p{margin:0 0 16px; color:var(--texte-doux); font-size:15px;}
+  .modale .rang{justify-content:flex-end;}
+  #toast{display:none; position:fixed; top:64px; left:50%; transform:translateX(-50%); background:var(--texte); color:#fff; padding:12px 20px; border-radius:14px; font-size:14px; font-weight:700; z-index:90; max-width:90%; text-align:center; box-shadow:0 6px 18px rgba(0,0,0,.28);}
+  #toast.succes{background:var(--vert);}
+  #toast.info{background:var(--bleu);}
+
+  /* Impression */
+  .outils-impression{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  .feuille{background:#fff; border:2px solid var(--bord); border-radius:12px; padding:20px; color:#000;}
+  .feuille h1{font-size:22px; color:#000; -webkit-text-fill-color:#000; background:none; margin:0 0 4px;}
+  .feuille .f-ident{margin:0 0 14px; font-size:14px;}
+  .f-mission{margin-bottom:16px; break-inside:avoid; page-break-inside:avoid;}
+  .f-mission h2{font-size:16px; margin:0 0 2px; border-bottom:2px solid #000; padding-bottom:2px;}
+  .f-consigne{margin:2px 0 8px; font-style:italic; font-size:13px;}
+  .f-q{margin:0 0 9px; font-size:14px; line-height:1.9;}
+  .f-ligne{display:inline-block; min-width:240px; border-bottom:1px solid #000; height:1em;}
+  .f-rep{font-weight:700; text-decoration:underline;}
+  .f-fr{color:#555; font-size:11.5px;}
+  .f-tuile{display:inline-block; border:1px solid #000; border-radius:6px; padding:1px 8px; margin:0 4px 4px 0;}
+  .f-assoc{display:flex; gap:60px; margin:4px 0 8px;}
+  .f-assoc div{line-height:2;}
+  .f-corrige-badge{display:inline-block; border:2px solid #000; padding:2px 10px; font-weight:900; margin-left:8px;}
+
+  @media (max-width:520px){
+    .app{padding:14px 10px 40px;}
+    .assoc{gap:8px;}
+    .assoc-btn{font-size:15px; padding:12px 6px;}
+    .grille-m{grid-template-columns:1fr;}
+    .m-carte{min-height:0;}
+  }
+  @media (prefers-reduced-motion:reduce){.mascotte{animation:none;} .ecran.actif{animation:none;}}
+
+  @page{size:A4; margin:12mm;}
+  @media print{
+    body{background:#fff !important;}
+    .barre-haut,.outils-impression,#toast,.voile,footer.pied{display:none !important;}
+    .app{padding:0; max-width:none;}
+    .feuille{border:none; padding:0;}
+    .f-q{font-size:12pt;}
+  }
+</style>
+</head>
+<body>
+
+<div class="barre-haut">
+  <a class="btn-retour" id="lien-retour" href="index.html">← Retour</a>
+  <span class="titre-barre">English Quest</span>
+  <span class="badge-version" id="badge-version">v1.0</span>
+</div>
+
+<main class="app">
+
+  <!-- ================= CHOIX DU JOUEUR ================= -->
+  <section class="ecran actif" id="s-joueur">
+    <div class="hero">
+      <div class="mascotte" aria-hidden="true">🗣️</div>
+      <h1>English Quest</h1>
+      <p class="sous">Révision du test n°6 — anglais CM2</p>
+    </div>
+    <div class="consigne">👆 Touche ton prénom pour commencer l’aventure !</div>
+    <div class="carte-blanche">
+      <div class="pills" id="liste-joueurs"></div>
+      <label class="lbl" for="inp-nouveau">Nouveau joueur</label>
+      <div class="rang">
+        <input type="text" id="inp-nouveau" class="champ" placeholder="Ton prénom" maxlength="20" autocomplete="off">
+        <button type="button" class="btn btn-prim" data-act="ajouterJoueur">Ajouter</button>
+      </div>
+    </div>
+    <button type="button" class="lien-parent" data-act="versParent">🔒 Mode Parent</button>
+  </section>
+
+  <!-- ================= CARTE DES MISSIONS ================= -->
+  <section class="ecran" id="s-carte">
+    <div class="entete-carte">
+      <div>
+        <h2 id="carte-salut">Salut !</h2>
+        <p class="sous">Choisis une mission, ou lance le défi complet.</p>
+      </div>
+      <div class="total-etoiles" id="total-etoiles">⭐ 0 / 0</div>
+    </div>
+    <div class="grille-m" id="grille-missions"></div>
+    <div class="actions-carte">
+      <button type="button" class="btn btn-vert" data-act="defi">🏁 Défi complet</button>
+      <button type="button" class="btn btn-sec" data-act="imprimerFiche">🖨️ Fiche à imprimer</button>
+      <button type="button" class="btn btn-ghost" data-act="changerJoueur">← Changer de joueur</button>
+    </div>
+  </section>
+
+  <!-- ================= QUESTION ================= -->
+  <section class="ecran" id="s-question">
+    <div class="progression"><div id="q-barre"></div></div>
+    <div class="ligne-q"><span id="q-mission"></span><span id="q-compteur"></span></div>
+    <div class="consigne" id="q-consigne"></div>
+    <div class="carte-blanche">
+      <div id="zone-q"></div>
+      <div id="zone-fb"></div>
+      <div class="zone-actions">
+        <button type="button" class="btn btn-prim" id="btn-valider" data-act="valider" style="display:none;">Valider ✓</button>
+        <button type="button" class="btn btn-vert" id="btn-suivant" data-act="suivant" style="display:none;">Question suivante →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RÉSULTAT ================= -->
+  <section class="ecran" id="s-resultat">
+    <div class="carte-blanche">
+      <h2 id="res-titre" style="text-align:center;"></h2>
+      <div class="score-central"><span class="chiffre" id="res-score">0</span><span class="sur" id="res-sur">/0</span></div>
+      <div class="etoiles-grandes" id="res-etoiles"></div>
+      <div class="message-res" id="res-message"></div>
+      <div id="res-defi"></div>
+      <div id="res-detail"></div>
+      <div class="zone-actions">
+        <button type="button" class="btn btn-sec" data-act="rejouer">🔁 Rejouer la mission</button>
+        <button type="button" class="btn btn-vert" id="btn-mission-suivante" data-act="missionSuivante" style="display:none;">Mission suivante →</button>
+        <button type="button" class="btn btn-prim" data-act="versCarte">🗺️ Retour à la carte</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CODE PARENT ================= -->
+  <section class="ecran" id="s-code">
+    <div class="carte-blanche">
+      <h2>🔒 Espace parent</h2>
+      <p class="sous">Entre le code pour accéder au Mode Parent.</p>
+      <label class="lbl" for="inp-code">Code</label>
+      <input type="password" id="inp-code" class="champ" placeholder="Code parent" autocomplete="off">
+      <div class="zone-actions">
+        <button type="button" class="btn btn-sec" data-act="quitterParent">← Retour</button>
+        <button type="button" class="btn btn-prim" data-act="entrerParent">Entrer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MODE PARENT ================= -->
+  <section class="ecran" id="s-parent">
+    <div class="carte-blanche">
+      <h2>Mode Parent</h2>
+      <div class="onglets">
+        <button type="button" class="onglet actif" data-act="onglet" data-o="joueurs">Joueurs</button>
+        <button type="button" class="onglet" data-act="onglet" data-o="historique">Historique</button>
+        <button type="button" class="onglet" data-act="onglet" data-o="rapport">Rapport</button>
+        <button type="button" class="onglet" data-act="onglet" data-o="reglages">Réglages</button>
+      </div>
+
+      <div class="sous-ecran actif" id="p-joueurs">
+        <p class="sous" style="display:block;">Gère les joueurs de cet appareil.</p>
+        <div id="p-liste-joueurs"></div>
+        <label class="lbl" for="inp-nouveau-parent">Ajouter un joueur</label>
+        <div class="rang">
+          <input type="text" id="inp-nouveau-parent" class="champ" placeholder="Prénom" maxlength="20" autocomplete="off">
+          <button type="button" class="btn btn-prim" data-act="ajouterJoueurParent">Ajouter</button>
+        </div>
+      </div>
+
+      <div class="sous-ecran" id="p-historique">
+        <p class="sous" style="display:block;">Journal des missions jouées, de la plus récente à la plus ancienne.</p>
+        <div class="pills" id="p-filtre-hist"></div>
+        <div id="p-liste-hist"></div>
+      </div>
+
+      <div class="sous-ecran" id="p-rapport">
+        <p class="sous" style="display:block;">Rapport évolutif : il se met à jour à chaque mission jouée. Copie-le pour le transmettre à Claude et améliorer l’outil.</p>
+        <div class="pills" id="p-filtre-rapport"></div>
+        <div id="p-rapport-contenu"></div>
+      </div>
+
+      <div class="sous-ecran" id="p-reglages">
+        <label class="lbl" for="inp-nouveau-code">Changer le code Mode Parent</label>
+        <div class="rang">
+          <input type="text" id="inp-nouveau-code" class="champ" placeholder="Nouveau code" autocomplete="off">
+          <button type="button" class="btn btn-sec" data-act="changerCode">Enregistrer</button>
+        </div>
+        <label class="lbl">Impressions</label>
+        <div class="rang">
+          <button type="button" class="btn btn-sec" data-act="imprimerFiche">🖨️ Fiche d’exercices</button>
+          <button type="button" class="btn btn-sec" data-act="imprimerCorrige">🖨️ Corrigé (avec traductions)</button>
+        </div>
+        <label class="lbl">Données</label>
+        <div class="rang">
+          <button type="button" class="btn btn-sec" data-act="exporter">📤 Exporter (JSON)</button>
+          <button type="button" class="btn btn-danger" data-act="reinit">🗑️ Tout réinitialiser</button>
+        </div>
+        <p class="sous" style="display:block; margin-top:12px; font-size:13px;">Les données restent sur cet appareil (aucun envoi sur internet).</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-ghost" data-act="quitterParent">← Quitter le Mode Parent</button>
+  </section>
+
+  <!-- ================= IMPRESSION ================= -->
+  <section class="ecran" id="s-impression">
+    <div class="outils-impression">
+      <button type="button" class="btn btn-prim" data-act="lancerImpression">🖨️ Imprimer</button>
+      <button type="button" class="btn btn-sec" data-act="fermerImpression">← Fermer l’aperçu</button>
+    </div>
+    <div class="feuille" id="feuille"></div>
+  </section>
+
+  <footer class="pied" id="pied">English Quest — Révision du test n°6 · v1.0</footer>
+</main>
+
+<div class="voile" id="voile">
+  <div class="modale">
+    <h3 id="modale-titre"></h3>
+    <p id="modale-texte"></p>
+    <div class="rang">
+      <button type="button" class="btn btn-sec" data-act="modaleAnnuler">Annuler</button>
+      <button type="button" class="btn btn-danger" id="modale-ok" data-act="modaleOk">Confirmer</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+var VERSION = "1.0";
+var NB = "\u00A0";
+
+/* ======================================================================
+   OUTILS DE BASE
+   ====================================================================== */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+// Typographie française : espace insécable avant : ; ? ! % et dans les guillemets « »
+function T(s){ return String(s).replace(/ ([?!:;»%])/g, NB+"$1").replace(/« /g, "«"+NB); }
+function H(s){ return esc(T(s)); }   // texte français
+function E(s){ return esc(s); }      // texte anglais (jamais modifié)
+function melanger(a){ var b=a.slice(); for(var i=b.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=b[i]; b[i]=b[j]; b[j]=t; } return b; }
+function melangerDiff(a){ var b, n=0; do{ b=melanger(a); n++; }while(n<30 && a.length>1 && b.join("|")===a.join("|")); return b; }
+function norm(s){ return String(s).replace(/[\u2018\u2019\u02BC`´]/g,"'").replace(/[.,!?;:]/g," ").replace(/\s+/g," ").trim(); }
+function joinMots(a){ var s=""; for(var i=0;i<a.length;i++){ if(i>0 && !/^[.?!,;:]$/.test(a[i])) s+=" "; s+=a[i]; } return s; }
+function p2(n){ return (n<10?"0":"")+n; }
+function fmtDateHeure(t){ var d=new Date(t); return p2(d.getDate())+"/"+p2(d.getMonth()+1)+"/"+d.getFullYear()+" "+p2(d.getHours())+":"+p2(d.getMinutes()); }
+function fmtDuree(s){ if(s<60) return s+" s"; return Math.floor(s/60)+" min "+p2(s%60)+" s"; }
+function choisir(a){ return a[Math.floor(Math.random()*a.length)]; }
+var PARLE = !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+function parler(txt){ try{ if(!PARLE) return; window.speechSynthesis.cancel(); var u=new window.SpeechSynthesisUtterance(txt); u.lang="en-GB"; u.rate=0.9; window.speechSynthesis.speak(u); }catch(e){} }
+
+function typoDom(racine){
+  var w=document.createTreeWalker(racine, NodeFilter.SHOW_TEXT, null, false), n, liste=[];
+  while((n=w.nextNode())){ var p=n.parentNode.nodeName; if(p!=="SCRIPT" && p!=="STYLE" && p!=="TEXTAREA") liste.push(n); }
+  liste.forEach(function(x){ x.nodeValue=T(x.nodeValue); });
+}
+
+/* ======================================================================
+   DONNÉES — LES 10 MISSIONS
+   Types : choix, ecrire, ordre, associer, presentation
+   ====================================================================== */
+function CH(phrase,choix,bonne,fr,expl,extra){ var o={type:"choix",phrase:phrase,choix:choix,bonne:bonne,fr:fr,expl:expl}; for(var k in (extra||{})) o[k]=extra[k]; return o; }
+function EC(inviteFr,inviteEn,reponses,fr,expl,extra){ var o={type:"ecrire",inviteFr:inviteFr,inviteEn:inviteEn,reponses:reponses,affiche:reponses[0],fr:fr,expl:expl,casse:false}; for(var k in (extra||{})) o[k]=extra[k]; return o; }
+function OR(tuiles,solution,fr,expl,extra){ var o={type:"ordre",tuiles:tuiles,solution:solution,fr:fr,expl:expl}; for(var k in (extra||{})) o[k]=extra[k]; return o; }
+
+var MISSIONS = [
+  { id:"jours", emoji:"📅", titre:"Les jours",
+    consigne:"Complète la suite des jours, puis remets la semaine dans l’ordre.",
+    conseil:"Révise les 7 jours : Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday (toujours avec une majuscule).",
+    items:[
+      CH("Monday, ___, Wednesday",["Tuesday","Thursday","Friday"],"Tuesday","Lundi, mardi, mercredi.","Après Monday (lundi) vient Tuesday (mardi)."),
+      CH("Thursday, ___, Saturday",["Friday","Sunday","Wednesday"],"Friday","Jeudi, vendredi, samedi.","Entre Thursday (jeudi) et Saturday (samedi), il y a Friday (vendredi)."),
+      CH("Saturday, ___",["Sunday","Monday","Friday"],"Sunday","Samedi, dimanche.","Le dernier jour de la semaine est Sunday (dimanche)."),
+      OR(["Friday","Monday","Sunday","Wednesday","Tuesday","Saturday","Thursday"],["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+         "Lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche.","La semaine commence par Monday (lundi) et finit par Sunday (dimanche).",
+         {consigne:"Touche les 7 jours dans l’ordre, du lundi au dimanche.", dire:"Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday."})
+    ]},
+
+  { id:"ordinaux", emoji:"🔢", titre:"Les nombres ordinaux",
+    consigne:"Écris le nombre en lettres. Attention à l’orthographe !",
+    conseil:"Révise : first, second, third, fourth, fifth, sixth. Attention à fifth (f-i-f-t-h) et third (t-h-i-r-d).",
+    items:[
+      EC(null,"1st = the ___",["first"],"Le premier.","1st se dit first."),
+      EC(null,"2nd = the ___",["second"],"Le deuxième.","2nd se dit second (avec un « d » à la fin)."),
+      EC(null,"3rd = the ___",["third"],"Le troisième.","3rd se dit third (t-h-i-r-d)."),
+      EC(null,"4th = the ___",["fourth"],"Le quatrième.","4th se dit fourth (four + th)."),
+      EC(null,"5th = the ___",["fifth"],"Le cinquième.","5th se dit fifth (f-i-f-t-h, pas « fiveth »)."),
+      EC(null,"6th = the ___",["sixth"],"Le sixième.","6th se dit sixth (six + th).")
+    ]},
+
+  { id:"date", emoji:"🗓️", titre:"La date",
+    consigne:"Écris les dates en anglais, comme dans ton cahier.",
+    conseil:"La date : jour, mois, numéro (avec th, st, nd, rd), année. Les jours et les mois prennent une majuscule : Friday, November 13th, 2026.",
+    items:[
+      OR(["2026","Friday","6th","November"],["Friday","November","6th","2026"],"Vendredi 6 novembre 2026.","On écrit le jour, puis le mois, puis le numéro, puis l’année.",
+         {consigne:"Touche les mots pour écrire la date : jour, mois, numéro, année.", dire:"Friday, November 6th, 2026."}),
+      {type:"choix", invite:"Comment dit-on « octobre » en anglais ?", choix:["October","Octobre","october"], bonne:"October",
+       fr:"octobre = October", expl:"Les mois prennent une majuscule en anglais : October, November.", dire:"October", libelle:"Comment dit-on « octobre » ?"},
+      EC("Écris en anglais : vendredi 13 novembre 2026.",null,["Friday, November 13th, 2026","Friday, November the 13th, 2026"],
+         "Vendredi 13 novembre 2026.","Jour, mois, numéro + th, année : Friday, November 13th, 2026.",
+         {casse:true, libelle:"Écrire la date « vendredi 13 novembre 2026 »"})
+    ]},
+
+  { id:"tobe", emoji:"🧩", titre:"To be (être)",
+    consigne:"Choisis le bon mot : am, is ou are.",
+    conseil:"Révise : I am · you are · he/she/it is · we are · you are · they are.",
+    items:[
+      CH("I ___ from France.",["am","is","are"],"am","Je viens de France.","Avec « I », on dit toujours « am » : I am."),
+      CH("You ___ from Canada.",["am","is","are"],"are","Tu viens du Canada.","Avec « you », on dit « are » : you are."),
+      CH("She ___ from Ireland.",["am","is","are"],"is","Elle vient d’Irlande.","Avec she, he et it, on dit « is » : she is."),
+      CH("We ___ from London.",["am","is","are"],"are","Nous venons de Londres.","Avec « we », on dit « are » : we are."),
+      CH("They ___ French.",["am","is","are"],"are","Ils sont français.","Avec « they », on dit « are » : they are."),
+      CH("It ___ Friday today.",["am","is","are"],"is","C’est vendredi aujourd’hui.","Avec « it », on dit « is » : it is.")
+    ]},
+
+  { id:"pays", emoji:"🌍", titre:"Pays et nationalités",
+    consigne:"Relie les pays à leurs nationalités, puis écris-les.",
+    conseil:"Révise : Australia → Australian · Canada → Canadian · France → French · Ireland → Irish · The United Kingdom → British · The United States → American. Les pays et les nationalités prennent une majuscule.",
+    items:[
+      {type:"associer", consigne:"Touche un pays, puis sa nationalité. Fais toutes les paires !",
+       paires:[["Australia","Australian"],["Canada","Canadian"],["France","French"],["Ireland","Irish"],["The United Kingdom","British"],["The United States","American"]]},
+      EC("Écris la nationalité (avec une majuscule) :","France → I'm ___.",["French"],"France → Je suis français(e).","La nationalité de la France : French (avec une majuscule).",{casse:true}),
+      EC("Écris la nationalité (avec une majuscule) :","Ireland → I'm ___.",["Irish"],"Irlande → Je suis irlandais(e).","La nationalité de l’Irlande : Irish (avec une majuscule).",{casse:true}),
+      EC("Écris la nationalité (avec une majuscule) :","The United Kingdom → I'm ___.",["British"],"Royaume-Uni → Je suis britannique.","La nationalité du Royaume-Uni : British (avec une majuscule).",{casse:true})
+    ]},
+
+  { id:"cahier", emoji:"📖", titre:"Les phrases du cahier",
+    consigne:"Complète les phrases comme dans ton cahier. Choisis la bonne réponse.",
+    conseil:"Révise les phrases : « This is Bill. He is from the United States. He is American. » Pour une fille, on dit She. Les nationalités prennent une majuscule.",
+    items:[
+      CH("This is Bill. He is from ___.",["the United States","the United Kingdom","Canada"],"the United States","Voici Bill. Il vient des États-Unis.","Les États-Unis : the United States (avec « the »).",{contexte:"Bill porte le drapeau des États-Unis."}),
+      CH("He is ___.",["American","America","american"],"American","Il est américain.","Une nationalité prend une majuscule : American.",{contexte:"On parle de Bill (États-Unis)."}),
+      CH("Here are Nicolas and Julie. They are ___.",["French","France","french"],"French","Voici Nicolas et Julie. Ils sont français.","La nationalité de la France : French (avec une majuscule).",{contexte:"Nicolas et Julie portent le drapeau de la France."}),
+      CH("This is Kelly. ___ is from Canada.",["He","She","They"],"She","Voici Kelly. Elle vient du Canada.","Kelly est une fille : on dit « She ». « He » est pour un garçon.",{contexte:"Kelly est une fille."}),
+      CH("She is ___.",["Canadian","Canada","canadian"],"Canadian","Elle est canadienne.","La nationalité du Canada : Canadian (avec une majuscule).",{contexte:"On parle de Kelly (Canada)."}),
+      CH("This is James. He is from the ___.",["United Kingdom","United States","Ireland"],"United Kingdom","Voici James. Il vient du Royaume-Uni.","Le Royaume-Uni : the United Kingdom.",{contexte:"James porte le drapeau du Royaume-Uni."}),
+      CH("He is ___.",["British","Britain","british"],"British","Il est britannique.","La nationalité du Royaume-Uni : British (avec une majuscule).",{contexte:"On parle de James (Royaume-Uni)."})
+    ]},
+
+  { id:"traduction", emoji:"🔄", titre:"Traduis en anglais",
+    consigne:"Traduis en anglais. Écris la phrase complète.",
+    conseil:"Révise : Where are you from? · I'm from the States. · I'm Australian. · Are you from Ireland? · Yes, I'm Irish.",
+    items:[
+      EC("D’où viens-tu ?",null,["Where are you from?"],"D’où viens-tu ?","Pour demander l’origine : Where are you from?",{casse:true, libelle:"Traduire « D’où viens-tu ? »"}),
+      EC("Je viens des États-Unis.",null,["I'm from the States","I am from the States","I'm from the United States","I am from the United States"],"Je viens des États-Unis.","Je viens de… = I'm from… ; États-Unis = the States (ou the United States).",{casse:true, affiche:"I'm from the States.", libelle:"Traduire « Je viens des États-Unis. »"}),
+      EC("Je suis australien(ne).",null,["I'm Australian","I am Australian"],"Je suis australien(ne).","Je suis… = I'm… ; australien(ne) = Australian (avec une majuscule).",{casse:true, affiche:"I'm Australian.", libelle:"Traduire « Je suis australien(ne). »"}),
+      EC("Viens-tu d’Irlande ?",null,["Are you from Ireland?"],"Viens-tu d’Irlande ?","Pour poser la question : Are you from… ?",{casse:true, libelle:"Traduire « Viens-tu d’Irlande ? »"}),
+      EC("Oui, je suis irlandais(e).",null,["Yes, I'm Irish","Yes, I am Irish"],"Oui, je suis irlandais(e).","Oui, je suis… = Yes, I'm… ; irlandais(e) = Irish (avec une majuscule).",{casse:true, affiche:"Yes, I'm Irish.", libelle:"Traduire « Oui, je suis irlandais(e). »"})
+    ]},
+
+  { id:"ordre", emoji:"🧱", titre:"Remets les mots en ordre",
+    consigne:"Touche les mots dans le bon ordre pour former une phrase.",
+    conseil:"Une question commence par Where ou Are. Une phrase commence par une majuscule et finit par un point (.) ou un point d’interrogation (?).",
+    items:[
+      OR(["from","you","are","?","Where"],["Where","are","you","from","?"],"D’où viens-tu ?","La question : Where + are + you + from ?"),
+      OR(["Irish","I'm","Yes,","."],["Yes,","I'm","Irish","."],"Oui, je suis irlandais(e).","La réponse : Yes, + I'm + Irish."),
+      OR(["Canada","is","He","from","."],["He","is","from","Canada","."],"Il vient du Canada.","La phrase : He + is + from + Canada."),
+      OR(["States","the","from","I'm","."],["I'm","from","the","States","."],"Je viens des États-Unis.","La phrase : I'm + from + the + States.")
+    ]},
+
+  { id:"dialogue", emoji:"💬", titre:"Le dialogue",
+    consigne:"Complète le dialogue. Choisis le bon mot dans chaque bulle.",
+    conseil:"Révise le dialogue : « Where are you from? — I'm from New York City. — Are you from the States too? — No, I'm from Sydney, Australia. — Are you from Ireland? — Yes, I'm Irish. »",
+    bulle:true,
+    items:[
+      CH("Where ___ you from, Justin?",["are","is","am"],"are","D’où viens-tu, Justin ?","Avec « you », on dit « are » : Where are you from?"),
+      CH("I'm ___ New York City.",["from","to","in"],"from","Je viens de New York.","Pour dire d’où on vient : I'm from…",{avant:"Where are you from, Justin?"}),
+      CH("Are you ___ the States too?",["from","at","of"],"from","Viens-tu aussi des États-Unis ?","Pour demander l’origine : Are you from… ?",{avant:"Oh! You're American. And you, Jason?"}),
+      CH("No, I'm from Sydney, ___.",["Australia","Australian","Australie"],"Australia","Non, je viens de Sydney, en Australie.","Le pays s’écrit Australia ; la nationalité s’écrit Australian.",{avant:"Are you from the States too?"}),
+      CH("Yes, I'm ___.",["Irish","Ireland","irish"],"Irish","Oui, je suis irlandais(e).","Une nationalité prend une majuscule : Irish.",{avant:"Are you from Ireland?"})
+    ]},
+
+  { id:"presentation", emoji:"✍️", titre:"Présente-toi",
+    consigne:"Présente-toi en 3 phrases : ton prénom, d’où tu viens, ta nationalité.",
+    conseil:"Modèle : « Hello, I'm Léa. I'm from France. I'm French. » N’oublie pas les majuscules.",
+    items:[
+      {type:"presentation", libelle:"Se présenter en 3 phrases", fr:"Présente-toi : prénom, origine, nationalité."}
+    ]}
+];
+
+// Calcul automatique de la phrase à écouter (dire) pour chaque question
+MISSIONS.forEach(function(m){ m.items.forEach(function(it){
+  if(it.dire) return;
+  if(it.type==="choix" && it.phrase) it.dire = it.phrase.replace("___", it.bonne);
+  else if(it.type==="ordre") it.dire = joinMots(it.solution);
+  else if(it.type==="ecrire") it.dire = it.affiche;
+}); });
+
+function getMission(id){ for(var i=0;i<MISSIONS.length;i++){ if(MISSIONS[i].id===id) return MISSIONS[i]; } return null; }
+function maxItem(it){ return it.type==="associer" ? it.paires.length : (it.type==="presentation" ? 3 : 1); }
+function maxMission(m){ var n=0; m.items.forEach(function(it){ n+=maxItem(it); }); return n; }
+function libelle(it){
+  if(it.libelle) return it.libelle;
+  if(it.type==="choix") return it.phrase||it.invite||"";
+  if(it.type==="ecrire") return it.inviteEn||it.inviteFr||"";
+  if(it.type==="ordre") return "Phrase à reconstituer : "+joinMots(it.solution);
+  return "";
+}
+function etoiles(score,max){ if(!max) return 0; var p=score/max; return p>=0.9?3:(p>=0.7?2:(p>=0.4?1:0)); }
+function htmlEtoiles(n){ var s=""; for(var i=0;i<3;i++){ s+= i<n ? "★" : '<span class="vide">★</span>'; } return s; }
+
+/* ======================================================================
+   STOCKAGE (localStorage protégé)
+   ====================================================================== */
+var CLES = { J:"ang6_v1_joueurs", S:"ang6_v1_sessions", C:"ang6_v1_code" };
+var memoire = {};
+var alerteStockage = false;
+function lire(k,def){ try{ var v=localStorage.getItem(k); if(v!==null) return JSON.parse(v); }catch(e){} return (k in memoire)?memoire[k]:def; }
+function ecrire(k,v){
+  memoire[k]=v;
+  try{ localStorage.setItem(k, JSON.stringify(v)); return true; }
+  catch(e){ if(!alerteStockage){ alerteStockage=true; toast("Stockage bloqué : l’historique ne sera pas conservé après fermeture."); } return false; }
+}
+function joueurs(){ return lire(CLES.J,[]); }
+function sessions(){ return lire(CLES.S,[]); }
+function getCode(){ return lire(CLES.C,"1234"); }
+
+/* ======================================================================
+   ÉTAT + NAVIGATION
+   ====================================================================== */
+var etat = { joueur:null, missionId:null, items:[], idx:0, recs:[], file:[], enCours:false, t0:0, verrou:false, valider:null, defi:null, retourImpression:"s-joueur", filtreHist:"", filtreRapport:"", cbModale:null };
+
+function afficher(id){
+  var tous=document.querySelectorAll(".ecran");
+  for(var i=0;i<tous.length;i++) tous[i].classList.remove("actif");
+  $(id).classList.add("actif");
+  window.scrollTo(0,0);
+}
+var toastTimer=null;
+function toast(msg,type){
+  var t=$("toast"); t.textContent=T(msg); t.className=type||""; t.style.display="block";
+  clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.style.display="none"; },2600);
+}
+function demander(titre,texte,labelOk,cb){
+  $("modale-titre").textContent=T(titre); $("modale-texte").textContent=T(texte); $("modale-ok").textContent=labelOk;
+  etat.cbModale=cb; $("voile").classList.add("visible");
+}
+function fermerModale(){ $("voile").classList.remove("visible"); etat.cbModale=null; }
+
+/* ======================================================================
+   JOUEURS
+   ====================================================================== */
+function nettoyerNom(s){ return String(s).replace(/\s+/g," ").trim().slice(0,20); }
+function ajouterJoueur(nom){
+  nom=nettoyerNom(nom);
+  if(!nom){ toast("Écris un prénom."); return false; }
+  var l=joueurs();
+  for(var i=0;i<l.length;i++){ if(l[i].toLowerCase()===nom.toLowerCase()){ toast("Ce prénom existe déjà."); return false; } }
+  l.push(nom); ecrire(CLES.J,l); return true;
+}
+function rendreJoueurs(){
+  var l=joueurs(), h="";
+  if(!l.length) h='<p class="vide-txt">Aucun joueur pour l’instant. Ajoute ton prénom ci-dessous !</p>';
+  l.forEach(function(n){ h+='<button type="button" class="pill" data-act="choisirJoueur" data-nom="'+esc(n)+'">'+E(n)+'</button>'; });
+  $("liste-joueurs").innerHTML=h;
+}
+
+/* ======================================================================
+   CARTE DES MISSIONS
+   ====================================================================== */
+function meilleur(joueur,id){
+  var b=null, n=0;
+  sessions().forEach(function(s){
+    if(s.joueur!==joueur || s.mission!==id) return;
+    n++;
+    if(!b || (s.score/s.max)>(b.score/b.max)) b=s;
+  });
+  return { b:b, n:n };
+}
+function montrerCarte(){
+  $("carte-salut").textContent=T("Salut "+etat.joueur+" !");
+  var h="", total=0;
+  MISSIONS.forEach(function(m,i){
+    var r=meilleur(etat.joueur,m.id), e=r.b?etoiles(r.b.score,r.b.max):0; total+=e;
+    h+='<button type="button" class="m-carte" data-act="ouvrirMission" data-id="'+m.id+'">'+
+       '<span class="m-emoji">'+m.emoji+'</span>'+
+       '<span class="m-titre">'+(i+1)+'. '+H(m.titre)+'</span>'+
+       '<span class="m-etoiles">'+htmlEtoiles(e)+'</span>'+
+       '<span class="m-score">'+(r.b?H("Meilleur score : "+r.b.score+" / "+r.b.max):H("À jouer"))+'</span></button>';
+  });
+  $("grille-missions").innerHTML=h;
+  $("total-etoiles").textContent="⭐ "+total+" / "+(MISSIONS.length*3);
+  afficher("s-carte");
+}
+
+/* ======================================================================
+   MOTEUR DE QUESTIONS
+   ====================================================================== */
+var RENDU = {};
+var ENC = ["Bravo !","Super !","Excellent !","Bien joué !","Parfait !"];
+var RAT = ["Presque !","Pas tout à fait.","On y est presque !"];
+var EXPL_MAJ = "Les jours, les mois, les pays et les nationalités prennent une majuscule en anglais.";
+
+function lancerMission(id,file,defi){
+  var m=getMission(id); if(!m) return;
+  etat.missionId=id; etat.items=m.items.slice(); etat.idx=0; etat.recs=[]; etat.file=file||[]; etat.defi=defi||null;
+  etat.enCours=true; etat.t0=Date.now();
+  afficher("s-question"); montrerQuestion();
+}
+function montrerQuestion(){
+  var m=getMission(etat.missionId), it=etat.items[etat.idx];
+  etat.verrou=false; etat.valider=null;
+  $("q-mission").textContent=m.emoji+" "+T(m.titre);
+  $("q-compteur").textContent=T("Question "+(etat.idx+1)+" / "+etat.items.length);
+  $("q-barre").style.width=Math.round(etat.idx/etat.items.length*100)+"%";
+  $("q-consigne").innerHTML=H("👉 "+(it.consigne||m.consigne));
+  $("zone-fb").innerHTML="";
+  $("btn-suivant").style.display="none";
+  var bv=$("btn-valider"); bv.style.display="none"; bv.disabled=true;
+  // Zone recréée à chaque question : supprime les anciens écouteurs de clic (évite les doubles traitements)
+  var z0=$("zone-q"), z=z0.cloneNode(false); z0.parentNode.replaceChild(z,z0);
+  RENDU[it.type](it,z,m);
+  window.scrollTo(0,0);
+}
+function bloc(ok,maj,bonneTxt,it,lignesPlus){
+  var cls=ok?(maj?"maj":"ok"):"ko", titre;
+  if(ok&&!maj) titre=choisir(ENC); else if(ok) titre="Bien ! Attention aux majuscules."; else titre=choisir(RAT);
+  var h='<div class="fb '+cls+'"><div class="fb-titre">'+(ok?"✅ ":"💡 ")+H(titre)+'</div>';
+  if(!ok && bonneTxt) h+='<div class="fb-ligne">'+H("Bonne réponse : ")+'<strong>'+E(bonneTxt)+'</strong></div>';
+  if(ok && maj) h+='<div class="fb-ligne">'+H("Écris : ")+'<strong>'+E(bonneTxt)+'</strong></div><div class="fb-ligne fb-expl">'+H(it.explMaj||EXPL_MAJ)+'</div>';
+  if(lignesPlus) h+=lignesPlus;
+  if(!ok && it.expl) h+='<div class="fb-ligne fb-expl">'+H(it.expl)+'</div>';
+  if(!ok && it.fr) h+='<div class="fb-ligne fb-fr">'+H("En français : "+it.fr)+'</div>';
+  if(it.dire && PARLE) h+='<button type="button" class="btn-son" data-act="son" data-dire="'+esc(it.dire)+'">🔊 Écouter</button>';
+  return h+'</div>';
+}
+function finirItem(recs,fbHtml){
+  recs.forEach(function(r){ etat.recs.push(r); });
+  $("zone-fb").innerHTML=fbHtml;
+  $("q-barre").style.width=Math.round((etat.idx+1)/etat.items.length*100)+"%";
+  $("btn-valider").style.display="none";
+  var bs=$("btn-suivant"); bs.textContent=T(etat.idx+1>=etat.items.length?"Voir mon score 🏆":"Question suivante →"); bs.style.display="inline-flex";
+}
+function suivant(){
+  etat.idx++;
+  if(etat.idx>=etat.items.length) finMission(); else montrerQuestion();
+}
+
+/* ---- Type : choix ---- */
+RENDU.choix=function(it,z,m){
+  var h="";
+  if(it.avant) h+='<div class="bulle bulle-avant">'+E(it.avant)+'</div>';
+  if(it.contexte) h+='<p class="contexte">'+H(it.contexte)+'</p>';
+  if(it.invite) h+='<p class="invite">'+H(it.invite)+'</p>';
+  if(it.phrase){
+    var parts=it.phrase.split("___");
+    var corps=(parts.length<2)?E(it.phrase):E(parts[0])+'<span class="trou" id="trou"></span>'+E(parts.slice(1).join("___"));
+    h+= (m.bulle ? '<div class="bulle bulle-moi">'+corps+'</div>' : '<div class="phrase">'+corps+'</div>');
+  }
+  h+='<div class="choix-grille">';
+  melanger(it.choix).forEach(function(c){ h+='<button type="button" class="choix-btn" data-v="'+esc(c)+'">'+E(c)+'</button>'; });
+  h+='</div>';
+  z.innerHTML=h;
+  var btns=z.querySelectorAll(".choix-btn");
+  Array.prototype.forEach.call(btns,function(b){
+    b.addEventListener("click",function(){
+      if(etat.verrou) return; etat.verrou=true;
+      var v=b.getAttribute("data-v"), ok=(v===it.bonne);
+      Array.prototype.forEach.call(btns,function(x){
+        x.disabled=true;
+        if(x.getAttribute("data-v")===it.bonne) x.classList.add("ok");
+      });
+      if(!ok) b.classList.add("ko");
+      var trou=$("trou"); if(trou){ trou.textContent=v; trou.classList.add(ok?"ok":"ko"); }
+      finirItem([{q:libelle(it),bonne:it.bonne,donnee:v,ok:ok,maj:false,fr:it.fr||""}], bloc(ok,false,it.bonne,it));
+    });
+  });
+};
+
+/* ---- Type : ecrire ---- */
+function comparer(it,raw){
+  var n=norm(raw), nl=n.toLowerCase();
+  for(var i=0;i<it.reponses.length;i++){
+    var r=norm(it.reponses[i]);
+    if(r.toLowerCase()===nl) return {ok:true, maj: !!it.casse && r!==n};
+  }
+  return {ok:false, maj:false};
+}
+RENDU.ecrire=function(it,z){
+  var h="";
+  if(it.inviteFr) h+='<p class="invite">'+H(it.inviteFr)+'</p>';
+  if(it.inviteEn) h+='<div class="phrase-en">'+E(it.inviteEn)+'</div>';
+  h+='<input type="text" id="saisie" class="champ" placeholder="Écris ta réponse ici" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">';
+  z.innerHTML=h;
+  var inp=$("saisie"), bv=$("btn-valider");
+  bv.style.display="inline-flex"; bv.disabled=true;
+  inp.addEventListener("input",function(){ bv.disabled=!norm(inp.value); });
+  inp.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); if(etat.valider) etat.valider(); } });
+  etat.valider=function(){
+    if(etat.verrou) return;
+    var raw=inp.value; if(!norm(raw)){ toast("Écris ta réponse avant de valider."); return; }
+    etat.verrou=true; inp.disabled=true;
+    var r=comparer(it,raw);
+    finirItem([{q:libelle(it),bonne:it.affiche,donnee:raw.trim(),ok:r.ok,maj:r.maj,fr:it.fr||""}], bloc(r.ok,r.maj,it.affiche,it));
+  };
+  try{ inp.focus(); }catch(e){}
+};
+
+/* ---- Type : ordre (tap-to-place) ---- */
+RENDU.ordre=function(it,z){
+  var tuiles=melangerDiff(it.tuiles.map(function(t,i){ return i; }));  // ordre d'affichage (indices)
+  var places=[];
+  z.innerHTML='<div class="rep-ordre" id="rep-ordre"></div><div class="banque" id="banque"></div>'+
+    '<button type="button" class="btn btn-ghost" id="btn-effacer">↺ Effacer</button>';
+  var bv=$("btn-valider"); bv.style.display="inline-flex"; bv.disabled=true;
+  function dessiner(statuts){
+    var rep=$("rep-ordre"), ban=$("banque"), hr="", hb="";
+    if(!places.length) hr='<span class="vide-info">'+H("Touche les mots ci-dessous dans le bon ordre…")+'</span>';
+    places.forEach(function(i,pos){ hr+='<button type="button" class="tuile placee'+(statuts?(" "+statuts[pos]):"")+'" data-i="'+i+'"'+(statuts?" disabled":"")+'>'+E(it.tuiles[i])+'</button>'; });
+    tuiles.forEach(function(i){ if(places.indexOf(i)<0) hb+='<button type="button" class="tuile" data-i="'+i+'">'+E(it.tuiles[i])+'</button>'; });
+    rep.innerHTML=hr; ban.innerHTML=hb;
+    bv.disabled=(places.length!==it.tuiles.length);
+  }
+  dessiner();
+  z.addEventListener("click",function(e){
+    if(etat.verrou) return;
+    var b=e.target.closest(".tuile"); if(!b) return;
+    var i=parseInt(b.getAttribute("data-i"),10), pos=places.indexOf(i);
+    if(pos<0) places.push(i); else places.splice(pos,1);
+    dessiner();
+  });
+  $("btn-effacer").addEventListener("click",function(){ if(etat.verrou) return; places=[]; dessiner(); });
+  etat.valider=function(){
+    if(etat.verrou || places.length!==it.tuiles.length) return;
+    etat.verrou=true;
+    var donnee=places.map(function(i){ return it.tuiles[i]; });
+    var ok=(donnee.join("|")===it.solution.join("|"));
+    var statuts=donnee.map(function(t,p){ return t===it.solution[p]?"ok":"ko"; });
+    dessiner(statuts);
+    Array.prototype.forEach.call(document.querySelectorAll("#banque .tuile"),function(x){ x.disabled=true; });
+    $("btn-effacer").style.display="none";
+    finirItem([{q:libelle(it),bonne:joinMots(it.solution),donnee:joinMots(donnee),ok:ok,maj:false,fr:it.fr||""}], bloc(ok,false,joinMots(it.solution),it));
+  };
+};
+
+/* ---- Type : associer (tap-to-select) ---- */
+RENDU.associer=function(it,z){
+  var sol={}; it.paires.forEach(function(p){ sol[p[0]]=p[1]; });
+  var droite=melangerDiff(it.paires.map(function(p){ return p[1]; }));
+  var st={sel:null, fait:{}, rate:{}, err:{}, n:0};
+  var h='<div class="assoc"><div class="assoc-col">';
+  it.paires.forEach(function(p){ h+='<button type="button" class="assoc-btn g" data-g="'+esc(p[0])+'">'+E(p[0])+'</button>'; });
+  h+='</div><div class="assoc-col">';
+  droite.forEach(function(d){ h+='<button type="button" class="assoc-btn d" data-d="'+esc(d)+'">'+E(d)+'</button>'; });
+  h+='</div></div>';
+  z.innerHTML=h;
+  function trouver(cls,attr,val){ var l=z.querySelectorAll("."+cls); for(var i=0;i<l.length;i++){ if(l[i].getAttribute(attr)===val) return l[i]; } return null; }
+  z.addEventListener("click",function(e){
+    if(etat.verrou) return;
+    var b=e.target.closest(".assoc-btn"); if(!b) return;
+    if(b.classList.contains("ok")) return;
+    if(b.classList.contains("g")){
+      var g=b.getAttribute("data-g");
+      if(st.sel===g){ st.sel=null; b.classList.remove("sel"); return; }
+      Array.prototype.forEach.call(z.querySelectorAll(".g.sel"),function(x){ x.classList.remove("sel"); });
+      st.sel=g; b.classList.add("sel"); return;
+    }
+    if(st.sel===null){ toast("Touche d’abord un pays à gauche."); return; }
+    var d=b.getAttribute("data-d"), gb=trouver("g","data-g",st.sel), g0=st.sel;
+    if(sol[g0]===d){
+      gb.classList.remove("sel"); gb.classList.add("ok"); b.classList.add("ok");
+      st.fait[g0]=true; st.n++; st.sel=null;
+      if(st.n===it.paires.length) terminer();
+    } else {
+      st.rate[g0]=true; (st.err[g0]=st.err[g0]||[]).push(d);
+      b.classList.add("ko"); gb.classList.add("ko"); gb.classList.remove("sel"); st.sel=null;
+      setTimeout(function(){ b.classList.remove("ko"); gb.classList.remove("ko"); },700);
+    }
+  });
+  function terminer(){
+    etat.verrou=true;
+    var recs=it.paires.map(function(p){ var r=!!st.rate[p[0]]; return {q:"Relier « "+p[0]+" » à sa nationalité",bonne:p[1],donnee:r?st.err[p[0]].join(" / "):p[1],ok:!r,maj:false,fr:""}; });
+    var rates=it.paires.filter(function(p){ return st.rate[p[0]]; });
+    var fb;
+    if(!rates.length) fb='<div class="fb ok"><div class="fb-titre">✅ '+H(choisir(ENC))+'</div><div class="fb-ligne">'+H("Toutes les paires du premier coup !")+'</div></div>';
+    else { fb='<div class="fb ko"><div class="fb-titre">💡 '+H("Tu as hésité sur :")+'</div>'; rates.forEach(function(p){ fb+='<div class="fb-ligne"><strong>'+E(p[0])+' → '+E(p[1])+'</strong></div>'; }); fb+='<div class="fb-ligne fb-expl">'+H("Les pays et les nationalités prennent une majuscule.")+'</div></div>'; }
+    finirItem(recs,fb);
+  }
+};
+
+/* ---- Type : presentation ---- */
+var NATIONALITES=["american","australian","british","canadian","french","irish","english"];
+function verifPresentation(l1,l2,l3){
+  var r=[], n, m;
+  n=norm(l1); m=n.match(/^(?:(?:hello|hi|hey)\s+)?(?:i'm|i am|my name is)\s+(\S+)/i);
+  if(m && m[1].toLowerCase()!=="from") r.push({ok:true, maj:m[1].charAt(0)!==m[1].charAt(0).toUpperCase(), msg:"Un prénom prend une majuscule."});
+  else r.push({ok:false, maj:false, msg:"Commence par « Hello, I'm … » ou « My name is … »."});
+  n=norm(l2); m=n.match(/^(?:i'm|i am)\s+from\s+(?:the\s+)?(\S.*)$/i);
+  if(m) r.push({ok:true, maj:m[1].charAt(0)!==m[1].charAt(0).toUpperCase(), msg:"Un nom de pays prend une majuscule."});
+  else r.push({ok:false, maj:false, msg:"Écris : « I'm from … » (par exemple I'm from France)."});
+  n=norm(l3); m=n.match(/^(?:i'm|i am)\s+(\S+)$/i);
+  if(m && NATIONALITES.indexOf(m[1].toLowerCase())>=0) r.push({ok:true, maj:m[1].charAt(0)!==m[1].charAt(0).toUpperCase(), msg:"Une nationalité prend une majuscule."});
+  else r.push({ok:false, maj:false, msg:"Écris : « I'm … » avec une nationalité : American, Australian, British, Canadian, French, Irish, English."});
+  return r;
+}
+RENDU.presentation=function(it,z){
+  z.innerHTML=
+    '<div class="ligne-pres"><label class="lbl" for="pres1">1️⃣ '+H("Ton prénom")+'</label><input type="text" id="pres1" class="champ" placeholder="Hello, I\'m …" autocomplete="off" autocapitalize="off" spellcheck="false"></div>'+
+    '<div class="ligne-pres"><label class="lbl" for="pres2">2️⃣ '+H("D’où tu viens")+'</label><input type="text" id="pres2" class="champ" placeholder="I\'m from …" autocomplete="off" autocapitalize="off" spellcheck="false"></div>'+
+    '<div class="ligne-pres"><label class="lbl" for="pres3">3️⃣ '+H("Ta nationalité")+'</label><input type="text" id="pres3" class="champ" placeholder="I\'m …" autocomplete="off" autocapitalize="off" spellcheck="false"></div>';
+  var bv=$("btn-valider"); bv.style.display="inline-flex"; bv.disabled=true;
+  var champs=[$("pres1"),$("pres2"),$("pres3")];
+  champs.forEach(function(c,i){
+    c.addEventListener("input",function(){ bv.disabled=!(norm(champs[0].value)&&norm(champs[1].value)&&norm(champs[2].value)); });
+    c.addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); if(i<2) champs[i+1].focus(); else if(etat.valider) etat.valider(); } });
+  });
+  etat.valider=function(){
+    if(etat.verrou) return;
+    if(!(norm(champs[0].value)&&norm(champs[1].value)&&norm(champs[2].value))){ toast("Écris tes 3 phrases avant de valider."); return; }
+    etat.verrou=true; champs.forEach(function(c){ c.disabled=true; });
+    var res=verifPresentation(champs[0].value,champs[1].value,champs[2].value);
+    var noms=["Phrase 1 (prénom)","Phrase 2 (origine)","Phrase 3 (nationalité)"], recs=[], fb='<div class="fb '+(res.every(function(x){return x.ok&&!x.maj;})?"ok":"ko")+'"><div class="fb-titre">'+H(res.every(function(x){return x.ok;})?"✅ Voici ta présentation !":"💡 Relis tes phrases")+'</div>';
+    res.forEach(function(x,i){
+      recs.push({q:"Présentation — "+noms[i],bonne:"(structure attendue)",donnee:champs[i].value.trim(),ok:x.ok,maj:x.ok&&x.maj,fr:""});
+      fb+='<div class="fb-ligne">'+(x.ok?(x.maj?"⚠️ ":"✅ "):"💡 ")+'<strong>'+E(champs[i].value.trim())+'</strong>'+((!x.ok||x.maj)?' <span class="fb-fr">— '+H(x.msg)+'</span>':'')+'</div>';
+    });
+    fb+='<div class="fb-ligne fb-fr">'+H("Modèle : Hello, I'm Léa. I'm from France. I'm French.")+'</div></div>';
+    finirItem(recs,fb);
+  };
+};
+
+/* ======================================================================
+   FIN DE MISSION + RÉSULTAT
+   ====================================================================== */
+function finMission(){
+  var m=getMission(etat.missionId), score=0;
+  etat.recs.forEach(function(r){ if(r.ok) score++; });
+  var max=etat.recs.length, duree=Math.round((Date.now()-etat.t0)/1000);
+  var s=sessions(); s.push({t:Date.now(),joueur:etat.joueur,mission:m.id,score:score,max:max,duree:duree,v:VERSION,recs:etat.recs});
+  ecrire(CLES.S,s);
+  etat.enCours=false;
+  if(etat.defi){ etat.defi.score+=score; etat.defi.max+=max; }
+  var e=etoiles(score,max);
+  $("res-titre").textContent=m.emoji+" "+T(m.titre);
+  $("res-score").textContent=score; $("res-sur").textContent=" / "+max;
+  $("res-etoiles").innerHTML=htmlEtoiles(e);
+  var p=max?score/max:0;
+  $("res-message").textContent=T(p>=0.9?"Parfait ! Tu maîtrises cette mission. 🎉":(p>=0.7?"Très bien ! Encore un petit effort. 💪":(p>=0.4?"Bon début ! Rejoue pour progresser. 🌱":"Courage ! Relis la leçon, puis réessaie. 📚")));
+  var ratees=etat.recs.filter(function(r){ return !r.ok; }), maj=etat.recs.filter(function(r){ return r.ok&&r.maj; }).length;
+  var h="";
+  if(ratees.length){
+    h+='<h3>'+H("À revoir")+'</h3>';
+    ratees.forEach(function(r){ h+='<div class="err"><div class="err-q">'+H(r.q)+'</div><div>'+H("Ta réponse : ")+'<b>'+E(r.donnee||"(vide)")+'</b> → '+H("Bonne réponse : ")+'<b>'+E(r.bonne)+'</b></div></div>'; });
+    h+='<div class="conseil">📚 '+H(m.conseil)+'</div>';
+  }
+  if(maj) h+='<div class="conseil">'+H("⚠️ Pense aux majuscules : "+EXPL_MAJ)+'</div>';
+  $("res-detail").innerHTML=h;
+  var rd=$("res-defi");
+  rd.innerHTML="";
+  var bs=$("btn-mission-suivante");
+  if(etat.file.length){ bs.style.display="inline-flex"; } else { bs.style.display="none"; }
+  if(etat.defi && !etat.file.length){ rd.innerHTML='<div class="conseil" style="text-align:center;">'+H("🏁 Défi complet terminé : "+etat.defi.score+" / "+etat.defi.max)+'</div>'; etat.defi=null; }
+  afficher("s-resultat");
+}
+
+/* ======================================================================
+   IMPRESSION (fiche + corrigé)
+   ====================================================================== */
+function construireFeuille(corrige){
+  var h='<h1>English Quest — Révision du test n°6'+(corrige?'<span class="f-corrige-badge">CORRIGÉ</span>':'')+'</h1>';
+  h+='<p class="f-ident">'+H("CM2 · Prénom : ____________________ · Date : ______________")+'</p>';
+  var L="abcdefghijklmnopqrstuvwxyz";
+  MISSIONS.forEach(function(m,mi){
+    h+='<section class="f-mission"><h2>'+(mi+1)+'. '+m.emoji+' '+H(m.titre)+'</h2><p class="f-consigne">'+H(m.consigne)+'</p>';
+    m.items.forEach(function(it,i){
+      var tag=L.charAt(i)+". ";
+      if(it.type==="choix"){
+        var ch=it.choix.slice().sort(), opts='<span class="f-fr">( '+ch.map(E).join(" / ")+' )</span>', corps="";
+        if(it.invite) corps=H(it.invite);
+        if(it.phrase){
+          var parts=it.phrase.split("___"), trou=corrige?'<span class="f-rep">'+E(it.bonne)+'</span>':'<span class="f-ligne" style="min-width:90px;"></span>';
+          corps+=(it.invite?" ":"")+E(parts[0])+trou+E(parts.slice(1).join("___"));
+        } else if(corrige){ corps+=' → <span class="f-rep">'+E(it.bonne)+'</span>'; } else { corps+=' <span class="f-ligne" style="min-width:90px;"></span>'; }
+        h+='<p class="f-q">'+tag+(it.avant?'<span class="f-fr">« '+E(it.avant)+' »</span> ':'')+corps+' '+opts+(corrige?' <span class="f-fr">'+H("= "+it.fr)+'</span>':'')+'</p>';
+      } else if(it.type==="ecrire"){
+        var q=(it.inviteFr?H(it.inviteFr)+" ":"")+(it.inviteEn?E(it.inviteEn)+" ":"");
+        h+='<p class="f-q">'+tag+q+(corrige?'→ <span class="f-rep">'+E(it.affiche)+'</span>':'<span class="f-ligne"></span>')+(corrige&&it.fr?' <span class="f-fr">'+H("= "+it.fr)+'</span>':'')+'</p>';
+      } else if(it.type==="ordre"){
+        var tl=it.tuiles.map(function(t){ return '<span class="f-tuile">'+E(t)+'</span>'; }).join("");
+        h+='<p class="f-q">'+tag+(it.consigne?H(it.consigne)+" ":"")+tl+'<br>'+(corrige?'→ <span class="f-rep">'+E(joinMots(it.solution))+'</span> <span class="f-fr">'+H("= "+it.fr)+'</span>':'<span class="f-ligne" style="min-width:380px;"></span>')+'</p>';
+      } else if(it.type==="associer"){
+        var gch=it.paires.map(function(p){ return E(p[0]); }), dr=it.paires.map(function(p){ return p[1]; }).reverse();
+        if(corrige){ h+='<div class="f-q">'+it.paires.map(function(p){ return E(p[0])+' → <span class="f-rep">'+E(p[1])+'</span>'; }).join("<br>")+'</div>'; }
+        else { h+='<div class="f-assoc"><div>'+gch.join("<br>")+'</div><div>'+dr.map(E).join("<br>")+'</div></div><p class="f-fr">'+H("Relie chaque pays à sa nationalité avec un trait.")+'</p>'; }
+      } else if(it.type==="presentation"){
+        if(corrige) h+='<p class="f-q">'+H("Exemple : ")+'<span class="f-rep">Hello, I\'m Léa. I\'m from France. I\'m French.</span></p>';
+        else h+='<p class="f-q">1. <span class="f-ligne" style="min-width:420px;"></span></p><p class="f-q">2. <span class="f-ligne" style="min-width:420px;"></span></p><p class="f-q">3. <span class="f-ligne" style="min-width:420px;"></span></p>';
+      }
+    });
+    h+='</section>';
+  });
+  return h;
+}
+function ouvrirImpression(corrige,retour){
+  etat.retourImpression=retour;
+  $("feuille").innerHTML=construireFeuille(corrige);
+  afficher("s-impression");
+}
+
+/* ======================================================================
+   MODE PARENT
+   ====================================================================== */
+function ouvrirOnglet(o){
+  Array.prototype.forEach.call(document.querySelectorAll(".onglet"),function(b){ b.classList.toggle("actif", b.getAttribute("data-o")===o); });
+  Array.prototype.forEach.call(document.querySelectorAll("#s-parent .sous-ecran"),function(d){ d.classList.toggle("actif", d.id==="p-"+o); });
+  if(o==="joueurs") rendreParentJoueurs();
+  if(o==="historique") rendreHistorique();
+  if(o==="rapport") rendreRapport();
+}
+function rendreParentJoueurs(){
+  var l=joueurs(), h="";
+  if(!l.length) h='<p class="vide-txt">'+H("Aucun joueur.")+'</p>';
+  l.forEach(function(n){
+    h+='<div class="ligne-joueur"><strong>'+E(n)+'</strong><button type="button" class="btn btn-sec" data-act="supprJoueur" data-nom="'+esc(n)+'">🗑️ Supprimer</button></div>';
+  });
+  $("p-liste-joueurs").innerHTML=h;
+}
+function pillsFiltre(cible,courant,avecTous){
+  var h="";
+  if(avecTous) h+='<button type="button" class="pill'+(courant===""?" actif":"")+'" data-act="filtre" data-cible="'+cible+'" data-v="">'+H("Tous")+'</button>';
+  joueurs().forEach(function(n){ h+='<button type="button" class="pill'+(courant===n?" actif":"")+'" data-act="filtre" data-cible="'+cible+'" data-v="'+esc(n)+'">'+E(n)+'</button>'; });
+  return h;
+}
+function rendreHistorique(){
+  $("p-filtre-hist").innerHTML=pillsFiltre("hist",etat.filtreHist,true);
+  var s=sessions().filter(function(x){ return !etat.filtreHist || x.joueur===etat.filtreHist; }).slice().reverse(), h="";
+  if(!s.length) h='<p class="vide-txt">'+H("Aucune mission jouée pour l’instant.")+'</p>';
+  s.forEach(function(x){
+    var m=getMission(x.mission), titre=m?(m.emoji+" "+m.titre):x.mission, e=etoiles(x.score,x.max), det="";
+    (x.recs||[]).forEach(function(r){ if(!r.ok) det+='<div class="err"><div class="err-q">'+H(r.q)+'</div><div>'+H("Réponse : ")+'<b>'+E(r.donnee||"(vide)")+'</b> → '+H("attendu : ")+'<b>'+E(r.bonne)+'</b>'+(r.fr?'<div class="fb-fr">'+H("En français : "+r.fr)+'</div>':'')+'</div></div>'; });
+    if(!det) det='<div class="vide-txt">'+H("Aucune erreur 👏")+'</div>';
+    h+='<details class="hist"><summary>'+fmtDateHeure(x.t)+' · '+E(x.joueur)+' · '+H(titre)+' · <b>'+x.score+'/'+x.max+'</b> <span style="color:#FFC93C">'+(e?"★".repeat(e):"")+'</span> · '+fmtDuree(x.duree||0)+'</summary>'+det+'</details>';
+  });
+  $("p-liste-hist").innerHTML=h;
+}
+function pct(x){ return x.max?x.score/x.max:0; }
+function analyse(j){
+  var ss=sessions().filter(function(x){ return x.joueur===j; }).sort(function(a,b){ return a.t-b.t; });
+  var parMission=[], erreurs={}, maj=0;
+  MISSIONS.forEach(function(m){
+    var a=ss.filter(function(x){ return x.mission===m.id; });
+    var info={m:m,n:a.length,dernier:a.length?a[a.length-1]:null,best:null,tend:"—"};
+    a.forEach(function(x){ if(!info.best || pct(x)>pct(info.best)) info.best=x; });
+    if(a.length>=2){ var d=pct(a[a.length-1])-pct(a[a.length-2]); info.tend= d>0.05?"↗ progrès":(d<-0.05?"↘ recul":"→ stable"); }
+    parMission.push(info);
+  });
+  ss.forEach(function(x){ (x.recs||[]).forEach(function(r){
+    if(r.ok && r.maj) maj++;
+    if(!r.ok){ var k=x.mission+"|"+r.q; if(!erreurs[k]) erreurs[k]={mission:x.mission,q:r.q,bonne:r.bonne,fr:r.fr||"",n:0,donnees:[]}; erreurs[k].n++; if(r.donnee && erreurs[k].donnees.indexOf(r.donnee)<0) erreurs[k].donnees.push(r.donnee); }
+  }); });
+  var liste=Object.keys(erreurs).map(function(k){ return erreurs[k]; }).sort(function(a,b){ return b.n-a.n; });
+  return {ss:ss,parMission:parMission,erreurs:liste,maj:maj};
+}
+function texteRapport(j){
+  var a=analyse(j), L=[];
+  L.push("RAPPORT — Révision d'anglais CM2 (test n°6) — outil English Quest v"+VERSION);
+  L.push("Joueur : "+j+" — généré le "+fmtDateHeure(Date.now()));
+  L.push("Missions jouées : "+a.ss.length);
+  L.push("");
+  L.push("PAR MISSION (tentatives · dernier score · meilleur score · tendance)");
+  a.parMission.forEach(function(p){
+    if(!p.n) L.push("- "+p.m.titre+" : pas encore jouée");
+    else L.push("- "+p.m.titre+" : "+p.n+" tentative(s) · dernier "+p.dernier.score+"/"+p.dernier.max+" · meilleur "+p.best.score+"/"+p.best.max+" · "+p.tend);
+  });
+  L.push("");
+  L.push("ERREURS LES PLUS FRÉQUENTES");
+  if(!a.erreurs.length) L.push("- Aucune erreur enregistrée.");
+  a.erreurs.slice(0,12).forEach(function(e){
+    var m=getMission(e.mission);
+    L.push("- ["+(m?m.titre:e.mission)+"] "+e.q+" → bonne réponse : "+e.bonne+(e.donnees.length?" (réponses données : "+e.donnees.join(" / ")+")":"")+(e.fr?" — en français : "+e.fr:"")+" — "+e.n+" fois");
+  });
+  L.push("");
+  L.push("POINTS DE VIGILANCE");
+  L.push("- Majuscules oubliées (réponse juste mais mal écrite) : "+a.maj+" fois");
+  L.push("");
+  L.push("POUR CLAUDE : analyser ces résultats, proposer de nouvelles questions sur les points faibles et ajuster la difficulté de l'outil.");
+  return T(L.join("\n"));
+}
+function rendreRapport(){
+  $("p-filtre-rapport").innerHTML=pillsFiltre("rapport",etat.filtreRapport,false);
+  var cible=$("p-rapport-contenu");
+  if(!joueurs().length){ cible.innerHTML='<p class="vide-txt">'+H("Aucun joueur.")+'</p>'; return; }
+  if(!etat.filtreRapport || joueurs().indexOf(etat.filtreRapport)<0) etat.filtreRapport=joueurs()[0];
+  $("p-filtre-rapport").innerHTML=pillsFiltre("rapport",etat.filtreRapport,false);
+  var a=analyse(etat.filtreRapport), h="";
+  if(!a.ss.length){ cible.innerHTML='<p class="vide-txt">'+H("Aucune mission jouée par "+etat.filtreRapport+" pour l’instant.")+'</p>'; return; }
+  h+='<div class="tableau-defil"><table class="tbl"><thead><tr><th>'+H("Mission")+'</th><th>'+H("Essais")+'</th><th>'+H("Dernier")+'</th><th>'+H("Meilleur")+'</th><th>'+H("Tendance")+'</th></tr></thead><tbody>';
+  a.parMission.forEach(function(p){
+    h+='<tr><td>'+p.m.emoji+' '+H(p.m.titre)+'</td><td>'+p.n+'</td><td>'+(p.n?p.dernier.score+"/"+p.dernier.max:"—")+'</td><td>'+(p.n?p.best.score+"/"+p.best.max:"—")+'</td><td>'+H(p.tend)+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='<p style="margin-top:12px;"><span class="pastille-maj">'+H("Majuscules oubliées : "+a.maj)+'</span></p>';
+  h+='<label class="lbl" for="rapport-texte">'+H("Rapport à copier pour Claude")+'</label><textarea id="rapport-texte" class="rapport" readonly></textarea>';
+  h+='<div class="zone-actions"><button type="button" class="btn btn-prim" data-act="copierRapport">📋 Copier le rapport</button></div>';
+  cible.innerHTML=h;
+  $("rapport-texte").value=texteRapport(etat.filtreRapport);
+}
+function copier(txt){
+  function repli(){
+    var ta=$("rapport-texte"); if(!ta){ toast("Copie impossible ici."); return; }
+    ta.focus(); ta.select();
+    var ok=false; try{ ok=document.execCommand("copy"); }catch(e){}
+    toast(ok?"Rapport copié ✓":"Texte sélectionné : copie-le avec le menu de ton appareil.", ok?"succes":"info");
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){ toast("Rapport copié ✓","succes"); }, repli);
+  } else repli();
+}
+function exporter(){
+  var data=JSON.stringify({outil:"English Quest",version:VERSION,joueurs:joueurs(),sessions:sessions()},null,1);
+  try{
+    var blob=new Blob([data],{type:"application/json"}), a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="english-quest-donnees.json"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    toast("Export lancé ✓","succes");
+  }catch(e){ toast("Export impossible sur cet appareil."); }
+}
+
+/* ======================================================================
+   ACTIONS (délégation des clics)
+   ====================================================================== */
+var ACTIONS = {
+  choisirJoueur:function(el){ etat.joueur=el.getAttribute("data-nom"); montrerCarte(); },
+  ajouterJoueur:function(){ var i=$("inp-nouveau"); if(ajouterJoueur(i.value)){ var n=nettoyerNom(i.value); i.value=""; rendreJoueurs(); etat.joueur=n; montrerCarte(); } },
+  versParent:function(){ $("inp-code").value=""; afficher("s-code"); try{ $("inp-code").focus(); }catch(e){} },
+  quitterParent:function(){ rendreJoueurs(); afficher("s-joueur"); },
+  entrerParent:function(){ if($("inp-code").value===getCode()){ afficher("s-parent"); ouvrirOnglet("joueurs"); } else toast("Code incorrect."); },
+  onglet:function(el){ ouvrirOnglet(el.getAttribute("data-o")); },
+  ajouterJoueurParent:function(){ var i=$("inp-nouveau-parent"); if(ajouterJoueur(i.value)){ i.value=""; rendreParentJoueurs(); toast("Joueur ajouté ✓","succes"); } },
+  supprJoueur:function(el){ var n=el.getAttribute("data-nom"); demander("Supprimer "+n+" ?","Le joueur et tout son historique seront effacés. Cette action est définitive.","Supprimer",function(){
+    ecrire(CLES.J,joueurs().filter(function(x){ return x!==n; })); ecrire(CLES.S,sessions().filter(function(x){ return x.joueur!==n; })); rendreParentJoueurs(); toast("Joueur supprimé.","info"); }); },
+  filtre:function(el){ var c=el.getAttribute("data-cible"), v=el.getAttribute("data-v"); if(c==="hist"){ etat.filtreHist=v; rendreHistorique(); } else { etat.filtreRapport=v; rendreRapport(); } },
+  copierRapport:function(){ var t=$("rapport-texte"); if(t) copier(t.value); },
+  changerCode:function(){ var v=$("inp-nouveau-code").value.trim(); if(!v){ toast("Entre un nouveau code."); return; } ecrire(CLES.C,v); $("inp-nouveau-code").value=""; toast("Code mis à jour ✓","succes"); },
+  exporter:function(){ exporter(); },
+  reinit:function(){ demander("Tout réinitialiser ?","Tous les joueurs et tout l’historique seront effacés. Le code Mode Parent est conservé.","Tout effacer",function(){ ecrire(CLES.J,[]); ecrire(CLES.S,[]); rendreParentJoueurs(); toast("Données réinitialisées.","info"); }); },
+  imprimerFiche:function(){ var d=$("s-parent").classList.contains("actif"); ouvrirImpression(false,d?"s-parent":"s-carte"); },
+  imprimerCorrige:function(){ ouvrirImpression(true,"s-parent"); },
+  lancerImpression:function(){ try{ window.print(); }catch(e){ toast("Impression indisponible ici."); } },
+  fermerImpression:function(){ afficher(etat.retourImpression); },
+  changerJoueur:function(){ etat.joueur=null; rendreJoueurs(); afficher("s-joueur"); },
+  ouvrirMission:function(el){ lancerMission(el.getAttribute("data-id"),[],null); },
+  defi:function(){ var ids=MISSIONS.map(function(m){ return m.id; }), premier=ids.shift(); lancerMission(premier,ids,{score:0,max:0}); },
+  valider:function(){ if(etat.valider) etat.valider(); },
+  suivant:function(){ suivant(); },
+  son:function(el){ parler(el.getAttribute("data-dire")); },
+  rejouer:function(){ lancerMission(etat.missionId,[],null); },
+  missionSuivante:function(){ var id=etat.file.shift(); lancerMission(id,etat.file,etat.defi); },
+  versCarte:function(){ etat.defi=null; etat.file=[]; montrerCarte(); },
+  modaleAnnuler:function(){ fermerModale(); },
+  modaleOk:function(){ var cb=etat.cbModale; fermerModale(); if(cb) cb(); }
+};
+document.addEventListener("click",function(e){
+  var el=e.target.closest("[data-act]"); if(!el) return;
+  var f=ACTIONS[el.getAttribute("data-act")]; if(f) f(el,e);
+});
+$("inp-nouveau").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); ACTIONS.ajouterJoueur(); } });
+$("inp-code").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); ACTIONS.entrerParent(); } });
+$("lien-retour").addEventListener("click",function(e){
+  if(etat.enCours){
+    e.preventDefault();
+    demander("Quitter la mission ?","Ta progression dans cette mission sera perdue.","Quitter",function(){ etat.enCours=false; window.location.href="index.html"; });
+  }
+});
+
+/* ======================================================================
+   DÉMARRAGE
+   ====================================================================== */
+$("badge-version").textContent="v"+VERSION;
+$("pied").textContent="English Quest — Révision du test n°6 · v"+VERSION;
+typoDom(document.body);
+rendreJoueurs();
+
+})();
+</script>
+</body>
+</html>
