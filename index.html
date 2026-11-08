@@ -6,6 +6,11 @@
   HISTORIQUE DES VERSIONS
   | Version | Date       | Modifications                                                                  |
   |---------|------------|--------------------------------------------------------------------------------|
+  | 4.0     | 2026-11-09 | Une page par enfant : écran « Qui joue ? », puis seuls ses jeux s'affichent.     |
+  |         |            | Réglage « Joueurs et jeux » dans le Mode Parent (cadenas) : joueurs + jeux de   |
+  |         |            | chacun, enregistrés en ligne (Firebase quizz-multiplication, doc hub/joueurs),   |
+  |         |            | copie locale hors connexion. Un jeu jamais réglé reste visible par tous.         |
+  |         |            | Listes SECTIONS et TOOLS inchangées (format du robot a-publier respecté).        |
   | 3.1     | 2026-11-08 | Ajout de la rubrique « English » et de la carte English Quest                    |
   |         |            | (revision-anglais-cm2.html, test n°6 d'anglais CM2). Rien d'autre ne change.     |
   | 3.0     | 2026-11-08 | Refonte : accessibilité (contrastes, repères de page, clavier), en-tête compact,|
@@ -153,6 +158,49 @@
   .carte.indisponible{opacity:.62;filter:grayscale(.55);cursor:not-allowed;}
   .carte.indisponible:hover{transform:none;border-color:var(--c-clair);}
 
+  /* ---------- Qui joue ? (v4.0) ---------- */
+  .qui-joue{text-align:center;margin:6px auto 26px;max-width:760px;}
+  .qui-joue h2{font-size:24px;margin:0 0 14px;font-weight:900;}
+  .choix-joueurs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;}
+  .choix-joueur{
+    font-family:inherit;cursor:pointer;background:#fff;border:3px solid #CBD0E6;border-radius:22px;
+    padding:18px 10px;box-shadow:var(--ombre);font-size:20px;font-weight:900;color:var(--texte);
+    min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  }
+  .choix-joueur .avatar{font-size:48px;line-height:1;}
+  .choix-joueur:hover{border-color:#4338CA;}
+  .choix-joueur:active{transform:scale(.97);}
+  .joueur-actif{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0 0;}
+  .joueur-actif .bouton{min-height:38px;padding:6px 14px;font-size:14px;}
+  .aucun-jeu{text-align:center;font-weight:800;font-size:16px;background:#fff;border-radius:18px;padding:18px;box-shadow:var(--ombre);}
+
+  /* ---------- Fenêtre « Joueurs et jeux » (Mode Parent, v4.0) ---------- */
+  .pj-fond{position:fixed;inset:0;z-index:2147483000;background:rgba(20,22,40,.6);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;}
+  .pj-boite{background:#fff;border-radius:20px;max-width:760px;width:100%;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.3);margin:auto 0;}
+  .pj-boite h2{margin:0 0 4px;font-size:21px;}
+  .pj-boite h3{margin:18px 0 8px;font-size:16.5px;color:#4338CA;}
+  .pj-aide{font-size:14px;color:var(--texte-doux);margin:4px 0;line-height:1.4;}
+  .pj-ligne{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;}
+  .pj-ligne input{font-family:inherit;font-size:16px;padding:9px 10px;border:2px solid #CBD0E6;border-radius:12px;}
+  .pj-ligne .pj-emoji{width:64px;text-align:center;}
+  .pj-ligne .pj-nom{flex:1;min-width:140px;}
+  .pj-jeu{border:2px solid #ECEBFF;border-radius:14px;padding:10px 12px;margin-bottom:8px;}
+  .pj-jeu-titre{font-weight:800;margin-bottom:6px;}
+  .pj-jeu-titre small{font-weight:700;color:var(--texte-doux);}
+  .pj-puces{display:flex;flex-wrap:wrap;gap:8px;}
+  .pj-puce{font-family:inherit;cursor:pointer;min-height:40px;padding:6px 14px;border-radius:24px;border:2px solid #CBD0E6;background:#fff;font-weight:800;font-size:14.5px;color:var(--texte-doux);}
+  .pj-puce.on{background:#E3F7EA;border-color:#1B7A38;color:#14532D;}
+  .pj-statut{font-size:14px;font-weight:800;margin:12px 0 0;}
+  .pj-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .pj-connexion{background:#F4F5FB;border-radius:14px;padding:12px;margin-top:12px;}
+  .pj-connexion input{width:100%;font-family:inherit;font-size:16px;padding:10px;border:2px solid #CBD0E6;border-radius:12px;margin:4px 0;}
+  .pj-mdp{position:relative;}
+  .pj-mdp input{padding-right:46px;}
+  .pj-oeil{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:20px;cursor:pointer;padding:4px;}
+  .pj-erreur{color:#B91C1C;font-weight:800;font-size:14px;min-height:18px;margin-top:6px;}
+  .bouton.rouge{background:#fff;color:#B91C1C;border:2px solid #B91C1C;box-shadow:none;}
+  #toast-hub{display:none;position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:2147483600;background:#1F2340;color:#fff;font-weight:800;padding:12px 20px;border-radius:14px;max-width:90%;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.3);}
+
   footer{text-align:center;font-size:12.5px;color:var(--texte-doux);margin-top:10px;}
   noscript .consigne{border-color:#C2410C;}
 
@@ -175,12 +223,18 @@
     <p class="salut" id="salut">Bonjour, champion !</p>
     <p class="motiv" id="motiv"></p>
     <div class="stats" id="stats" aria-live="polite"></div>
+    <div class="joueur-actif" id="joueur-actif" hidden></div>
   </header>
 
   <main id="contenu">
     <noscript><div class="consigne">⚠️ Pour afficher les jeux, il faut activer JavaScript dans le navigateur.</div></noscript>
 
     <section class="parent" id="zone-parent" aria-label="Résumé pour le parent" hidden></section>
+
+    <section class="qui-joue" id="zone-qui-joue" aria-labelledby="t-qui" hidden>
+      <h2 id="t-qui">👋 Qui joue aujourd'hui ?</h2>
+      <div class="choix-joueurs" id="choix-joueurs"></div>
+    </section>
 
     <section class="reprise" id="zone-reprise" aria-labelledby="t-reprise" hidden>
       <h2 id="t-reprise">▶️ Reprendre où tu t'es arrêté</h2>
@@ -189,12 +243,18 @@
 
     <nav class="rubriques" id="rubriques" aria-label="Aller à une rubrique" hidden></nav>
 
-    <div class="consigne">👆 Touche une carte pour lancer le jeu de ton choix.</div>
+    <div class="consigne" id="consigne-jeux">👆 Touche une carte pour lancer le jeu de ton choix.</div>
     <div id="sections-e"></div>
   </main>
 
-  <footer>Mes jeux pour apprendre — v3.1 (en ligne)</footer>
+  <footer>Mes jeux pour apprendre — v4.0 (en ligne)</footer>
 </div>
+<div id="toast-hub" role="status" aria-live="polite"></div>
+
+<!-- Firebase (SDK compat, sans bundler) : réglage « Joueurs et jeux » partagé entre appareils -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <script>
 (function(){
@@ -256,9 +316,11 @@
     return a;
   }
   function construire(){
-    var nav = $("rubriques"), nb = 0;
+    var nav = $("rubriques"), nb = 0, total = 0;
+    $("sections-e").innerHTML = ""; nav.innerHTML = ""; nav.hidden = true;
     SECTIONS.forEach(function(s){
-      var outils = TOOLS.filter(function(t){ return t.sec === s.id && t.esp === s.esp; });
+      var outils = TOOLS.filter(function(t){ return t.sec === s.id && t.esp === s.esp && estVisible(t); });
+      total += outils.length;
       if(!outils.length) return;
       nb++;
       var sec = document.createElement("section"); sec.className = "rub"; sec.id = "sec-" + s.id; sec.setAttribute("aria-labelledby", "h-" + s.id);
@@ -273,6 +335,11 @@
       var lien = document.createElement("a"); lien.href = "#sec-" + s.id; lien.textContent = s.titre; nav.appendChild(lien);
     });
     if(nb >= 3) nav.hidden = false;
+    if(total === 0){
+      var vide = document.createElement("p"); vide.className = "aucun-jeu";
+      vide.textContent = "🙈 Aucun jeu pour toi pour l'instant. Demande à tes parents de t'en ajouter !";
+      $("sections-e").appendChild(vide);
+    }
   }
 
   /* ===================== SUIVI : jours, ouverts aujourd'hui, derniers jeux ===================== */
@@ -311,7 +378,7 @@
   function majReprise(){
     var l = lire(CLE_DERNIERS, []);
     if(!l.length){ var d = lire(CLE_DERNIER, null); if(d && d.nom && d.href) l = [d]; }
-    l = l.filter(function(x){ return TOOLS.some(function(t){ return t.href === x.href; }); });
+    l = l.filter(function(x){ return TOOLS.some(function(t){ return t.href === x.href && estVisible(t); }); });
     var z = $("puces"); z.innerHTML = "";
     l.forEach(function(x){
       var t = TOOLS.filter(function(t){ return t.href === x.href; })[0];
@@ -371,13 +438,16 @@
     b1.addEventListener("click", function(){ window.HubParent.ouvrir("historique"); });
     var b2 = document.createElement("button"); b2.type = "button"; b2.className = "bouton clair"; b2.textContent = "📋 Rapport pour analyse";
     b2.addEventListener("click", function(){ window.HubParent.ouvrir("rapport"); });
-    act.appendChild(b1); act.appendChild(b2); z.appendChild(act);
+    var b3 = document.createElement("button"); b3.type = "button"; b3.className = "bouton"; b3.textContent = "👥 Joueurs et jeux";
+    b3.addEventListener("click", ouvrirPJ);
+    act.appendChild(b3); act.appendChild(b1); act.appendChild(b2); z.appendChild(act);
   }
 
   /* ===================== MESSAGE D'ACCUEIL ===================== */
   function accueil(){
     var h = new Date().getHours();
-    $("salut").textContent = h < 12 ? "Bonjour, champion ! ☀️" : (h < 18 ? "Bon après-midi, champion ! 🌤️" : "Bonsoir, champion ! 🌙");
+    var j = joueurActif(), qui = j ? j.nom : "champion";
+    $("salut").textContent = h < 12 ? "Bonjour, " + qui + " ! ☀️" : (h < 18 ? "Bon après-midi, " + qui + " ! 🌤️" : "Bonsoir, " + qui + " ! 🌙");
     var PHRASES = [
       "Chaque bonne réponse te rend plus fort 💪", "Aujourd'hui, on vise le niveau supérieur ! 🏆",
       "Se tromper, c'est apprendre. Vas-y ! 🌟", "Un petit peu chaque jour, et tu deviens imbattable 🚀", "Prêt à relever le défi ? 🎯"
@@ -385,11 +455,289 @@
     $("motiv").textContent = PHRASES[Math.floor(Math.random() * PHRASES.length)];
   }
 
+  /* ===================== JOUEURS ET JEUX DÉDIÉS (v4.0) =====================
+     Configuration : { joueurs:[{id, nom, emoji}], attributions:[{href, joueurs:[id…]}], maj }
+     - enregistrée en ligne dans Firebase (projet quizz-multiplication, document hub/joueurs),
+       écriture réservée au compte parent (règle Firestore côté serveur, aucun email dans ce fichier) ;
+     - copie locale (localStorage) : la page fonctionne aussi hors connexion ;
+     - un jeu absent des attributions (jamais réglé, ou ajouté par le robot) est visible par tous ;
+     - le joueur choisi est mémorisé sur l'appareil (bouton « Changer de joueur »). */
+  var CLE_CONFIG = "hub:configJoueurs";
+  var CLE_ACTIF = "hub:joueurActif";
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAP8dleVoF3ejPe4R4Q5ef8HpY1QQSIwtg",
+    authDomain: "quizz-multiplication.firebaseapp.com",
+    projectId: "quizz-multiplication",
+    storageBucket: "quizz-multiplication.firebasestorage.app",
+    messagingSenderId: "869707235327",
+    appId: "1:869707235327:web:cc122791ba8727687a71ca"
+  };
+  var config = normaliser(lire(CLE_CONFIG, null));
+  var db = null, firebaseOK = false, etatSync = "local", desabonnerConfig = null;
+
+  function esc(t){ return String(t === null || t === undefined ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function normaliser(c){
+    c = c || {};
+    var joueurs = Array.isArray(c.joueurs) ? c.joueurs.filter(function(j){ return j && j.id && j.nom; }) : [];
+    var att = Array.isArray(c.attributions) ? c.attributions.filter(function(a){ return a && a.href && Array.isArray(a.joueurs); }) : [];
+    return { joueurs: joueurs, attributions: att, maj: Number(c.maj) || 0, nonSync: !!c.nonSync };
+  }
+  function attributionDe(cfg, href){
+    for(var i = 0; i < cfg.attributions.length; i++){ if(cfg.attributions[i].href === href) return cfg.attributions[i]; }
+    return null;
+  }
+  function joueurActif(){
+    var id = lire(CLE_ACTIF, null);
+    return config.joueurs.filter(function(j){ return j.id === id; })[0] || null;
+  }
+  function estVisible(t){
+    var j = joueurActif();
+    if(!j) return true;
+    var a = attributionDe(config, t.href);
+    if(!a) return true;                       /* jeu jamais réglé : visible par tous */
+    return a.joueurs.indexOf(j.id) >= 0;
+  }
+
+  /* ---------- Affichage côté enfant ---------- */
+  function afficherSelonJoueur(){
+    var aChoisir = config.joueurs.length > 0 && !joueurActif();
+    $("zone-qui-joue").hidden = !aChoisir;
+    $("sections-e").hidden = aChoisir;
+    $("consigne-jeux").hidden = aChoisir;
+    construire(); brancherClics(); majStats(); majReprise(); verifierDisponibilite();
+    if(aChoisir){
+      $("zone-reprise").hidden = true; $("rubriques").hidden = true;
+      construireChoix();
+    }
+    majBandeauJoueur(); accueil();
+  }
+  function construireChoix(){
+    var z = $("choix-joueurs"); z.innerHTML = "";
+    config.joueurs.forEach(function(j){
+      var b = document.createElement("button"); b.type = "button"; b.className = "choix-joueur";
+      var av = document.createElement("span"); av.className = "avatar"; av.setAttribute("aria-hidden", "true"); av.textContent = j.emoji || "🙂";
+      var nom = document.createElement("span"); nom.textContent = j.nom;
+      b.appendChild(av); b.appendChild(nom);
+      b.addEventListener("click", function(){ ecrire(CLE_ACTIF, j.id); afficherSelonJoueur(); window.scrollTo(0, 0); });
+      z.appendChild(b);
+    });
+  }
+  function majBandeauJoueur(){
+    var z = $("joueur-actif"), j = joueurActif();
+    z.innerHTML = "";
+    if(!j){ z.hidden = true; return; }
+    var s = document.createElement("span"); s.className = "stat"; s.textContent = (j.emoji || "🙂") + " " + j.nom; z.appendChild(s);
+    var b = document.createElement("button"); b.type = "button"; b.className = "bouton clair"; b.textContent = "🔄 Changer de joueur";
+    b.addEventListener("click", function(){ ecrire(CLE_ACTIF, null); afficherSelonJoueur(); window.scrollTo(0, 0); });
+    z.appendChild(b);
+    z.hidden = false;
+  }
+
+  /* ---------- Firebase : lecture en direct + connexion ---------- */
+  function ecouterConfig(){
+    if(desabonnerConfig){ try{ desabonnerConfig(); }catch(e){} }
+    desabonnerConfig = db.collection("hub").doc("joueurs").onSnapshot(function(doc){
+      etatSync = "en-ligne"; majStatutPJ();
+      if(!doc.exists) return;
+      if(config.nonSync && config.maj >= (Number(doc.data().maj) || 0)) return;   /* réglage local plus récent, pas encore envoyé */
+      config = normaliser(doc.data());
+      ecrire(CLE_CONFIG, config);
+      afficherSelonJoueur();
+    }, function(err){
+      etatSync = (err && err.code === "permission-denied") ? "refus-lecture" : "hors-ligne";
+      console.warn("Lecture hub/joueurs impossible.", err); majStatutPJ();
+    });
+  }
+  function connexionAnonyme(){
+    return firebase.auth().signInAnonymously().then(function(){ firebaseOK = true; ecouterConfig(); });
+  }
+  function demarrerFirebase(){
+    if(typeof firebase === "undefined" || location.protocol === "file:"){ etatSync = "local"; return; }
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+    }catch(e){ etatSync = "local"; return; }
+    var stop = firebase.auth().onAuthStateChanged(function(u){
+      stop();
+      if(u){ firebaseOK = true; ecouterConfig(); }
+      else connexionAnonyme().catch(function(e){ etatSync = "hors-ligne"; console.warn(e); majStatutPJ(); });
+    });
+  }
+  function estCompteParent(){
+    var u = firebaseOK && firebase.auth().currentUser;
+    return !!(u && !u.isAnonymous);
+  }
+
+  /* ---------- Message bref ---------- */
+  var minuteurToast = null;
+  function toast(t){
+    var z = $("toast-hub"); z.textContent = t; z.style.display = "block";
+    clearTimeout(minuteurToast); minuteurToast = setTimeout(function(){ z.style.display = "none"; }, 3500);
+  }
+
+  /* ---------- Fenêtre « Joueurs et jeux » (Mode Parent) ---------- */
+  var brouillon = null, fondPJ = null, connexionVisible = false;
+  function ouvrirPJ(){
+    if(!window.HubParent || !window.HubParent.actif()) return;   /* réservé au Mode Parent déverrouillé */
+    brouillon = JSON.parse(JSON.stringify({ joueurs: config.joueurs, attributions: config.attributions }));
+    connexionVisible = false;
+    if(!fondPJ){
+      fondPJ = document.createElement("div"); fondPJ.className = "pj-fond";
+      fondPJ.setAttribute("role", "dialog"); fondPJ.setAttribute("aria-modal", "true"); fondPJ.setAttribute("aria-label", "Joueurs et jeux");
+      fondPJ.addEventListener("click", clicPJ);
+      fondPJ.addEventListener("input", saisiePJ);
+      document.body.appendChild(fondPJ);
+    }
+    fondPJ.hidden = false;
+    rendrePJ();
+  }
+  function fermerPJ(){ if(fondPJ) fondPJ.hidden = true; brouillon = null; }
+  function texteStatut(){
+    if(etatSync === "en-ligne") return "🟢 En ligne : le réglage sera partagé avec tous les appareils.";
+    if(etatSync === "refus-lecture") return "🟠 Firebase refuse l'accès au réglage : la règle « hub » n'est pas encore installée. Le réglage restera sur cet appareil.";
+    if(etatSync === "hors-ligne") return "🔴 Hors connexion : le réglage sera enregistré sur cet appareil seulement.";
+    return "⚪ Mode local (fichier ouvert sur l'appareil) : le réglage reste sur cet appareil.";
+  }
+  function majStatutPJ(){ var s = document.getElementById("pj-statut"); if(s) s.textContent = texteStatut(); }
+  function rendrePJ(){
+    var h = "<div class=\"pj-boite\">";
+    h += "<h2>👥 Joueurs et jeux</h2>";
+    h += "<p class=\"pj-aide\">Crée un joueur par enfant, puis touche les prénoms pour choisir qui voit chaque jeu. Un jeu jamais réglé reste visible par tous.</p>";
+    h += "<h3>1. Les joueurs</h3>";
+    if(!brouillon.joueurs.length) h += "<p class=\"pj-aide\">Aucun joueur : tout le monde voit tous les jeux, sans écran « Qui joue ? ».</p>";
+    brouillon.joueurs.forEach(function(j, i){
+      h += "<div class=\"pj-ligne\"><input class=\"pj-emoji\" data-i=\"" + i + "\" data-champ=\"emoji\" maxlength=\"4\" aria-label=\"Emoji du joueur\" value=\"" + esc(j.emoji) + "\">" +
+        "<input class=\"pj-nom\" data-i=\"" + i + "\" data-champ=\"nom\" maxlength=\"20\" placeholder=\"Prénom ou pseudo\" aria-label=\"Prénom du joueur\" value=\"" + esc(j.nom) + "\">" +
+        "<button type=\"button\" class=\"bouton rouge\" data-pj=\"supprimer\" data-i=\"" + i + "\">Supprimer</button></div>";
+    });
+    h += "<button type=\"button\" class=\"bouton clair\" data-pj=\"ajouter\">➕ Ajouter un joueur</button>";
+    h += "<h3>2. Les jeux de chacun</h3>";
+    if(!brouillon.joueurs.length){ h += "<p class=\"pj-aide\">Ajoute d'abord un joueur.</p>"; }
+    else {
+      SECTIONS.forEach(function(s){
+        TOOLS.filter(function(t){ return t.sec === s.id && t.esp === s.esp; }).forEach(function(t){
+          var a = attributionDe(brouillon, t.href);
+          h += "<div class=\"pj-jeu\"><div class=\"pj-jeu-titre\">" + esc(t.emoji + " " + t.titre) + (a ? "" : " <small>(pas encore réglé : visible par tous)</small>") + "</div><div class=\"pj-puces\">";
+          brouillon.joueurs.forEach(function(j){
+            var on = !a || a.joueurs.indexOf(j.id) >= 0;
+            h += "<button type=\"button\" class=\"pj-puce" + (on ? " on" : "") + "\" aria-pressed=\"" + on + "\" data-pj=\"basculer\" data-href=\"" + esc(t.href) + "\" data-id=\"" + esc(j.id) + "\">" +
+              (on ? "✅ " : "⬜ ") + esc((j.emoji || "") + " " + (j.nom || "…")) + "</button>";
+          });
+          h += "</div></div>";
+        });
+      });
+    }
+    h += "<p class=\"pj-statut\" id=\"pj-statut\">" + esc(texteStatut()) + "</p>";
+    h += "<div class=\"pj-connexion\" id=\"pj-connexion\"" + (connexionVisible ? "" : " hidden") + ">" +
+      "<p class=\"pj-aide\"><b>Connexion du compte parent</b> (le même que pour Quiz Math Foot) pour enregistrer en ligne :</p>" +
+      "<input type=\"email\" id=\"pj-email\" placeholder=\"parent@exemple.fr\" autocomplete=\"username\">" +
+      "<div class=\"pj-mdp\"><input type=\"password\" id=\"pj-mdp\" placeholder=\"Mot de passe\" autocomplete=\"current-password\">" +
+      "<button type=\"button\" class=\"pj-oeil\" data-pj=\"oeil\" aria-label=\"Afficher ou masquer le mot de passe\">👁️</button></div></div>";
+    h += "<div class=\"pj-erreur\" id=\"pj-erreur\" role=\"alert\"></div>";
+    h += "<div class=\"pj-actions\"><button type=\"button\" class=\"bouton\" data-pj=\"enregistrer\">💾 " + (connexionVisible ? "Se connecter et enregistrer" : "Enregistrer") + "</button>" +
+      "<button type=\"button\" class=\"bouton clair\" data-pj=\"fermer\">Fermer sans enregistrer</button></div>";
+    h += "</div>";
+    fondPJ.innerHTML = h;
+  }
+  function saisiePJ(e){
+    var c = e.target.getAttribute("data-champ");
+    if(!c || !brouillon) return;
+    var i = Number(e.target.getAttribute("data-i"));
+    if(brouillon.joueurs[i]) brouillon.joueurs[i][c] = e.target.value;
+  }
+  function clicPJ(e){
+    var b = e.target.closest ? e.target.closest("[data-pj]") : null;
+    if(!b || !brouillon) return;
+    var action = b.getAttribute("data-pj");
+    if(action === "fermer"){ fermerPJ(); return; }
+    if(action === "oeil"){ var m = $("pj-mdp"); m.type = m.type === "password" ? "text" : "password"; return; }
+    if(action === "ajouter"){
+      brouillon.joueurs.push({ id: "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), nom: "", emoji: "🙂" });
+      rendrePJ();
+      var champs = fondPJ.querySelectorAll(".pj-nom"); if(champs.length) champs[champs.length - 1].focus();
+      return;
+    }
+    if(action === "supprimer"){
+      var i = Number(b.getAttribute("data-i")), id = brouillon.joueurs[i].id;
+      brouillon.joueurs.splice(i, 1);
+      brouillon.attributions.forEach(function(a){ a.joueurs = a.joueurs.filter(function(x){ return x !== id; }); });
+      rendrePJ(); return;
+    }
+    if(action === "basculer"){
+      var href = b.getAttribute("data-href"), jid = b.getAttribute("data-id");
+      var a = attributionDe(brouillon, href);
+      if(!a){   /* 1er réglage de ce jeu : on part de « visible par tous » */
+        a = { href: href, joueurs: brouillon.joueurs.map(function(j){ return j.id; }) };
+        brouillon.attributions.push(a);
+      }
+      var k = a.joueurs.indexOf(jid);
+      if(k >= 0) a.joueurs.splice(k, 1); else a.joueurs.push(jid);
+      rendrePJ(); return;
+    }
+    if(action === "enregistrer") enregistrerPJ();
+  }
+  function enregistrerPJ(){
+    var err = $("pj-erreur"); err.textContent = "";
+    var noms = {}, probleme = "";
+    brouillon.joueurs.forEach(function(j){
+      j.nom = String(j.nom || "").trim(); j.emoji = String(j.emoji || "").trim() || "🙂";
+      if(!j.nom) probleme = "Chaque joueur doit avoir un prénom ou un pseudo.";
+      else if(noms[j.nom.toLowerCase()]) probleme = "Deux joueurs ont le même nom : « " + j.nom + " ».";
+      noms[j.nom.toLowerCase()] = true;
+    });
+    if(probleme){ err.textContent = probleme; return; }
+    var ids = brouillon.joueurs.map(function(j){ return j.id; });
+    brouillon.attributions.forEach(function(a){ a.joueurs = a.joueurs.filter(function(x){ return ids.indexOf(x) >= 0; }); });
+    var aEcrire = { joueurs: brouillon.joueurs, attributions: brouillon.attributions, maj: Date.now() };
+
+    var garderLocal = function(message){
+      config = normaliser(aEcrire); config.nonSync = true;
+      ecrire(CLE_CONFIG, config); fermerPJ(); afficherSelonJoueur(); majParent(); toast(message);
+    };
+    if(!firebaseOK){ garderLocal("💾 Enregistré sur cet appareil (pas de connexion à Firebase)."); return; }
+
+    var envoyer = function(){
+      return db.collection("hub").doc("joueurs").set(aEcrire).then(function(){
+        config = normaliser(aEcrire); ecrire(CLE_CONFIG, config);
+        fermerPJ(); afficherSelonJoueur(); majParent(); toast("✅ Enregistré pour tous les appareils.");
+      });
+    };
+    var echec = function(e){
+      console.warn("Écriture hub/joueurs impossible.", e);
+      if(e && e.code === "permission-denied") garderLocal("⚠️ Firebase a refusé l'écriture (règle « hub » manquante ou mauvais compte). Enregistré sur cet appareil seulement.");
+      else garderLocal("⚠️ Envoi impossible. Enregistré sur cet appareil seulement.");
+    };
+    /* Repasse l'appareil en session anonyme : un enfant ne doit jamais hériter de la session parent
+       (sinon le Mode Parent de Quiz Math Foot, sur le même site, s'ouvrirait sans mot de passe). */
+    var revenirAnonyme = function(){
+      return firebase.auth().signOut().then(connexionAnonyme).catch(function(e){ console.warn(e); });
+    };
+
+    if(estCompteParent()){ envoyer().catch(echec); return; }
+    if(!connexionVisible){
+      connexionVisible = true; rendrePJ();
+      $("pj-erreur").textContent = "Connecte-toi avec le compte parent pour enregistrer en ligne.";
+      $("pj-email").focus();
+      return;
+    }
+    var email = $("pj-email").value.trim(), mdp = $("pj-mdp").value;
+    if(!email || !mdp){ err.textContent = "Renseigne l'email et le mot de passe du compte parent."; return; }
+    err.textContent = "Connexion…";
+    firebase.auth().signInWithEmailAndPassword(email, mdp).then(function(){
+      return envoyer().catch(echec).then(revenirAnonyme);
+    }).catch(function(e){
+      var code = e && e.code;
+      err.textContent = (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found")
+        ? "Email ou mot de passe incorrect." : "Connexion impossible (" + code + ").";
+    });
+  }
+
   /* ===================== DÉMARRAGE ===================== */
-  construire(); accueil(); brancherClics(); majStats(); majReprise(); verifierDisponibilite();
+  afficherSelonJoueur();
+  demarrerFirebase();
   window.addEventListener("load", majParent);
   document.addEventListener("hub:parent", majParent);
-  window.addEventListener("pageshow", function(e){ if(e.persisted){ majStats(); majReprise(); } });
+  window.addEventListener("pageshow", function(e){ if(e.persisted){ afficherSelonJoueur(); } });
 })();
 </script>
 <!-- hub-commun v1.0 : bouton Mes jeux + Mode Parent partage -->
