@@ -1,4 +1,4 @@
-# Dossier a-publier (version 1.1)
+# Dossier a-publier (version 1.3)
 
 Depose ici un fichier `.html` : le robot GitHub le controle, le publie a la racine
 (sans numero de version dans le nom), ajoute sa carte au hub et monte la version du hub.
@@ -14,9 +14,12 @@ Depose ici un fichier `.html` : le robot GitHub le controle, le publie a la raci
    - pas d'apostrophe droite dans les textes (utiliser ’)
 
 ## Ajoute automatiquement par le robot
-Le robot insere dans chaque outil publie la balise `hub-commun.js` : bouton « 🚀 Mes jeux » (retour au hub)
+Le robot insere dans chaque outil publie la balise `hub-commun.js` : barre du haut avec le bouton « ⬅ Retour aux jeux » (retour au hub)
 et Mode Parent partage (code + historique des evaluations) pour les outils qui n'ont pas leur propre Mode Parent.
 Pour une evaluation, enregistrer le resultat avec `HubHistorique.enregistrer({...})` (voir evaluation-plantes-cm1-v1.3.html).
+Rapport pour analyse : `HubHistorique.enregistrer({... questions:[{n,ref,comp,compLabel,type,enonce,reponse,attendu,ok,tempsSec,indice|aide}] })`
+alimente l'onglet « Rapport » du Mode Parent (format `hub-rapport` v1, evolutif : tout champ en plus est conserve).
+Un outil qui a son propre Mode Parent appelle `HubRapport.ouvrir({outil:{id,titre,version}, passages:[...]})` (voir resolution_problemes_cm1-v1.8.html).
 Reglage facultatif : `<meta name="hub-parent" content="propre|partage">`.
 
 ## Controles automatiques (si un seul echoue, RIEN n'est publie)

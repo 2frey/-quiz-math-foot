@@ -1,8 +1,10 @@
-/* hub-commun.js - VERSION 1.1 (2026-11-07)  [1.1 : barre fixe en haut avec « Retour aux jeux », adaptee PC/tablette/telephone]
+/* hub-commun.js - VERSION 1.2 (2026-11-08)  [1.2 : rapport pour analyse (HubRapport) ; 1.1 : barre « Retour aux jeux »]
    Partage entre tous les outils du hub « Mes jeux pour apprendre » :
    1. barre fixe en HAUT avec le bouton « ← Retour aux jeux » (retour au hub) ;
    2. Mode Parent partage (code) pour les outils qui n'ont pas leur propre Mode Parent ;
-   3. historique des evaluations (HubHistorique), consultable dans le Mode Parent.
+   3. historique des evaluations (HubHistorique), consultable dans le Mode Parent ;
+   4. RAPPORT pour analyse (onglet « Rapport » du Mode Parent, ou HubRapport.ouvrir(donnees)) :
+      texte lisible + donnees JSON versionnees (schema « hub-rapport »), a copier et transmettre a Claude.
    Les donnees restent dans le navigateur (localStorage) : rien n'est envoye sur internet.
    Le code parent est un simple verrou pour les enfants, pas une protection cryptographique.
 
@@ -13,7 +15,7 @@
 (function () {
   "use strict";
   if (window.HubCommun) return;
-  var VERSION = "1.1";
+  var VERSION = "1.2";
   var K_HIST = "hub:historique", K_CODE = "hub:codeParent", K_SESS = "hub:parentActif", MAX = 500;
   var enIframe = false;
   try { enIframe = window.self !== window.top; } catch (e) { enIframe = true; }
@@ -36,6 +38,7 @@
       e = e || {};
       e.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       e.date = Date.now();
+      e.schema = e.schema || 1;
       l.push(e);
       if (l.length > MAX) l = l.slice(l.length - MAX);
       ecrire(K_HIST, l);
@@ -79,6 +82,8 @@
     ".hubc-l{cursor:pointer}.hubc-l:hover{background:#f6f6ff}.hubc-d td{background:#fffaf0;font-size:13.5px}",
     ".hubc-note{font-size:13px;color:#5B6280}.hubc-ok{color:#1b7a3d;font-weight:700}.hubc-ko{color:#C0501A;font-weight:700}",
     ".hubc-d ul{margin:4px 0 8px;padding-left:18px}",
+    ".hubc-boite textarea{width:100%;box-sizing:border-box;padding:10px;border:2px solid #cbd0e6;border-radius:10px;margin:6px 0;background:#fff;color:#1F2340;font:inherit}",
+    ".hubc-boite .hubc-sortie{font:12px/1.4 ui-monospace,Consolas,monospace;height:240px;resize:vertical}.hubc-notes{height:64px}.hubc-case{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:14px}.hubc-case input{width:auto;margin:0}",
     "@media print{.hubc-bar,.hubc-fond{display:none!important}html.hubc-avec-barre{padding-top:0!important}}"
   ].join("");
 
@@ -97,9 +102,9 @@
   }
   function fermer() { if (fond) fond.classList.remove("on"); }
   function onglets(v) {
-    return "<div class=\"hubc-onglets\"><button class=\"hubc-o" + (v === "historique" ? " on" : "") + "\" id=\"hubc-t1\">📊 Historique</button><button class=\"hubc-o" + (v === "reglages" ? " on" : "") + "\" id=\"hubc-t2\">⚙️ Réglages</button></div>";
+    return "<div class=\"hubc-onglets\"><button class=\"hubc-o" + (v === "historique" ? " on" : "") + "\" id=\"hubc-t1\">📊 Historique</button><button class=\"hubc-o" + (v === "rapport" ? " on" : "") + "\" id=\"hubc-t3\">📋 Rapport</button><button class=\"hubc-o" + (v === "reglages" ? " on" : "") + "\" id=\"hubc-t2\">⚙️ Réglages</button></div>";
   }
-  function brancherOnglets() { $("hubc-t1").onclick = function () { afficher("historique"); }; $("hubc-t2").onclick = function () { afficher("reglages"); }; }
+  function brancherOnglets() { $("hubc-t1").onclick = function () { afficher("historique"); }; $("hubc-t3").onclick = function () { afficher("rapport"); }; $("hubc-t2").onclick = function () { afficher("reglages"); }; }
 
   function afficher(v) {
     construire(); fond.classList.add("on");
@@ -108,6 +113,7 @@
     if (v === "oubli") return vueOubli();
     if (!Parent.actif()) return vueSaisir();
     if (v === "reglages") return vueReglages();
+    if (v === "rapport") return vueRapport(sourceHistorique(), { onglets: true });
     return vueHistorique();
   }
   function msg(t) { var m = $("hubc-msg"); if (m) m.textContent = t; }
@@ -206,6 +212,171 @@
     $("hubc-verr").onclick = function () { Parent.verrouiller(); };
   }
 
+  /* ---------- RAPPORT pour analyse ---------- */
+  var SCHEMA = "hub-rapport", SCHEMA_V = 1, MAX_PASSAGES = 60;
+  var etatRapport = { periode: "0", joueur: "", outil: 0, anonymiser: true, notes: "" };
+  function pc(a, b) { return b ? Math.round(100 * a / b) : 0; }
+  function cel(x, n) { var t = String(x === null || x === undefined ? "" : x).replace(/\|/g, "\\|").replace(/\r?\n/g, " "); return n && t.length > n ? t.slice(0, n - 1) + "…" : t; }
+  function tableau(entetes, lignes) {
+    var h = "| " + entetes.join(" | ") + " |\n|" + entetes.map(function () { return "---"; }).join("|") + "|\n";
+    lignes.forEach(function (l) { h += "| " + l.join(" | ") + " |\n"; });
+    return h;
+  }
+  function dureeTxt(sec) { if (!sec && sec !== 0) return ""; return sec >= 60 ? Math.floor(sec / 60) + " min " + z(sec % 60) + " s" : sec + " s"; }
+  function anonymiser(ps) {
+    var map = {}, n = 0;
+    return ps.map(function (p) {
+      var c = JSON.parse(JSON.stringify(p)), nom = c.joueur || "joueur";
+      if (!map[nom]) map[nom] = "Joueur " + String.fromCharCode(65 + (n++ % 26));
+      c.joueur = map[nom]; return c;
+    });
+  }
+  function construireRapport(o) {
+    var ps = (o.passages || []).slice().sort(function (a, b) { return a.date - b.date; });
+    var totalBrut = ps.length;
+    if (ps.length > MAX_PASSAGES) ps = ps.slice(ps.length - MAX_PASSAGES);
+    if (o.anonymiser) ps = anonymiser(ps);
+    var ou = o.outil || {}, ver = ou.version || "", L = [];
+    L.push("# RAPPORT HUB — " + (ou.titre || ou.id || "outil"));
+    L.push("Généré le " + fmtDate(Date.now()) + " · format hub-rapport v" + SCHEMA_V + " · outil " + (ou.id || "?") + (ver ? " " + ver : "") + (o.anonymiser ? " · prénoms anonymisés" : ""));
+    L.push("Objectif : analyser les résultats et améliorer l'outil (rapport à transmettre à Claude).");
+    if (totalBrut > ps.length) L.push("Note : " + ps.length + " derniers passages sur " + totalBrut + ".");
+    L.push("");
+    if (o.notes && o.notes.trim()) { L.push("## Observations du parent", o.notes.trim(), ""); }
+    if (!ps.length) { L.push("Aucun passage enregistré pour ces filtres."); return L.join("\n"); }
+
+    var joueurs = {}, somme = 0, nbS = 0, cats = {}, ratees = {};
+    ps.forEach(function (p) {
+      joueurs[p.joueur || "joueur"] = 1;
+      if (p.total) { somme += p.score / p.total; nbS++; }
+      (p.questions || []).forEach(function (q) {
+        var c = q.compLabel || q.comp || "(sans catégorie)";
+        cats[c] = cats[c] || { ok: 0, n: 0 }; cats[c].n++; if (q.ok) cats[c].ok++;
+        var k = q.ref || (q.enonce || "").slice(0, 80);
+        ratees[k] = ratees[k] || { enonce: q.enonce, n: 0, ko: 0, faux: {} };
+        ratees[k].n++;
+        if (!q.ok) { ratees[k].ko++; var r = q.reponse || "—"; ratees[k].faux[r] = (ratees[k].faux[r] || 0) + 1; }
+      });
+    });
+    var tag = " (" + (ou.id || "outil") + (ver ? " " + ver : "") + ")";
+    L.push("## 1. Synthèse");
+    L.push("- Passages : " + ps.length + " · Joueurs : " + Object.keys(joueurs).sort().join(", ") + (nbS ? " · Moyenne : " + Math.round(100 * somme / nbS) + " %" : ""));
+    L.push("");
+    L.push("## 2. Évolution dans le temps");
+    L.push("**Tableau 1 — Résultats par passage" + tag + "**");
+    L.push(tableau(["Date", "Joueur", "Score", "%", "Durée", "Aides/indices"], ps.map(function (p) {
+      var aides = 0; (p.questions || []).forEach(function (q) { aides += (q.aide || 0) + (q.indice ? 1 : 0); });
+      return [fmtDate(p.date), cel(p.joueur || "joueur"), p.score + "/" + p.total, pc(p.score, p.total) + " %", dureeTxt(p.dureeSec), (p.questions ? aides : "")];
+    })));
+    var cl = Object.keys(cats);
+    if (cl.length) {
+      L.push("## 3. Réussite par catégorie / compétence");
+      L.push("**Tableau 2 — Cumul de tous les passages" + tag + "**");
+      L.push(tableau(["Catégorie", "Réussites", "Questions", "%"], cl.sort().map(function (c) { return [cel(c), cats[c].ok, cats[c].n, pc(cats[c].ok, cats[c].n) + " %"]; })));
+      var rl = Object.keys(ratees).filter(function (k) { return ratees[k].ko > 0; }).sort(function (a, b) { return ratees[b].ko / ratees[b].n - ratees[a].ko / ratees[a].n || ratees[b].ko - ratees[a].ko; }).slice(0, 8);
+      L.push("## 4. Questions les plus ratées");
+      if (rl.length) {
+        L.push("**Tableau 3 — Top des échecs" + tag + "**");
+        L.push(tableau(["Question", "Échecs", "Passages", "Réponses fausses fréquentes"], rl.map(function (k) {
+          var f = ratees[k].faux, top = Object.keys(f).sort(function (a, b) { return f[b] - f[a]; }).slice(0, 3).map(function (x) { return cel(x, 50) + " (×" + f[x] + ")"; }).join(" ; ");
+          return [cel(ratees[k].enonce || k, 90), ratees[k].ko, ratees[k].n, top];
+        })));
+      } else L.push("Aucune question ratée sur cette période. 🌟");
+    }
+    L.push("## 5. Détail par passage");
+    ps.forEach(function (p, i) {
+      L.push("### Passage " + (i + 1) + " — " + fmtDate(p.date) + " — " + cel(p.joueur || "joueur") + " — " + p.score + "/" + p.total + (p.dureeSec ? " — " + dureeTxt(p.dureeSec) : "") + (p.version ? " — outil " + p.version : ""));
+      if (p.questions && p.questions.length) {
+        L.push("**Tableau " + (3 + (i + 1)) + " — Réponses" + tag + "**");
+        L.push(tableau(["Q", "Catégorie", "Énoncé", "Réponse donnée", "Attendu", "Résultat", "Temps", "Aide"], p.questions.map(function (q) {
+          return [q.n, cel(q.compLabel || q.comp, 30), cel(q.enonce, 110), cel(q.reponse, 80), cel(q.attendu, 60), q.ok ? "✅" : "❌", q.tempsSec !== undefined ? q.tempsSec + " s" : "", (q.aide || 0) + (q.indice ? 1 : 0) || ""];
+        })));
+      } else if (p.aRevoir && p.aRevoir.length) {
+        L.push("(détail des réponses non enregistré par cette version de l'outil)");
+        p.aRevoir.forEach(function (r) { L.push("- À revoir Q" + r.q + " : " + cel(r.texte, 120) + " → " + cel(r.correction, 120)); });
+      } else L.push("(aucun détail enregistré)");
+      L.push("");
+    });
+    L.push("## 6. Données brutes (JSON, schéma hub-rapport v" + SCHEMA_V + ")");
+    L.push("```json");
+    L.push(JSON.stringify({ schema: SCHEMA, schemaVersion: SCHEMA_V, genere: Date.now(), outil: ou, anonymise: !!o.anonymiser, notesParent: o.notes || "", passages: ps }));
+    L.push("```");
+    L.push("");
+    L.push("## 7. Demande d'analyse (à lire par Claude)");
+    L.push("1. Quelles erreurs reviennent (par catégorie, par question, par type de réponse fausse) ?");
+    L.push("2. Des questions sont-elles ambiguës, trop faciles ou trop difficiles ? Des consignes sont-elles à reformuler ?");
+    L.push("3. Les temps de réponse et le recours aux aides/indices révèlent-ils des blocages ?");
+    L.push("4. Propose des améliorations concrètes de l'outil (questions, indices, consignes, niveaux) et indique la version à produire.");
+    L.push("Remarque : le schéma est évolutif ; des champs supplémentaires (extras) peuvent apparaître dans les versions futures.");
+    return L.join("\n");
+  }
+  function sourceHistorique() {
+    var g = {};
+    Hist.lister().forEach(function (e) {
+      var id = e.outil || "inconnu";
+      if (!g[id]) g[id] = { id: id, titre: e.titre || id, version: e.version || "", passages: [] };
+      g[id].version = e.version || g[id].version; g[id].passages.push(e);
+    });
+    return Object.keys(g).sort().map(function (k) { return g[k]; });
+  }
+  function vueRapport(outils, opt) {
+    opt = opt || {};
+    if (!outils.length) {
+      corps.innerHTML = (opt.onglets ? onglets("rapport") : "") + "<p>Aucun résultat enregistré pour l'instant : le rapport se remplira avec les évaluations terminées.</p>" + (opt.modal ? "<button class=\"hubc-b sec\" id=\"hubc-fm\">Fermer</button>" : "");
+      if (opt.onglets) brancherOnglets(); if ($("hubc-fm")) $("hubc-fm").onclick = fermer; return;
+    }
+    if (etatRapport.outil >= outils.length) etatRapport.outil = 0;
+    var cur = outils[etatRapport.outil];
+    var noms = {}; cur.passages.forEach(function (p) { noms[p.joueur || "joueur"] = 1; });
+    var h = opt.onglets ? onglets("rapport") : "";
+    h += "<p class=\"hubc-note\">Rapport à copier puis à transmettre à Claude pour analyser les résultats et améliorer l'outil.</p>";
+    if (outils.length > 1) { h += "<select id=\"hubc-ro\">"; outils.forEach(function (o, i) { h += "<option value=\"" + i + "\"" + (i === etatRapport.outil ? " selected" : "") + ">" + esc(o.titre) + "</option>"; }); h += "</select>"; }
+    h += "<div class=\"hubc-filtres\"><select id=\"hubc-rp\"><option value=\"0\">Toute la période</option><option value=\"30\">30 derniers jours</option><option value=\"7\">7 derniers jours</option></select><select id=\"hubc-rj\"><option value=\"\">Tous les joueurs</option>";
+    Object.keys(noms).sort().forEach(function (n) { h += "<option value=\"" + esc(n) + "\"" + (n === etatRapport.joueur ? " selected" : "") + ">" + esc(n) + "</option>"; });
+    h += "</select></div><label class=\"hubc-case\"><input type=\"checkbox\" id=\"hubc-ra\"" + (etatRapport.anonymiser ? " checked" : "") + "> Anonymiser les prénoms (Joueur A, Joueur B…)</label>";
+    h += "<textarea id=\"hubc-rn\" class=\"hubc-notes\" placeholder=\"Observations du parent (facultatif) : ex. « hésite sur les retenues »\"></textarea>";
+    h += "<textarea id=\"hubc-sortie\" class=\"hubc-sortie\" readonly></textarea><div class=\"hubc-msg\" id=\"hubc-msg\" style=\"color:#1b7a3d\"></div>";
+    h += "<button class=\"hubc-b\" id=\"hubc-rc\">📋 Copier le rapport</button><button class=\"hubc-b sec\" id=\"hubc-rd\">💾 Télécharger (.txt)</button>" + (opt.modal ? "<button class=\"hubc-b sec\" id=\"hubc-fm\">Fermer</button>" : "");
+    corps.innerHTML = h;
+    $("hubc-rp").value = etatRapport.periode; $("hubc-rn").value = etatRapport.notes;
+    if (opt.onglets) brancherOnglets();
+    var texte = "";
+    var maj = function () {
+      var ps = cur.passages.filter(function (p) {
+        return (!etatRapport.joueur || (p.joueur || "joueur") === etatRapport.joueur) && (etatRapport.periode === "0" || p.date >= Date.now() - Number(etatRapport.periode) * 86400000);
+      });
+      texte = construireRapport({ outil: { id: cur.id, titre: cur.titre, version: cur.version }, passages: ps, notes: etatRapport.notes, anonymiser: etatRapport.anonymiser });
+      $("hubc-sortie").value = texte;
+    };
+    $("hubc-rp").onchange = function () { etatRapport.periode = this.value; maj(); };
+    $("hubc-rj").onchange = function () { etatRapport.joueur = this.value; maj(); };
+    $("hubc-ra").onchange = function () { etatRapport.anonymiser = this.checked; maj(); };
+    $("hubc-rn").oninput = function () { etatRapport.notes = this.value; maj(); };
+    if ($("hubc-ro")) $("hubc-ro").onchange = function () { etatRapport.outil = Number(this.value); etatRapport.joueur = ""; vueRapport(outils, opt); };
+    $("hubc-rc").onclick = function () {
+      var fin = function (ok) { $("hubc-msg").style.color = ok ? "#1b7a3d" : "#C0501A"; msg(ok ? "✅ Rapport copié : colle-le dans la conversation avec Claude." : "Copie impossible : touche le texte, sélectionne tout et copie."); };
+      var repli = function () { var ta = $("hubc-sortie"); ta.focus(); ta.select(); var ok = false; try { ok = document.execCommand("copy"); } catch (e) {} fin(ok); };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(texte).then(function () { fin(true); }, repli); else repli();
+    };
+    $("hubc-rd").onclick = function () {
+      try {
+        var blob = new Blob([texte], { type: "text/plain;charset=utf-8" }), url = URL.createObjectURL(blob), a = document.createElement("a");
+        var d = new Date();
+        a.href = url; a.download = "rapport-" + (cur.id || "hub") + "-" + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + ".txt";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        $("hubc-msg").style.color = "#1b7a3d"; msg("Téléchargement lancé. Sinon, utilise « Copier le rapport ».");
+      } catch (e) { $("hubc-msg").style.color = "#C0501A"; msg("Téléchargement impossible : utilise « Copier le rapport »."); }
+    };
+    if ($("hubc-fm")) $("hubc-fm").onclick = fermer;
+    maj();
+  }
+  var Rapport = {
+    /* donnees = { outil:{id,titre,version}, passages:[{date(ms),joueur,score,total,dureeSec,competences,questions:[...]}] } */
+    ouvrir: function (donnees) { construire(); fond.classList.add("on"); vueRapport([{ id: donnees.outil.id, titre: donnees.outil.titre, version: donnees.outil.version, passages: donnees.passages || [] }], { modal: true }); },
+    construire: construireRapport,
+    version: SCHEMA_V
+  };
+
   /* ---------- barre du haut ---------- */
   var cadenas = null;
   function majCadenas() { if (cadenas) { var on = Parent.actif(); cadenas.className = "hubc-btn hubc-cadenas" + (on ? " on" : ""); cadenas.innerHTML = (on ? "🔓" : "🔒") + "<span>Parent</span>"; } }
@@ -255,6 +426,7 @@
 
   window.HubHistorique = Hist;
   window.HubParent = Parent;
+  window.HubRapport = Rapport;
   window.HubCommun = { version: VERSION, aCadenas: function () { return !!cadenas; } };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boutons); else boutons();
 })();

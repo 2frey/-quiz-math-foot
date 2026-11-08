@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-publier.py - VERSION 1.1 (2026-11-07)  [1.1 : injecter_hub_commun]
+publier.py - VERSION 1.2 (2026-11-08)  [1.2 : detection exacte de la balise hub-commun ; 1.1 : injecter_hub_commun]
 Publie un outil HTML dans le depot du hub « Mes jeux pour apprendre ».
 
 Ce que fait le script :
@@ -36,9 +36,14 @@ DOMAINES_OK = ("exemple.fr", "exemple.com", "example.com", "example.org", "examp
 TAG_HUB = '<script src="hub-commun.js"></script>'
 
 
+def a_balise_hub_commun(txt):
+    """Vrai si la balise <script src="hub-commun.js"> est deja presente (une simple mention ne compte pas)."""
+    return re.search(r"<script[^>]+src=[\"']hub-commun\.js", txt, re.I) is not None
+
+
 def injecter_hub_commun(txt):
     """Ajoute la balise hub-commun.js avant le dernier </body>. Retourne (texte, modifie)."""
-    if "hub-commun.js" in txt:
+    if a_balise_hub_commun(txt):
         return txt, False
     i = txt.lower().rfind("</body>")
     if i < 0:

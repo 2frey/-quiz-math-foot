@@ -36,7 +36,7 @@ def main():
         if change:
             publier.ecrire(f, txt)
             faits.append(nom)
-        elif "hub-commun.js" in txt:
+        elif publier.a_balise_hub_commun(txt):
             deja.append(nom)
         else:
             ignores.append(nom)
