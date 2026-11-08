@@ -1,11 +1,21 @@
 <!DOCTYPE html>
-<!-- Sonic Quest du Matin — v3.1 — mis à jour le 27/09/2026
+<!-- Sonic Quest du Matin — v4.0 — 09/11/2026
+     v4.0 : Mode Parent standard (règle MAJP du 09/11/2026)
+            - accès par le bouton « 👨‍👩‍👧 Mode Parent » ; code parent créé au 1er accès (aucun code écrit dans le fichier)
+            - onglets : Joueurs (ajouter / renommer / supprimer), Tâches, Historique (filtrable par joueur),
+              Analyse, Rapport (lire / imprimer / .txt / copier + observations du parent), Données
+              (export / import JSON, réinitialisations), Réglages (changer le code)
+            - les boutons Joueurs / Tâches / Historique ne sont plus accessibles à l'enfant
+            - bouton « ⬅️ Retour » vers la page d'accueil (index.html)
+            - chaque jour mémorise le nom de ses tâches (historique lisible même après retrait d'une tâche)
+            - modales et messages maison, jamais confirm()/alert()
+            Données existantes conservées : clés sq_* inchangées.
      v3.1 : lien du Quiz Math Foot corrigé (quiz-math-foot-v8.html -> quiz-math-foot.html) pour le site GitHub Pages
      v3.0 : 21/07/2026 -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sonic Quest du Matin</title>
 <style>
   :root{
@@ -31,8 +41,9 @@
     -webkit-tap-highlight-color: transparent;
     user-select:none;
   }
+  input, select, textarea, .rapport{user-select:text;}
   .wrap{max-width:640px;margin:0 auto;}
-  header{text-align:center;padding:14px 10px 10px;}
+  header{text-align:center;padding:40px 10px 10px;}
   h1{
     margin:0;font-size:1.7em;letter-spacing:1px;
     background: linear-gradient(90deg, var(--or), var(--bleu));
@@ -40,6 +51,12 @@
     text-shadow: 0 0 18px rgba(255,210,63,.25);
   }
   .sous-titre{opacity:.75;font-size:.9em;margin-top:4px;}
+  .btn-retour{
+    position:fixed;top:10px;left:10px;z-index:40;
+    background:var(--fond2);border:2px solid var(--or);color:var(--or);
+    font-weight:bold;padding:8px 14px;border-radius:999px;text-decoration:none;font-size:.85em;
+    box-shadow:0 4px 12px rgba(0,0,0,.4);
+  }
   .barre-haut{
     display:flex; justify-content:space-between; align-items:center;
     background: linear-gradient(135deg, var(--bleu-fonce), #1a1150);
@@ -53,10 +70,6 @@
   }
   .rings{display:flex;align-items:center;gap:6px;font-weight:bold;}
   .rings span.count{color:var(--or);font-size:1.1em;}
-  .reglages-btn, .historique-btn{
-    background:none;border:1px solid rgba(255,255,255,.3);color:var(--texte);
-    border-radius:10px;padding:6px 10px;font-size:.8em;cursor:pointer;
-  }
   .progress-bar{
     height:14px;border-radius:999px;background:rgba(255,255,255,.1);
     overflow:hidden;margin:10px 0 18px;border:1px solid rgba(255,255,255,.2);
@@ -98,11 +111,14 @@
     overflow-y:auto;
   }
   .overlay.actif{display:flex;}
+  .overlay.dessus{z-index:60;}
   .modale{
     background:var(--fond2); border:2px solid var(--or);border-radius:18px;
     padding:22px; max-width:400px; width:100%;text-align:center;
     max-height:88vh; overflow-y:auto;
   }
+  .modale.large{max-width:600px;text-align:left;padding:18px;}
+  .modale.large h3{text-align:center;}
   .modale h3{margin-top:0;color:var(--or);}
   .choix-perso{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center;}
   .choix-perso button{
@@ -111,11 +127,13 @@
   }
   .choix-perso button.suggere{border-color:var(--or); box-shadow:0 0 12px rgba(255,210,63,.5);}
   .suggestion-txt{font-size:.8em;opacity:.75;margin-top:10px;}
-  .modale input[type=text]{
+  .modale input[type=text], .modale input[type=password], .modale select, .modale textarea{
     width:100%; padding:10px; margin:6px 0; border-radius:10px;
     border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.08);
-    color:var(--texte); font-size:1em; text-align:center;
+    color:var(--texte); font-size:1em; font-family:inherit;
   }
+  .modale select option{color:#111;}
+  .modale input[type=password], .modale input.code{text-align:center;}
   .fermer-btn{
     margin-top:10px; background:none; border:none; color:rgba(255,255,255,.5);
     cursor:pointer; font-size:.85em; text-decoration:underline;
@@ -139,29 +157,78 @@
   .carte-recompense h4{margin:6px 0 2px;font-size:.95em;}
   .carte-recompense p{margin:0;opacity:.85;font-size:.75em;}
   .message-motiv{text-align:center; font-size:.95em; opacity:.9; margin:10px 0 4px;min-height:20px;}
-  footer{text-align:center; opacity:.4; font-size:.75em; margin-top:26px;}
-  .liste-participants{list-style:none;padding:0;margin:10px 0;text-align:left;}
-  .liste-participants li{
-    display:flex;justify-content:space-between;align-items:center;
-    background:rgba(255,255,255,.06);padding:8px 12px;border-radius:10px;margin-bottom:6px;
+  footer{text-align:center; font-size:.75em; margin-top:26px;}
+  footer .version{opacity:.4;margin-top:10px;}
+  .btn-parent{
+    background:none;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.65);
+    border-radius:10px;padding:8px 14px;font-size:.9em;cursor:pointer;
   }
-  .liste-participants button{
-    background:var(--rouge-ninja);border:none;color:#fff;border-radius:8px;
-    padding:4px 10px;cursor:pointer;font-size:.8em;
+
+  /* ---------- Mode Parent ---------- */
+  .onglets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px;}
+  .onglet{
+    flex:1 1 auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
+    color:var(--texte);padding:8px 10px;border-radius:10px;font-size:.8em;font-weight:bold;cursor:pointer;
   }
-  .ajout-participant{display:flex;gap:6px;margin-top:8px;}
-  .ajout-participant input{flex:1;margin:0;}
-  .ajout-participant button{
-    background:var(--vert-ninja);border:none;color:#fff;border-radius:10px;
-    padding:0 14px;cursor:pointer;font-weight:bold;
+  .onglet.actif{background:var(--or);color:#2a1c00;border-color:var(--or);}
+  .titre-p{color:var(--or);font-weight:bold;margin:14px 0 6px;}
+  .aide-p{font-size:.78em;opacity:.7;margin:6px 0;}
+  .ligne-p{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    background:rgba(255,255,255,.06);padding:8px 12px;border-radius:10px;margin-bottom:6px;flex-wrap:wrap;
   }
-  .historique-liste{list-style:none;padding:0;margin:10px 0;text-align:left;max-height:300px;overflow-y:auto;}
-  .historique-liste li{
-    background:rgba(255,255,255,.05);padding:8px 12px;border-radius:10px;margin-bottom:6px;font-size:.85em;
+  .ligne-p .actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .mini-btn{border:none;border-radius:8px;padding:6px 10px;font-size:.8em;cursor:pointer;color:#fff;background:var(--bleu);font-weight:bold;}
+  .mini-btn.danger{background:var(--rouge-ninja);}
+  .mini-btn.gris{background:rgba(255,255,255,.18);}
+  .btn-p{
+    display:block;width:100%;margin-top:8px;padding:11px;border-radius:12px;border:none;
+    font-weight:bold;font-size:.95em;cursor:pointer;background:var(--bleu);color:#fff;
+  }
+  .btn-p.vert{background:var(--vert-ninja);}
+  .btn-p.danger{background:var(--rouge-ninja);}
+  .btn-p.gris{background:rgba(255,255,255,.14);}
+  .rangee{display:flex;gap:6px;align-items:center;}
+  .rangee input{flex:1;}
+  .rangee .mini-btn{padding:10px 14px;}
+  .stat{display:inline-block;background:rgba(255,255,255,.08);border-radius:10px;padding:5px 10px;margin:0 6px 6px 0;font-size:.82em;}
+  details.jour{background:rgba(255,255,255,.06);border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:.85em;}
+  details.jour summary{cursor:pointer;font-weight:bold;}
+  details.jour ul{margin:6px 0 2px;padding-left:18px;}
+  .champ-mdp{position:relative;}
+  .champ-mdp input{padding-right:44px !important;}
+  .oeil{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:1.2em;cursor:pointer;padding:4px;}
+  .erreur-p{color:#ff9aa8;font-weight:bold;min-height:20px;font-size:.85em;margin:4px 0;}
+  .rapport{
+    background:#fff;color:#1d1d1d;border-radius:12px;padding:14px;font-size:.82em;
+    white-space:pre-wrap;font-family:Consolas, "Courier New", monospace;line-height:1.45;margin:0;
+  }
+  #toast{
+    display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:70;
+    background:#20233A;color:#fff;padding:12px 20px;border-radius:12px;font-weight:bold;font-size:.9em;
+    box-shadow:0 6px 18px rgba(0,0,0,.4);max-width:88%;text-align:center;
+  }
+  #toast.succes{background:var(--vert-ninja);}
+  #toast.erreur{background:var(--rouge-ninja);}
+  #zoneImpression{display:none;}
+  .fichier-cache{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+
+  @media (max-width:420px){
+    body{padding:10px;}
+    .modale{padding:16px;}
+    .modale.large{padding:12px;}
+    .onglet{font-size:.75em;padding:8px 6px;}
+  }
+  @media print{
+    body{background:#fff !important;color:#000;padding:0;}
+    .wrap, .overlay, .btn-retour, #toast{display:none !important;}
+    #zoneImpression{display:block;}
+    #zoneImpression pre{white-space:pre-wrap;font-family:Consolas, "Courier New", monospace;font-size:11pt;color:#000;}
   }
 </style>
 </head>
 <body>
+<a class="btn-retour" href="index.html">⬅️ Retour</a>
 <div class="wrap">
 
   <header>
@@ -172,11 +239,6 @@
   <div class="barre-haut">
     <div class="jour-badge" id="jourBadge">Jour 1</div>
     <div class="rings">💍 <span class="count" id="ringsCount">0</span>/<span id="totalCount">9</span></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="historique-btn" id="btnHistorique">📜 Historique</button>
-      <button class="reglages-btn" id="btnReglages">⚙️ Joueurs</button>
-      <button class="reglages-btn" id="btnTaches">🗂️ Tâches</button>
-    </div>
   </div>
 
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -197,7 +259,10 @@
     <div class="recompenses" id="zoneRecompenses"></div>
   </section>
 
-  <footer>Sonic Quest du Matin — v3.1</footer>
+  <footer>
+    <button class="btn-parent" id="btnModeParent">👨‍👩‍👧 Mode Parent</button>
+    <div class="version">Sonic Quest du Matin — v4.0</div>
+  </footer>
 </div>
 
 <!-- Modale : qui a fait la tâche partagée -->
@@ -210,55 +275,63 @@
   </div>
 </div>
 
-<!-- Modale : réglages des participants -->
-<div class="overlay" id="overlayReglages">
+<!-- Modale : code parent -->
+<div class="overlay" id="overlayCode">
   <div class="modale">
-    <h3>⚙️ Participants aux tâches</h3>
-    <ul class="liste-participants" id="listeParticipants"></ul>
-    <div class="ajout-participant">
-      <input type="text" id="inputNouveauParticipant" placeholder="Ajouter un prénom" maxlength="16">
-      <button id="btnAjouterParticipant">Ajouter</button>
+    <h3 id="titreCode">🔒 Mode Parent</h3>
+    <p id="texteCode" style="font-size:.9em;opacity:.85;"></p>
+    <div class="champ-mdp">
+      <input type="password" id="inputCode1" class="code" placeholder="Code parent" autocomplete="off">
+      <button type="button" class="oeil" data-oeil="inputCode1" aria-label="Afficher ou masquer le code">👁️</button>
     </div>
-    <div><button class="fermer-btn" id="fermerReglages">Fermer</button></div>
+    <div id="blocCode2" class="champ-mdp">
+      <input type="password" id="inputCode2" class="code" placeholder="Retape le code" autocomplete="off">
+      <button type="button" class="oeil" data-oeil="inputCode2" aria-label="Afficher ou masquer le code">👁️</button>
+    </div>
+    <div class="erreur-p" id="erreurCode"></div>
+    <button class="btn-p vert" id="btnValiderCode">Entrer</button>
+    <div><button class="fermer-btn" id="fermerCode">Annuler</button></div>
   </div>
 </div>
 
-<!-- Modale : historique -->
-<div class="overlay" id="overlayHistorique">
+<!-- Modale : Mode Parent -->
+<div class="overlay" id="overlayParent">
+  <div class="modale large">
+    <h3>👨‍👩‍👧 Mode Parent</h3>
+    <div class="onglets" id="ongletsParent">
+      <button class="onglet" data-onglet="joueurs">👥 Joueurs</button>
+      <button class="onglet" data-onglet="taches">🗂️ Tâches</button>
+      <button class="onglet" data-onglet="historique">📜 Historique</button>
+      <button class="onglet" data-onglet="analyse">📊 Analyse</button>
+      <button class="onglet" data-onglet="rapport">📄 Rapport</button>
+      <button class="onglet" data-onglet="donnees">💾 Données</button>
+      <button class="onglet" data-onglet="reglages">⚙️ Réglages</button>
+    </div>
+    <div id="contenuParent"></div>
+    <button class="btn-p gris" id="btnQuitterParent" style="margin-top:16px;">⬅️ Quitter le Mode Parent</button>
+  </div>
+</div>
+
+<!-- Modale : confirmation -->
+<div class="overlay dessus" id="overlayConfirm">
   <div class="modale">
-    <h3>📜 Qui a fait quoi, et quand</h3>
-    <ul class="historique-liste" id="listeHistorique"></ul>
-    <div><button class="fermer-btn" id="fermerHistorique">Fermer</button></div>
+    <h3>⚠️ Confirmation</h3>
+    <p id="texteConfirm" style="font-size:.95em;"></p>
+    <div class="rangee">
+      <button class="btn-p gris" id="btnAnnulerConfirm">Annuler</button>
+      <button class="btn-p danger" id="btnOkConfirm">Confirmer</button>
+    </div>
   </div>
 </div>
 
-<!-- Modale : gestion des tâches -->
-<div class="overlay" id="overlayTaches">
-  <div class="modale">
-    <h3>🗂️ Gérer les tâches</h3>
-    <div style="text-align:left;font-weight:bold;color:var(--or);margin-top:6px;">🍳 Après le petit-déjeuner</div>
-    <ul class="liste-participants" id="listeTachesMatin"></ul>
-    <div style="text-align:left;font-weight:bold;color:var(--or);margin-top:10px;">🧩 Autres missions</div>
-    <ul class="liste-participants" id="listeTachesSuite"></ul>
-
-    <div style="text-align:left;margin-top:14px;font-weight:bold;color:var(--or);">➕ Ajouter une tâche</div>
-    <input type="text" id="inputNouvelleTache" placeholder="Nom de la tâche" maxlength="60">
-    <input type="text" id="inputIconeTache" placeholder="Emoji (optionnel, ex: 🧦)" maxlength="4">
-    <select id="selectGroupeTache" style="width:100%;padding:10px;margin:6px 0;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:var(--texte);font-size:1em;">
-      <option value="matin">Après le petit-déjeuner</option>
-      <option value="suite" selected>Autres missions</option>
-    </select>
-    <label style="display:flex;align-items:center;gap:8px;justify-content:center;font-size:.9em;margin-top:4px;">
-      <input type="checkbox" id="checkTachePartagee" style="width:auto;margin:0;">
-      Tâche partagée (tour de rôle entre participants)
-    </label>
-    <div><button class="valider-btn" id="btnAjouterTache" style="margin-top:14px;background:var(--vert-ninja);border:none;color:#fff;padding:10px 22px;border-radius:12px;font-weight:bold;cursor:pointer;font-size:1em;">Ajouter la tâche</button></div>
-    <div><button class="fermer-btn" id="fermerTaches">Fermer</button></div>
-  </div>
-</div>
+<input type="file" id="fichierImport" class="fichier-cache" accept=".json,application/json">
+<div id="toast"></div>
+<div id="zoneImpression"></div>
 
 <script>
 (function(){
+
+  const VERSION = "4.0";
 
   const TACHES_PAR_DEFAUT = [
     {id:"table", icone:"🍽️", nom:"Débarrasser et nettoyer la table du petit-déj", groupe:"matin"},
@@ -272,8 +345,7 @@
     {id:"quizdujour", groupe:"suite", quizJour:true}
   ];
 
-  // Les 2 vrais outils de quiz de Fred, alternés chaque jour (pas les quiz maison précédents)
-  // v3.1 : noms de fichiers alignés sur le site GitHub Pages (tous les fichiers à la racine)
+  // Les 2 vrais outils de quiz de Fred, alternés chaque jour
   const QUIZ_VARIANTS = [
     {icone:"⚽", nom:"Quiz Math Foot", fichier:"quiz-math-foot.html"},
     {icone:"🧩", nom:"Résolution de problèmes CM1", fichier:"resolution_problemes_cm1.html"}
@@ -281,6 +353,10 @@
   function quizDuJour(numeroJour){
     return QUIZ_VARIANTS[(numeroJour - 1) % QUIZ_VARIANTS.length];
   }
+
+  const CLE_CODE = "sq_code_parent";
+  const CLE_NOTES = "sq_notes_parent";
+  const PREFIXE_JOUR = "sq_day_";
 
   let taches = [];
   let participants = ["Joueur 1", "Joueur 2"];
@@ -290,6 +366,11 @@
   let etatJour = null;
   let tachePartageEnCours = null;
 
+  function $(id){ return document.getElementById(id); }
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
   function dateDuJour(){
     const d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
@@ -298,10 +379,16 @@
     const [y,m,d] = iso.split("-");
     return d + "/" + m + "/" + y;
   }
+  // "AAAA-MM-JJ" -> Date locale (jamais new Date("chaîne"), qui décale en UTC)
+  function parseDate(iso){
+    const [y,m,d] = iso.split("-").map(Number);
+    return new Date(y, m-1, d);
+  }
+  function ecartJours(isoA, isoB){
+    return Math.round((parseDate(isoB) - parseDate(isoA)) / 86400000);
+  }
 
-  // Stockage local au navigateur : ce fichier est ouvert directement (tablette/PC),
-  // pas forcément dans l'interface Claude, donc on utilise localStorage plutôt que
-  // le stockage propre aux artefacts Claude (qui échouait sur cet appareil).
+  // Stockage local (fichier ouvert directement sur tablette/PC)
   function storageGet(key){
     try{
       const v = localStorage.getItem(key);
@@ -318,6 +405,24 @@
       console.error("Erreur de sauvegarde", key, e);
     }
   }
+  function storageRemove(key){
+    try{ localStorage.removeItem(key); }catch(e){}
+  }
+  function clesSonic(){
+    const cles = [];
+    try{
+      for(let i = 0; i < localStorage.length; i++){
+        const k = localStorage.key(i);
+        if(k && k.indexOf("sq_") === 0) cles.push(k);
+      }
+    }catch(e){}
+    return cles;
+  }
+
+  function nomTache(t, numeroJour){
+    if(t.quizJour) return "Quiz du jour : " + quizDuJour(numeroJour || dayCount).nom;
+    return t.nom;
+  }
 
   function creerEtatVide(){
     const tacheState = {};
@@ -329,21 +434,31 @@
     return {date: todayStr, tasks: tacheState, doneBy: doneBy};
   }
 
+  // Aligne l'état du jour sur la liste des tâches (ajouts ET retraits) et mémorise leurs noms
   function synchroniserEtatAvecTaches(){
     if(!etatJour) return;
+    if(!etatJour.doneBy) etatJour.doneBy = {};
+    const ids = new Set(taches.map(t => t.id));
     taches.forEach(t=>{
       if(!(t.id in etatJour.tasks)) etatJour.tasks[t.id] = false;
       if(t.partage && !(t.id in etatJour.doneBy)) etatJour.doneBy[t.id] = null;
     });
+    Object.keys(etatJour.tasks).forEach(id => { if(!ids.has(id)) delete etatJour.tasks[id]; });
+    Object.keys(etatJour.doneBy).forEach(id => { if(!ids.has(id)) delete etatJour.doneBy[id]; });
+    etatJour.noms = {};
+    taches.forEach(t => { etatJour.noms[t.id] = nomTache(t, dayCount); });
+    etatJour.numeroJour = dayCount;
   }
 
   function init(){
     todayStr = dateDuJour();
+    dayCount = 1;
+    participants = ["Joueur 1", "Joueur 2"];
+    historique = [];
 
     const t = storageGet("sq_taches");
     if(t && Array.isArray(t) && t.length>0) taches = t;
-    else { taches = TACHES_PAR_DEFAUT; storageSet("sq_taches", taches); }
-    document.getElementById("totalCount").textContent = taches.length;
+    else { taches = JSON.parse(JSON.stringify(TACHES_PAR_DEFAUT)); storageSet("sq_taches", taches); }
 
     const p = storageGet("sq_participants");
     if(p && Array.isArray(p) && p.length>0) participants = p;
@@ -352,27 +467,27 @@
     const h = storageGet("sq_historique");
     if(h && Array.isArray(h)) historique = h;
 
-    const jourExistant = storageGet("sq_day_" + todayStr);
+    const jourExistant = storageGet(PREFIXE_JOUR + todayStr);
     if(jourExistant){
       etatJour = jourExistant;
       const dc = storageGet("sq_dayCount_valeur_" + todayStr);
       if(dc) dayCount = dc;
-      synchroniserEtatAvecTaches();
     } else {
       const dcPrecedent = storageGet("sq_dayCount");
       dayCount = dcPrecedent ? dcPrecedent + 1 : 1;
       storageSet("sq_dayCount", dayCount);
       storageSet("sq_dayCount_valeur_" + todayStr, dayCount);
       etatJour = creerEtatVide();
-      storageSet("sq_day_" + todayStr, etatJour);
     }
+    synchroniserEtatAvecTaches();
+    storageSet(PREFIXE_JOUR + todayStr, etatJour);
 
-    document.getElementById("jourBadge").textContent = "Jour " + dayCount;
+    $("jourBadge").textContent = "Jour " + dayCount;
     render();
   }
 
   function render(){
-    document.getElementById("totalCount").textContent = taches.length;
+    $("totalCount").textContent = taches.length;
     renderGroupe("groupeMatin", taches.filter(t=>t.groupe==="matin"));
     renderGroupe("groupeSuite", taches.filter(t=>t.groupe==="suite"));
     renderProgress();
@@ -380,7 +495,7 @@
   }
 
   function renderGroupe(idConteneur, liste){
-    const conteneur = document.getElementById(idConteneur);
+    const conteneur = $(idConteneur);
     conteneur.innerHTML = "";
     liste.forEach(t=>{
       const fait = etatJour.tasks[t.id];
@@ -392,13 +507,14 @@
         div.innerHTML = `
           <div class="icone">${q.icone}</div>
           <div class="contenu-tache">
-            <div class="nom-tache">${q.nom}</div>
+            <div class="nom-tache">${esc(q.nom)}</div>
             <div class="fait-par">
-              <a href="${q.fichier}" target="_blank" class="lien-quiz" onclick="event.stopPropagation();">▶️ Ouvrir le quiz</a>
+              <a href="${q.fichier}" target="_blank" class="lien-quiz">▶️ Ouvrir le quiz</a>
             </div>
           </div>
           <div class="check">${fait ? "✔" : ""}</div>
         `;
+        div.querySelector("a").addEventListener("click", e => e.stopPropagation());
         div.onclick = () => onTapTache(t);
         conteneur.appendChild(div);
         return;
@@ -407,13 +523,13 @@
       let faitParHtml = "";
       if(t.partage){
         const nomFait = etatJour.doneBy[t.id];
-        faitParHtml = `<div class="fait-par">${fait ? "✅ Fait par " + nomFait : "À tour de rôle 🔄"}</div>`;
+        faitParHtml = `<div class="fait-par">${fait ? "✅ Fait par " + esc(nomFait) : "À tour de rôle 🔄"}</div>`;
       }
       div.innerHTML = `
         ${t.partage ? '<div class="badge-partage">TOUR DE RÔLE</div>' : ''}
-        <div class="icone">${t.icone}</div>
+        <div class="icone">${esc(t.icone)}</div>
         <div class="contenu-tache">
-          <div class="nom-tache">${t.nom}</div>
+          <div class="nom-tache">${esc(t.nom)}</div>
           ${faitParHtml}
         </div>
         <div class="check">${fait ? "✔" : ""}</div>
@@ -454,10 +570,9 @@
 
   function ouvrirModalePartage(t){
     tachePartageEnCours = t;
-    document.getElementById("titrePartage").textContent = "Qui a fait : " + t.nom + " ?";
+    $("titrePartage").textContent = "Qui a fait : " + t.nom + " ?";
 
     const dernier = dernierePersonnePour(t.id);
-    // suggestion = participant qui ne l'a pas fait depuis le plus longtemps (ou jamais)
     const tries = [...participants].sort((a,b)=>{
       const da = dateDerniereFoisPour(t.id, a);
       const db = dateDerniereFoisPour(t.id, b);
@@ -468,7 +583,7 @@
     });
     const suggere = tries[0];
 
-    const container = document.getElementById("choixPersoContainer");
+    const container = $("choixPersoContainer");
     container.innerHTML = "";
     participants.forEach(p=>{
       const btn = document.createElement("button");
@@ -478,7 +593,7 @@
       container.appendChild(btn);
     });
 
-    const suggTxt = document.getElementById("suggestionTxt");
+    const suggTxt = $("suggestionTxt");
     if(dernier && suggere){
       suggTxt.textContent = "💡 La dernière fois c'était " + dernier + ", ça pourrait être le tour de " + suggere + " !";
     } else if(suggere){
@@ -486,8 +601,7 @@
     } else {
       suggTxt.textContent = "";
     }
-
-    document.getElementById("overlayPartage").classList.add("actif");
+    $("overlayPartage").classList.add("actif");
   }
 
   function choisirPersonnePartage(personne){
@@ -497,23 +611,24 @@
     etatJour.doneBy[t.id] = personne;
     historique.unshift({date: todayStr, taskId: t.id, taskName: t.nom, person: personne});
     storageSet("sq_historique", historique);
-    document.getElementById("overlayPartage").classList.remove("actif");
+    $("overlayPartage").classList.remove("actif");
     sauverJourEtRender();
   }
 
   function sauverJourEtRender(){
-    storageSet("sq_day_" + todayStr, etatJour);
+    synchroniserEtatAvecTaches();
+    storageSet(PREFIXE_JOUR + todayStr, etatJour);
     render();
   }
 
   function renderProgress(){
     const total = taches.length;
     const faites = taches.filter(t=>etatJour.tasks[t.id]).length;
-    document.getElementById("ringsCount").textContent = faites;
-    document.getElementById("progressFill").style.width = (total>0 ? (faites/total*100) : 0) + "%";
+    $("ringsCount").textContent = faites;
+    $("progressFill").style.width = (total>0 ? (faites/total*100) : 0) + "%";
 
-    const msg = document.getElementById("messageMotiv");
-    if(total===0) msg.textContent = "Ajoute des tâches avec 🗂️ Tâches pour commencer !";
+    const msg = $("messageMotiv");
+    if(total===0) msg.textContent = "Demande à tes parents d'ajouter des tâches (Mode Parent) !";
     else if(faites === total) msg.textContent = "🏆 Mission du jour terminée à 100% !";
     else if(faites === 0) msg.textContent = "🚀 Prêt à foncer comme Sonic ce matin ?";
     else if(faites < total/2) msg.textContent = "💪 Bon départ, continue comme ça !";
@@ -529,7 +644,7 @@
       {emoji:"📺", nom:"Dessin animé", desc:"un épisode au choix"},
       {emoji:"🎬", nom:"Film", desc:"séance ciné maison"}
     ];
-    const zone = document.getElementById("zoneRecompenses");
+    const zone = $("zoneRecompenses");
     zone.innerHTML = "";
     RECOMPENSES.forEach(r=>{
       const div = document.createElement("div");
@@ -543,71 +658,543 @@
     });
   }
 
-  // --- Réglages participants ---
-  function renderListeParticipants(){
-    const ul = document.getElementById("listeParticipants");
-    ul.innerHTML = "";
-    participants.forEach((p, idx)=>{
-      const li = document.createElement("li");
-      li.innerHTML = `<span>🥷 ${p}</span>`;
-      const btn = document.createElement("button");
-      btn.textContent = "Retirer";
-      btn.onclick = () => {
-        if(participants.length <= 1) return;
-        participants.splice(idx,1);
-        storageSet("sq_participants", participants);
-        renderListeParticipants();
-        render();
-      };
-      li.appendChild(btn);
-      ul.appendChild(li);
-    });
-  }
-
-  document.getElementById("btnReglages").onclick = () => {
-    renderListeParticipants();
-    document.getElementById("overlayReglages").classList.add("actif");
-  };
-  document.getElementById("fermerReglages").onclick = () => {
-    document.getElementById("overlayReglages").classList.remove("actif");
-  };
-  document.getElementById("btnAjouterParticipant").onclick = () => {
-    const input = document.getElementById("inputNouveauParticipant");
-    const val = input.value.trim();
-    if(val && !participants.includes(val)){
-      participants.push(val);
-      storageSet("sq_participants", participants);
-      input.value = "";
-      renderListeParticipants();
-      render();
-    }
-  };
-
-  // --- Historique ---
-  document.getElementById("btnHistorique").onclick = () => {
-    const ul = document.getElementById("listeHistorique");
-    ul.innerHTML = "";
-    if(historique.length === 0){
-      ul.innerHTML = "<li>Aucune tâche partagée enregistrée pour l'instant.</li>";
-    } else {
-      historique.slice(0,30).forEach(e=>{
-        const li = document.createElement("li");
-        li.textContent = dateAffichage(e.date) + " — " + e.taskName + " — " + e.person;
-        ul.appendChild(li);
-      });
-    }
-    document.getElementById("overlayHistorique").classList.add("actif");
-  };
-  document.getElementById("fermerHistorique").onclick = () => {
-    document.getElementById("overlayHistorique").classList.remove("actif");
-  };
-
-  document.getElementById("fermerPartage").onclick = () => {
-    document.getElementById("overlayPartage").classList.remove("actif");
+  $("fermerPartage").onclick = () => {
+    $("overlayPartage").classList.remove("actif");
     tachePartageEnCours = null;
   };
 
-  // --- Gestion des tâches (ajout / suppression) ---
+  /* =====================================================================
+     MESSAGES ET CONFIRMATIONS (remplacent alert()/confirm())
+     ===================================================================== */
+  let toastTimer = null;
+  function toast(message, type){
+    const t = $("toast");
+    t.className = type || "";
+    t.textContent = message;
+    t.style.display = "block";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.display = "none"; }, 3200);
+  }
+  let rappelConfirm = null;
+  function demanderConfirmation(message, fn){
+    $("texteConfirm").textContent = message;
+    rappelConfirm = fn;
+    $("overlayConfirm").classList.add("actif");
+  }
+  $("btnAnnulerConfirm").onclick = () => { rappelConfirm = null; $("overlayConfirm").classList.remove("actif"); };
+  $("btnOkConfirm").onclick = () => {
+    $("overlayConfirm").classList.remove("actif");
+    const fn = rappelConfirm; rappelConfirm = null;
+    if(typeof fn === "function") fn();
+  };
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-oeil]");
+    if(!b) return;
+    const champ = $(b.dataset.oeil);
+    if(champ) champ.type = champ.type === "password" ? "text" : "password";
+  });
+
+  /* =====================================================================
+     MODE PARENT — accès par code
+     ===================================================================== */
+  let modeCode = "saisie";
+  function ouvrirModeParent(){
+    const code = storageGet(CLE_CODE);
+    modeCode = code ? "saisie" : "creation";
+    $("titreCode").textContent = code ? "🔒 Mode Parent" : "🔒 Crée ton code parent";
+    $("texteCode").textContent = code
+      ? "Entre le code parent."
+      : "Première ouverture : choisis un code d'au moins 4 caractères. Il sera demandé à chaque accès au Mode Parent.";
+    $("blocCode2").style.display = code ? "none" : "block";
+    $("btnValiderCode").textContent = code ? "Entrer" : "Créer le code";
+    ["inputCode1","inputCode2"].forEach(id => { $(id).value = ""; $(id).type = "password"; });
+    $("erreurCode").textContent = "";
+    $("overlayCode").classList.add("actif");
+    setTimeout(() => $("inputCode1").focus(), 50);
+  }
+  function validerCode(){
+    const v1 = $("inputCode1").value.trim();
+    const erreur = $("erreurCode");
+    if(modeCode === "creation"){
+      if(v1.length < 4){ erreur.textContent = "Le code doit contenir au moins 4 caractères."; return; }
+      if(v1 !== $("inputCode2").value.trim()){ erreur.textContent = "Les deux codes ne sont pas identiques."; return; }
+      storageSet(CLE_CODE, v1);
+      toast("Code parent créé.", "succes");
+    } else if(v1 !== storageGet(CLE_CODE)){
+      erreur.textContent = "Code incorrect.";
+      return;
+    }
+    $("overlayCode").classList.remove("actif");
+    afficherModeParent("joueurs");
+  }
+  $("btnModeParent").onclick = ouvrirModeParent;
+  $("btnValiderCode").onclick = validerCode;
+  $("fermerCode").onclick = () => $("overlayCode").classList.remove("actif");
+  ["inputCode1","inputCode2"].forEach(id => $(id).addEventListener("keydown", e => { if(e.key === "Enter") validerCode(); }));
+
+  let ongletActif = "joueurs";
+  let joueurEnRenommage = -1;
+  let filtreHistorique = "__tous__";
+
+  function afficherModeParent(onglet){
+    $("overlayParent").classList.add("actif");
+    afficherOnglet(onglet || ongletActif);
+  }
+  function quitterModeParent(){
+    $("overlayParent").classList.remove("actif");
+    joueurEnRenommage = -1;
+    render();
+  }
+  $("btnQuitterParent").onclick = quitterModeParent;
+  $("ongletsParent").addEventListener("click", e => {
+    const b = e.target.closest("[data-onglet]");
+    if(b) afficherOnglet(b.dataset.onglet);
+  });
+
+  function afficherOnglet(nom){
+    ongletActif = nom;
+    document.querySelectorAll("#ongletsParent .onglet").forEach(o => o.classList.toggle("actif", o.dataset.onglet === nom));
+    const c = $("contenuParent");
+    if(nom === "joueurs") c.innerHTML = htmlJoueurs();
+    else if(nom === "taches") c.innerHTML = htmlTaches();
+    else if(nom === "historique") c.innerHTML = htmlHistorique();
+    else if(nom === "analyse") c.innerHTML = htmlAnalyse();
+    else if(nom === "rapport") c.innerHTML = htmlRapport();
+    else if(nom === "donnees") c.innerHTML = htmlDonnees();
+    else if(nom === "reglages") c.innerHTML = htmlReglages();
+  }
+
+  /* ---------- Onglet Joueurs ---------- */
+  function htmlJoueurs(){
+    let html = '<div class="titre-p">👥 Joueurs</div>';
+    participants.forEach((p, i) => {
+      if(i === joueurEnRenommage){
+        html += `<div class="ligne-p" style="display:block;">
+          <div>Renommer « ${esc(p)} » :</div>
+          <input type="text" id="inputRenommer" value="${esc(p)}" maxlength="16">
+          <div class="actions">
+            <button class="mini-btn" data-action="valider-renommer" data-i="${i}">Valider</button>
+            <button class="mini-btn gris" data-action="annuler-renommer">Annuler</button>
+          </div></div>`;
+      } else {
+        html += `<div class="ligne-p"><span>🥷 ${esc(p)}</span><span class="actions">
+          <button class="mini-btn" data-action="renommer" data-i="${i}">Renommer</button>
+          <button class="mini-btn danger" data-action="supprimer-joueur" data-i="${i}">Supprimer</button>
+        </span></div>`;
+      }
+    });
+    html += `<div class="titre-p">➕ Ajouter un joueur</div>
+      <div class="rangee"><input type="text" id="inputNouveauJoueur" placeholder="Prénom" maxlength="16">
+      <button class="mini-btn" data-action="ajouter-joueur">Ajouter</button></div>
+      <p class="aide-p">Il faut au moins un joueur. Supprimer un joueur ne supprime pas l'historique déjà enregistré.</p>`;
+    return html;
+  }
+
+  // Applique un renommage à toutes les traces enregistrées (historique, jours passés, jour en cours)
+  function renommerPartout(ancien, nouveau){
+    historique.forEach(e => { if(e.person === ancien) e.person = nouveau; });
+    storageSet("sq_historique", historique);
+    listerJours().forEach(j => {
+      let modifie = false;
+      Object.keys(j.etat.doneBy || {}).forEach(id => {
+        if(j.etat.doneBy[id] === ancien){ j.etat.doneBy[id] = nouveau; modifie = true; }
+      });
+      if(modifie){
+        if(j.date === todayStr) etatJour = j.etat;
+        storageSet(PREFIXE_JOUR + j.date, j.etat);
+      }
+    });
+  }
+
+  /* ---------- Onglet Tâches ---------- */
+  function htmlTaches(){
+    function liste(groupe){
+      const items = taches.filter(t => t.groupe === groupe);
+      if(items.length === 0) return '<div class="ligne-p">Aucune tâche.</div>';
+      return items.map(t => {
+        const nom = t.quizJour ? "🧠 Quiz du jour (alterné automatiquement)" : (esc(t.icone) + " " + esc(t.nom) + (t.partage ? " 🔄" : ""));
+        return `<div class="ligne-p"><span>${nom}</span><span class="actions">
+          <button class="mini-btn danger" data-action="retirer-tache" data-id="${esc(t.id)}">Retirer</button></span></div>`;
+      }).join("");
+    }
+    return `<div class="titre-p">🍳 Après le petit-déjeuner</div>${liste("matin")}
+      <div class="titre-p">🧩 Autres missions</div>${liste("suite")}
+      <div class="titre-p">➕ Ajouter une tâche</div>
+      <input type="text" id="inputNouvelleTache" placeholder="Nom de la tâche" maxlength="60">
+      <input type="text" id="inputIconeTache" placeholder="Emoji (optionnel, ex : 🧦)" maxlength="4">
+      <select id="selectGroupeTache">
+        <option value="matin">Après le petit-déjeuner</option>
+        <option value="suite" selected>Autres missions</option>
+      </select>
+      <div class="ligne-p" data-action="basculer-partage" id="lignePartage" style="cursor:pointer;">
+        <span id="casePartage">☐ Tâche partagée (tour de rôle entre joueurs)</span>
+      </div>
+      <button class="btn-p vert" data-action="ajouter-tache">Ajouter la tâche</button>
+      <button class="btn-p gris" data-action="restaurer-taches">Restaurer les tâches d'origine</button>`;
+  }
+  let nouvelleTachePartagee = false;
+
+  /* ---------- Jours enregistrés ---------- */
+  function listerJours(){
+    const jours = [];
+    clesSonic().forEach(k => {
+      if(k.indexOf(PREFIXE_JOUR) !== 0) return;
+      const date = k.slice(PREFIXE_JOUR.length);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      const etat = storageGet(k);
+      if(etat && etat.tasks) jours.push({date, etat});
+    });
+    jours.sort((a,b) => a.date < b.date ? 1 : -1);
+    return jours;
+  }
+  function nomDansJour(j, id){
+    if(j.etat.noms && j.etat.noms[id]) return j.etat.noms[id];
+    const t = taches.find(x => x.id === id);
+    if(t) return t.quizJour ? "Quiz du jour" : t.nom;
+    const h = historique.find(e => e.taskId === id);
+    return h ? h.taskName : id;
+  }
+  function bilanJour(j){
+    const ids = Object.keys(j.etat.tasks);
+    const faites = ids.filter(id => j.etat.tasks[id]);
+    return { total: ids.length, faites: faites.length, nonFaites: ids.filter(id => !j.etat.tasks[id]), complet: ids.length > 0 && faites.length === ids.length };
+  }
+
+  /* ---------- Onglet Historique ---------- */
+  function htmlHistorique(){
+    const noms = Array.from(new Set(participants.concat(historique.map(e => e.person)))).filter(Boolean);
+    let html = `<div class="titre-p">📜 Historique</div>
+      <select id="selectFiltreHistorique">
+        <option value="__tous__"${filtreHistorique === "__tous__" ? " selected" : ""}>Tous les jours</option>
+        ${noms.map(n => `<option value="${esc(n)}"${filtreHistorique === n ? " selected" : ""}>Tâches partagées de ${esc(n)}</option>`).join("")}
+      </select>`;
+    if(filtreHistorique === "__tous__"){
+      const jours = listerJours().slice(0, 60);
+      if(jours.length === 0) return html + '<p class="aide-p">Aucun jour enregistré.</p>';
+      jours.forEach(j => {
+        const b = bilanJour(j);
+        const partagees = Object.keys(j.etat.doneBy || {}).filter(id => j.etat.doneBy[id]);
+        html += `<details class="jour"><summary>${dateAffichage(j.date)}${j.date === todayStr ? " (aujourd'hui)" : ""} — ${b.faites}/${b.total} ${b.complet ? "🏆" : ""}</summary>
+          ${b.nonFaites.length ? "<div>Non fait :</div><ul>" + b.nonFaites.map(id => "<li>" + esc(nomDansJour(j, id)) + "</li>").join("") + "</ul>" : "<div>✅ Tout est fait.</div>"}
+          ${partagees.length ? "<div>Tâches partagées :</div><ul>" + partagees.map(id => "<li>" + esc(nomDansJour(j, id)) + " — " + esc(j.etat.doneBy[id]) + "</li>").join("") + "</ul>" : ""}
+        </details>`;
+      });
+    } else {
+      const entrees = historique.filter(e => e.person === filtreHistorique);
+      if(entrees.length === 0) return html + '<p class="aide-p">Aucune tâche partagée enregistrée pour ce joueur.</p>';
+      entrees.slice(0, 100).forEach(e => {
+        html += `<div class="ligne-p"><span>${dateAffichage(e.date)}</span><span>${esc(e.taskName)}</span></div>`;
+      });
+    }
+    return html;
+  }
+
+  /* ---------- Calculs d'analyse (partagés par Analyse et Rapport) ---------- */
+  function calculerAnalyse(){
+    const jours = listerJours();
+    const bilans = jours.map(j => ({ j, b: bilanJour(j) })).filter(x => x.b.total > 0);
+    const complets = bilans.filter(x => x.b.complet).length;
+    const tauxMoyen = bilans.length ? Math.round(100 * bilans.reduce((s, x) => s + x.b.faites / x.b.total, 0) / bilans.length) : 0;
+
+    // Série de jours à 100 % (aujourd'hui compte s'il est déjà complet)
+    let serie = 0;
+    const parDate = {};
+    bilans.forEach(x => { parDate[x.j.date] = x.b.complet; });
+    let curseur = parDate[todayStr] ? todayStr : null;
+    if(!curseur){
+      const hier = parseDate(todayStr); hier.setDate(hier.getDate() - 1);
+      curseur = hier.getFullYear() + "-" + String(hier.getMonth()+1).padStart(2,"0") + "-" + String(hier.getDate()).padStart(2,"0");
+    }
+    while(parDate[curseur]){
+      serie++;
+      const d = parseDate(curseur); d.setDate(d.getDate() - 1);
+      curseur = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+    }
+
+    // Tâches souvent oubliées (jours terminés uniquement, pas aujourd'hui)
+    const oublis = {};
+    bilans.filter(x => x.j.date !== todayStr).forEach(x => {
+      Object.keys(x.j.etat.tasks).forEach(id => {
+        const nom = nomDansJour(x.j, id).replace(/^Quiz du jour : .*/, "Quiz du jour");
+        if(!oublis[nom]) oublis[nom] = { presence: 0, oubli: 0 };
+        oublis[nom].presence++;
+        if(!x.j.etat.tasks[id]) oublis[nom].oubli++;
+      });
+    });
+    const topOublis = Object.keys(oublis)
+      .map(n => ({ nom: n, oubli: oublis[n].oubli, presence: oublis[n].presence }))
+      .filter(o => o.oubli > 0)
+      .sort((a, b) => (b.oubli / b.presence) - (a.oubli / a.presence) || b.oubli - a.oubli)
+      .slice(0, 5);
+
+    // Répartition des tâches partagées
+    const repartition = {};
+    historique.forEach(e => {
+      if(!repartition[e.person]) repartition[e.person] = {};
+      repartition[e.person][e.taskName] = (repartition[e.person][e.taskName] || 0) + 1;
+    });
+
+    return { jours, bilans, complets, tauxMoyen, serie, topOublis, repartition };
+  }
+
+  /* ---------- Onglet Analyse ---------- */
+  function htmlAnalyse(){
+    const a = calculerAnalyse();
+    if(a.bilans.length === 0) return '<div class="titre-p">📊 Analyse</div><p class="aide-p">Pas encore de données.</p>';
+    let html = `<div class="titre-p">📊 Vue d'ensemble</div>
+      <span class="stat">${a.bilans.length} jour(s) enregistré(s)</span>
+      <span class="stat">${a.complets} jour(s) à 100 % 🏆</span>
+      <span class="stat">Réussite moyenne : ${a.tauxMoyen} %</span>
+      <span class="stat">Série en cours : ${a.serie} jour(s) 🔥</span>
+      <div class="titre-p">😴 Tâches les plus souvent oubliées</div>`;
+    html += a.topOublis.length
+      ? a.topOublis.map(o => `<div class="ligne-p"><span>${esc(o.nom)}</span><span>oubliée ${o.oubli} fois sur ${o.presence}</span></div>`).join("")
+      : '<p class="aide-p">Aucun oubli sur les jours terminés. Bravo !</p>';
+    html += '<div class="titre-p">🔄 Tâches partagées : qui fait quoi</div>';
+    const personnes = Object.keys(a.repartition);
+    html += personnes.length
+      ? personnes.map(p => `<div class="ligne-p" style="display:block;"><b>🥷 ${esc(p)}</b><br>${Object.keys(a.repartition[p]).map(t => esc(t) + " : " + a.repartition[p][t] + " fois").join(" · ")}</div>`).join("")
+      : '<p class="aide-p">Aucune tâche partagée enregistrée.</p>';
+    return html;
+  }
+
+  /* ---------- Onglet Rapport (évolutif) ---------- */
+  function construireRapportTexte(){
+    const a = calculerAnalyse();
+    const maintenant = new Date();
+    const L = [];
+    L.push("=== Rapport Sonic Quest du Matin (v" + VERSION + ") ===");
+    L.push("Généré le " + maintenant.toLocaleDateString("fr-FR") + " à " + maintenant.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}));
+    L.push("");
+    L.push("--- Configuration ---");
+    L.push("Joueurs : " + participants.join(", "));
+    L.push("Tâches (" + taches.length + ") : " + taches.map(t => t.quizJour ? "Quiz du jour (alterné)" : t.nom + (t.partage ? " [partagée]" : "")).join(" ; "));
+    L.push("");
+    L.push("--- Vue d'ensemble ---");
+    L.push("Jours enregistrés : " + a.bilans.length + " | Jours à 100 % : " + a.complets + " | Réussite moyenne : " + a.tauxMoyen + " % | Série en cours : " + a.serie + " jour(s)");
+    L.push("");
+    L.push("--- Tâches les plus souvent oubliées ---");
+    if(a.topOublis.length === 0) L.push("Aucun oubli sur les jours terminés.");
+    a.topOublis.forEach(o => L.push("- " + o.nom + " : oubliée " + o.oubli + " fois sur " + o.presence));
+    L.push("");
+    L.push("--- Tâches partagées : qui fait quoi ---");
+    const personnes = Object.keys(a.repartition);
+    if(personnes.length === 0) L.push("Aucune tâche partagée enregistrée.");
+    personnes.forEach(p => L.push("- " + p + " : " + Object.keys(a.repartition[p]).map(t => t + " ×" + a.repartition[p][t]).join(", ")));
+    L.push("");
+    L.push("--- 14 derniers jours ---");
+    a.bilans.slice(0, 14).forEach(x => {
+      const nonFaites = x.b.nonFaites.map(id => nomDansJour(x.j, id));
+      L.push(dateAffichage(x.j.date) + " : " + x.b.faites + "/" + x.b.total + (x.b.complet ? " (100 %)" : " — non fait : " + nonFaites.join(", ")));
+    });
+    L.push("");
+    L.push("--- Observations du parent ---");
+    const notes = storageGet(CLE_NOTES);
+    L.push(notes && notes.trim() ? notes.trim() : "(aucune)");
+    return L.join("\n");
+  }
+  function htmlRapport(){
+    const notes = storageGet(CLE_NOTES) || "";
+    return `<div class="titre-p">📝 Tes observations (ajoutées au rapport)</div>
+      <textarea id="zoneNotes" rows="3" placeholder="Ex : il oublie le lit le mercredi, la tâche lecture est trop longue…">${esc(notes)}</textarea>
+      <button class="mini-btn" data-action="enregistrer-notes">Enregistrer les observations</button>
+      <div class="titre-p">📄 Rapport</div>
+      <pre class="rapport" id="texteRapport">${esc(construireRapportTexte())}</pre>
+      <button class="btn-p" data-action="imprimer-rapport">🖨️ Imprimer / PDF</button>
+      <button class="btn-p" data-action="telecharger-rapport">📄 Télécharger en .txt</button>
+      <button class="btn-p gris" data-action="copier-rapport">📋 Copier le texte (pour le transmettre à Claude)</button>`;
+  }
+
+  /* ---------- Onglet Données ---------- */
+  function htmlDonnees(){
+    return `<div class="titre-p">💾 Sauvegarde</div>
+      <button class="btn-p" data-action="exporter">📤 Exporter les données (.json)</button>
+      <button class="btn-p" data-action="importer">📂 Importer une sauvegarde (.json)</button>
+      <div class="titre-p">🧹 Réinitialiser</div>
+      <button class="btn-p gris" data-action="reset-jour">Réinitialiser la journée</button>
+      <button class="btn-p danger" data-action="reset-tout">Tout réinitialiser (le code parent est conservé)</button>`;
+  }
+
+  /* ---------- Onglet Réglages ---------- */
+  function htmlReglages(){
+    return `<div class="titre-p">🔑 Changer le code parent</div>
+      <div class="champ-mdp"><input type="password" id="nouveauCode1" class="code" placeholder="Nouveau code" autocomplete="off">
+        <button type="button" class="oeil" data-oeil="nouveauCode1">👁️</button></div>
+      <div class="champ-mdp"><input type="password" id="nouveauCode2" class="code" placeholder="Retape le nouveau code" autocomplete="off">
+        <button type="button" class="oeil" data-oeil="nouveauCode2">👁️</button></div>
+      <button class="btn-p vert" data-action="changer-code">Enregistrer le nouveau code</button>
+      <p class="aide-p">Le code protège le Mode Parent sur cet appareil. Si tu l'oublies, il faut effacer les données du site dans le navigateur.</p>`;
+  }
+
+  /* ---------- Actions du Mode Parent (délégation) ---------- */
+  function telecharger(contenu, nomFichier, type){
+    const blob = new Blob([contenu], {type: type + ";charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = nomFichier;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  $("contenuParent").addEventListener("change", e => {
+    if(e.target.id === "selectFiltreHistorique"){
+      filtreHistorique = e.target.value;
+      afficherOnglet("historique");
+    }
+  });
+
+  $("contenuParent").addEventListener("click", e => {
+    const b = e.target.closest("[data-action]");
+    if(!b) return;
+    const action = b.dataset.action;
+    const i = b.dataset.i !== undefined ? Number(b.dataset.i) : -1;
+
+    if(action === "renommer"){ joueurEnRenommage = i; afficherOnglet("joueurs"); }
+    else if(action === "annuler-renommer"){ joueurEnRenommage = -1; afficherOnglet("joueurs"); }
+    else if(action === "valider-renommer"){
+      const ancien = participants[i];
+      const nouveau = $("inputRenommer").value.trim();
+      if(!nouveau){ toast("Le prénom ne peut pas être vide.", "erreur"); return; }
+      if(nouveau !== ancien && participants.includes(nouveau)){ toast("Ce prénom existe déjà.", "erreur"); return; }
+      participants[i] = nouveau;
+      storageSet("sq_participants", participants);
+      if(nouveau !== ancien) renommerPartout(ancien, nouveau);
+      joueurEnRenommage = -1;
+      toast("Joueur renommé.", "succes");
+      afficherOnglet("joueurs");
+    }
+    else if(action === "supprimer-joueur"){
+      if(participants.length <= 1){ toast("Il faut garder au moins un joueur.", "erreur"); return; }
+      const nom = participants[i];
+      demanderConfirmation("Supprimer « " + nom + " » de la liste des joueurs ? Son historique est conservé.", () => {
+        participants.splice(i, 1);
+        storageSet("sq_participants", participants);
+        afficherOnglet("joueurs");
+        toast(nom + " a été retiré.", "succes");
+      });
+    }
+    else if(action === "ajouter-joueur"){
+      const champ = $("inputNouveauJoueur");
+      const val = champ.value.trim();
+      if(!val){ toast("Écris un prénom.", "erreur"); return; }
+      if(participants.includes(val)){ toast("Ce prénom existe déjà.", "erreur"); return; }
+      participants.push(val);
+      storageSet("sq_participants", participants);
+      afficherOnglet("joueurs");
+      toast(val + " a été ajouté.", "succes");
+    }
+    else if(action === "retirer-tache"){
+      const t = taches.find(x => x.id === b.dataset.id);
+      if(!t) return;
+      demanderConfirmation("Retirer la tâche « " + nomTache(t) + " » ? Les jours déjà enregistrés gardent leur historique.", () => {
+        taches = taches.filter(x => x.id !== t.id);
+        storageSet("sq_taches", taches);
+        sauverJourEtRender();
+        afficherOnglet("taches");
+      });
+    }
+    else if(action === "basculer-partage"){
+      nouvelleTachePartagee = !nouvelleTachePartagee;
+      $("casePartage").textContent = (nouvelleTachePartagee ? "☑" : "☐") + " Tâche partagée (tour de rôle entre joueurs)";
+    }
+    else if(action === "ajouter-tache"){
+      const nom = $("inputNouvelleTache").value.trim();
+      if(!nom){ toast("Écris le nom de la tâche.", "erreur"); return; }
+      const nouvelle = {id: slugifier(nom), icone: $("inputIconeTache").value.trim() || "📌", nom: nom, groupe: $("selectGroupeTache").value};
+      if(nouvelleTachePartagee) nouvelle.partage = true;
+      taches.push(nouvelle);
+      storageSet("sq_taches", taches);
+      nouvelleTachePartagee = false;
+      sauverJourEtRender();
+      afficherOnglet("taches");
+      toast("Tâche ajoutée.", "succes");
+    }
+    else if(action === "restaurer-taches"){
+      demanderConfirmation("Remplacer la liste actuelle par les tâches d'origine ?", () => {
+        taches = JSON.parse(JSON.stringify(TACHES_PAR_DEFAUT));
+        storageSet("sq_taches", taches);
+        sauverJourEtRender();
+        afficherOnglet("taches");
+        toast("Tâches d'origine restaurées.", "succes");
+      });
+    }
+    else if(action === "enregistrer-notes"){
+      storageSet(CLE_NOTES, $("zoneNotes").value);
+      afficherOnglet("rapport");
+      toast("Observations enregistrées.", "succes");
+    }
+    else if(action === "imprimer-rapport"){
+      $("zoneImpression").innerHTML = "<pre>" + esc(construireRapportTexte()) + "</pre>";
+      window.print();
+    }
+    else if(action === "telecharger-rapport"){
+      telecharger(construireRapportTexte(), "rapport_sonic_quest_" + todayStr + ".txt", "text/plain");
+    }
+    else if(action === "copier-rapport"){
+      const texte = construireRapportTexte();
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(texte).then(() => toast("Rapport copié.", "succes"), () => toast("Copie impossible : sélectionne le texte du rapport à la main.", "erreur"));
+      } else {
+        toast("Copie impossible : sélectionne le texte du rapport à la main.", "erreur");
+      }
+    }
+    else if(action === "exporter"){
+      const donnees = {};
+      clesSonic().forEach(k => { if(k !== CLE_CODE) donnees[k] = storageGet(k); });
+      telecharger(JSON.stringify({format:"sonicQuest_v1", version: VERSION, exporteLe: todayStr, donnees}, null, 2), "sonic_quest_sauvegarde_" + todayStr + ".json", "application/json");
+    }
+    else if(action === "importer"){ $("fichierImport").click(); }
+    else if(action === "reset-jour"){
+      demanderConfirmation("Remettre à zéro les tâches d'aujourd'hui ?", () => {
+        etatJour = creerEtatVide();
+        historique = historique.filter(e => e.date !== todayStr);
+        storageSet("sq_historique", historique);
+        sauverJourEtRender();
+        toast("Journée réinitialisée.", "succes");
+      });
+    }
+    else if(action === "reset-tout"){
+      demanderConfirmation("Effacer TOUTES les données (joueurs, tâches, historique, jours) ? Pense à exporter une sauvegarde avant. Le code parent est conservé.", () => {
+        clesSonic().forEach(k => { if(k !== CLE_CODE) storageRemove(k); });
+        init();
+        afficherOnglet("joueurs");
+        toast("Toutes les données ont été effacées.", "succes");
+      });
+    }
+    else if(action === "changer-code"){
+      const c1 = $("nouveauCode1").value.trim();
+      if(c1.length < 4){ toast("Le code doit contenir au moins 4 caractères.", "erreur"); return; }
+      if(c1 !== $("nouveauCode2").value.trim()){ toast("Les deux codes ne sont pas identiques.", "erreur"); return; }
+      storageSet(CLE_CODE, c1);
+      afficherOnglet("reglages");
+      toast("Code parent modifié.", "succes");
+    }
+  });
+
+  $("fichierImport").addEventListener("change", e => {
+    const fichier = e.target.files[0];
+    e.target.value = "";
+    if(!fichier) return;
+    const lecteur = new FileReader();
+    lecteur.onload = ev => {
+      let paquet;
+      try{ paquet = JSON.parse(ev.target.result); }catch(err){ paquet = null; }
+      if(!paquet || paquet.format !== "sonicQuest_v1" || !paquet.donnees){
+        toast("Fichier invalide : ce n'est pas une sauvegarde Sonic Quest.", "erreur");
+        return;
+      }
+      demanderConfirmation("Remplacer toutes les données actuelles par celles de la sauvegarde ?", () => {
+        clesSonic().forEach(k => { if(k !== CLE_CODE) storageRemove(k); });
+        Object.keys(paquet.donnees).forEach(k => { if(k.indexOf("sq_") === 0 && k !== CLE_CODE) storageSet(k, paquet.donnees[k]); });
+        init();
+        afficherOnglet("joueurs");
+        toast("Sauvegarde importée.", "succes");
+      });
+    };
+    lecteur.readAsText(fichier);
+  });
+
   function slugifier(texte){
     return "t_" + texte.toLowerCase()
       .normalize("NFD").replace(/[̀-ͯ]/g,"")
@@ -615,72 +1202,8 @@
       .slice(0,20) + "_" + Date.now();
   }
 
-  function renderListeTaches(){
-    const ulMatin = document.getElementById("listeTachesMatin");
-    const ulSuite = document.getElementById("listeTachesSuite");
-    ulMatin.innerHTML = "";
-    ulSuite.innerHTML = "";
-    taches.forEach(t=>{
-      const ul = t.groupe === "matin" ? ulMatin : ulSuite;
-      const li = document.createElement("li");
-      const nomAffiche = t.quizJour ? "🧠 Quiz du jour (alterné automatiquement)" : (t.icone + " " + t.nom + (t.partage ? " 🔄" : ""));
-      li.innerHTML = `<span>${nomAffiche}</span>`;
-      const btn = document.createElement("button");
-      btn.textContent = "Retirer";
-      btn.onclick = () => {
-        taches = taches.filter(x => x.id !== t.id);
-        storageSet("sq_taches", taches);
-        renderListeTaches();
-        render();
-      };
-      li.appendChild(btn);
-      ul.appendChild(li);
-    });
-    if(taches.filter(t=>t.groupe==="matin").length===0) ulMatin.innerHTML = "<li>Aucune tâche.</li>";
-    if(taches.filter(t=>t.groupe==="suite").length===0) ulSuite.innerHTML = "<li>Aucune tâche.</li>";
-  }
-
-  document.getElementById("btnTaches").onclick = () => {
-    renderListeTaches();
-    document.getElementById("overlayTaches").classList.add("actif");
-  };
-  document.getElementById("fermerTaches").onclick = () => {
-    document.getElementById("overlayTaches").classList.remove("actif");
-  };
-  document.getElementById("btnAjouterTache").onclick = () => {
-    const inputNom = document.getElementById("inputNouvelleTache");
-    const inputIcone = document.getElementById("inputIconeTache");
-    const selectGroupe = document.getElementById("selectGroupeTache");
-    const checkPartagee = document.getElementById("checkTachePartagee");
-
-    const nom = inputNom.value.trim();
-    if(!nom) return;
-    const icone = inputIcone.value.trim() || "📌";
-    const groupe = selectGroupe.value;
-    const partage = checkPartagee.checked;
-
-    const nouvelleTache = {id: slugifier(nom), icone: icone, nom: nom, groupe: groupe};
-    if(partage) nouvelleTache.partage = true;
-
-    taches.push(nouvelleTache);
-    storageSet("sq_taches", taches);
-
-    etatJour.tasks[nouvelleTache.id] = false;
-    if(partage) etatJour.doneBy[nouvelleTache.id] = null;
-    storageSet("sq_day_" + todayStr, etatJour);
-
-    inputNom.value = "";
-    inputIcone.value = "";
-    checkPartagee.checked = false;
-
-    renderListeTaches();
-    render();
-  };
-
   init();
 })();
 </script>
-<!-- hub-commun v1.0 : bouton Mes jeux + Mode Parent partage -->
-<script src="hub-commun.js"></script>
 </body>
 </html>

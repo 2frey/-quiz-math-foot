@@ -18,6 +18,14 @@
   | 1.5     | 2026-07-21 | Participants nommés, sélecteur "qui a fait ?" sur tâches         |
   |         |            | partagées avec horodatage, historique consultable, 2e récompense |
   |         |            | (dessin animé / film) en plus de la PS4                          |
+  | 2.0     | 2026-11-09 | Mode Parent standard (règle MAJP) : code parent créé au 1er      |
+  |         |            | accès ; onglets Joueurs, Historique, Analyse, Rapport, Données,  |
+  |         |            | Réglages. Participants, historique et réinitialisations ne sont  |
+  |         |            | plus accessibles à l'enfant. Archivage de chaque journée (jours  |
+  |         |            | passés consultables). Bouton « ⬅️ Retour » vers index.html.      |
+  |         |            | Correctif : la décoche d'une tâche partagée après 20 h ne        |
+  |         |            | retirait pas l'entrée d'historique (date UTC) → champ « jour »   |
+  |         |            | en date locale. Données existantes conservées (même clé).        |
 -->
 <style>
   :root{
@@ -47,7 +55,13 @@
     padding:20px 14px 60px;
   }
   .wrap{max-width:640px;margin:0 auto;}
-  header{text-align:center;margin-bottom:18px;}
+  header{text-align:center;margin-bottom:18px;padding-top:30px;}
+  .btn-retour{
+    position:fixed;top:10px;left:10px;z-index:40;
+    background:var(--card);border:2px solid var(--purple-glow);color:#e9ddff;
+    font-weight:700;padding:8px 14px;border-radius:999px;text-decoration:none;font-size:.85rem;
+    box-shadow:0 4px 12px rgba(0,0,0,.45);
+  }
   .logo{
     font-size:2.1rem;
     font-weight:900;
@@ -79,7 +93,6 @@
     background:linear-gradient(90deg,var(--purple),var(--red));
     padding:3px 10px;border-radius:20px;font-weight:700;font-size:.8rem;
   }
-  .streak{color:var(--orange);font-weight:700;}
   .xpbar-outer{
     background:#0e0620;border:1px solid var(--card-border);
     border-radius:10px;height:14px;overflow:hidden;
@@ -107,7 +120,7 @@
 
   .chapter{margin-bottom:24px;}
   .chapter-title{
-    display:flex;align-items:center;gap:8px;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
     font-size:1rem;font-weight:800;
     margin-bottom:10px;
     color:var(--text);
@@ -149,12 +162,10 @@
     box-shadow:0 0 10px rgba(34,197,94,.6);
   }
   .task-texts{flex:1;}
-  .task-label{
-    font-weight:700;font-size:.92rem;
-    text-decoration:none;
-  }
+  .task-label{font-weight:700;font-size:.92rem;}
   .task.done .task-label{color:var(--text-dim);text-decoration:line-through;}
   .task-flavor{font-size:.78rem;color:var(--text-dim);margin-top:2px;}
+  .task-who{font-size:.75rem;color:#d8c8ff;margin-top:2px;}
   .shared-tag{
     display:inline-block;
     font-size:.65rem;font-weight:700;
@@ -164,68 +175,21 @@
     padding:1px 7px;border-radius:8px;
     margin-left:6px;
   }
-
-  .reward{
-    display:none;
-    text-align:center;
-    background:linear-gradient(135deg, rgba(255,122,24,.18), rgba(139,92,246,.18));
-    border:1px solid var(--orange);
-    border-radius:16px;
-    padding:18px;
-    margin:20px 0;
-    animation:pulseglow 2s infinite;
-  }
-  .reward.show{display:block;}
   @keyframes pulseglow{
     0%,100%{box-shadow:0 0 15px rgba(255,122,24,.3);}
     50%{box-shadow:0 0 30px rgba(255,122,24,.6);}
   }
-  .reward-title{font-size:1.1rem;font-weight:900;color:#ffd28a;margin-bottom:4px;}
-  .reward-sub{font-size:.8rem;color:var(--text-dim);}
 
   footer{
     text-align:center;margin-top:30px;
     font-size:.7rem;color:var(--text-dim);
-    opacity:.6;
   }
-  .resetbtn{
-    display:block;margin:18px auto 0;
+  footer .version{opacity:.6;margin-top:10px;}
+  .btn-parent{
     background:none;border:1px solid var(--card-border);
-    color:var(--text-dim);font-size:.7rem;
-    padding:6px 12px;border-radius:10px;
-    cursor:pointer;
-  }
-  .participants-panel{
-    background:var(--card);
-    border:1px solid var(--card-border);
-    border-radius:16px;
-    padding:14px 16px;
-    margin-bottom:20px;
-  }
-  .participants-title{font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
-  .chip{
-    display:flex;align-items:center;gap:6px;
-    background:linear-gradient(90deg, rgba(139,92,246,.25), rgba(239,35,60,.15));
-    border:1px solid var(--card-border);
-    padding:5px 10px;border-radius:20px;
-    font-size:.8rem;font-weight:600;
-  }
-  .chip button{
-    background:none;border:none;color:var(--text-dim);
-    cursor:pointer;font-size:.9rem;line-height:1;padding:0;
-  }
-  .add-row{display:flex;gap:8px;}
-  .add-row input{
-    flex:1;background:#0e0620;border:1px solid var(--card-border);
-    border-radius:10px;padding:8px 10px;color:var(--text);font-size:.85rem;
-  }
-  .add-row button{
-    background:linear-gradient(90deg,var(--purple),var(--purple-glow));
-    border:none;color:#fff;font-weight:700;font-size:.8rem;
+    color:var(--text-dim);font-size:.85rem;
     padding:8px 14px;border-radius:10px;cursor:pointer;
   }
-  .empty-hint{font-size:.75rem;color:var(--text-dim);}
 
   .picker{
     background:var(--card);
@@ -247,22 +211,6 @@
     padding:7px 14px;border-radius:20px;cursor:pointer;
   }
 
-  .history-panel{margin:20px 0;}
-  .history-toggle{
-    width:100%;text-align:left;
-    background:var(--card);border:1px solid var(--card-border);
-    color:var(--text);font-weight:700;font-size:.85rem;
-    padding:12px 14px;border-radius:14px;cursor:pointer;
-  }
-  .history-list{margin-top:8px;}
-  .history-item{
-    display:flex;justify-content:space-between;gap:10px;
-    font-size:.78rem;color:var(--text-dim);
-    padding:8px 12px;border-bottom:1px solid var(--card-border);
-  }
-  .history-item b{color:var(--text);}
-  .history-empty{font-size:.78rem;color:var(--text-dim);padding:8px 12px;}
-
   .rewards-grid{
     display:grid;grid-template-columns:1fr 1fr;gap:12px;
     margin:20px 0;
@@ -282,9 +230,91 @@
   .reward-card-sub{font-size:.72rem;color:var(--text-dim);}
 
   .loading{text-align:center;color:var(--text-dim);padding:40px 0;}
+
+  /* ---------- Fenêtres (code, Mode Parent, confirmation) ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(5,2,12,.85);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px;overflow-y:auto;
+  }
+  .overlay.actif{display:flex;}
+  .overlay.dessus{z-index:60;}
+  .modale{
+    background:var(--bg2);border:1px solid var(--purple);border-radius:18px;
+    padding:20px;max-width:400px;width:100%;max-height:88vh;overflow-y:auto;text-align:center;
+    box-shadow:0 0 30px rgba(139,92,246,.25);
+  }
+  .modale.large{max-width:600px;text-align:left;padding:16px;}
+  .modale.large h3{text-align:center;}
+  .modale h3{margin-top:0;color:#ffd28a;}
+  .modale input[type=text], .modale input[type=password], .modale select, .modale textarea{
+    width:100%;background:#0e0620;border:1px solid var(--card-border);
+    border-radius:10px;padding:10px;color:var(--text);font-size:.95rem;margin:6px 0;font-family:inherit;
+  }
+  .modale input.code{text-align:center;}
+  .lien-fermer{margin-top:10px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.8rem;text-decoration:underline;}
+  .onglets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px;}
+  .onglet{
+    flex:1 1 auto;background:var(--card);border:1px solid var(--card-border);
+    color:var(--text);padding:8px 10px;border-radius:10px;font-size:.78rem;font-weight:700;cursor:pointer;
+  }
+  .onglet.actif{background:linear-gradient(90deg,var(--purple),var(--purple-glow));border-color:var(--purple-glow);}
+  .titre-p{color:#ffd28a;font-weight:800;margin:14px 0 6px;font-size:.9rem;}
+  .aide-p{font-size:.75rem;color:var(--text-dim);margin:6px 0;}
+  .ligne-p{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--card-border);
+    padding:8px 12px;border-radius:10px;margin-bottom:6px;font-size:.85rem;
+  }
+  .ligne-p .actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .mini-btn{border:none;border-radius:8px;padding:6px 10px;font-size:.78rem;cursor:pointer;color:#fff;background:var(--purple);font-weight:700;}
+  .mini-btn.danger{background:var(--red);}
+  .mini-btn.gris{background:var(--card-border);}
+  .btn-p{
+    display:block;width:100%;margin-top:8px;padding:11px;border-radius:12px;border:none;
+    font-weight:800;font-size:.9rem;cursor:pointer;color:#fff;
+    background:linear-gradient(90deg,var(--purple),var(--purple-glow));
+  }
+  .btn-p.vert{background:var(--green);}
+  .btn-p.danger{background:var(--red);}
+  .btn-p.gris{background:var(--card-border);}
+  .rangee{display:flex;gap:6px;align-items:center;}
+  .rangee input{flex:1;}
+  .rangee .mini-btn{padding:10px 14px;}
+  .stat{display:inline-block;background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:5px 10px;margin:0 6px 6px 0;font-size:.8rem;}
+  details.jour{background:var(--card);border:1px solid var(--card-border);border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:.82rem;}
+  details.jour summary{cursor:pointer;font-weight:700;}
+  details.jour ul{margin:6px 0 2px;padding-left:18px;}
+  .champ-mdp{position:relative;}
+  .champ-mdp input{padding-right:44px !important;}
+  .oeil{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:1.2rem;cursor:pointer;padding:4px;}
+  .erreur-p{color:#ffb4b4;font-weight:700;min-height:20px;font-size:.82rem;margin:4px 0;}
+  .rapport{
+    background:#fff;color:#1d1d1d;border-radius:12px;padding:14px;font-size:.8rem;
+    white-space:pre-wrap;font-family:Consolas, "Courier New", monospace;line-height:1.45;margin:0;
+  }
+  #toast{
+    display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:70;
+    background:#2e1b4d;color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;font-size:.85rem;
+    box-shadow:0 6px 18px rgba(0,0,0,.45);max-width:88%;text-align:center;
+  }
+  #toast.succes{background:#15803d;}
+  #toast.erreur{background:var(--red);}
+  #zoneImpression{display:none;}
+  .fichier-cache{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+  @media (max-width:420px){
+    .modale.large{padding:12px;}
+    .onglet{font-size:.72rem;padding:8px 6px;}
+  }
+  @media print{
+    body{background:#fff !important;color:#000;padding:0;}
+    .wrap, .overlay, .btn-retour, #toast{display:none !important;}
+    #zoneImpression{display:block;}
+    #zoneImpression pre{white-space:pre-wrap;font-family:Consolas, "Courier New", monospace;font-size:11pt;color:#000;}
+  }
 </style>
 </head>
 <body>
+<a class="btn-retour" href="index.html">⬅️ Retour</a>
 <div class="wrap">
   <header>
     <p class="logo">⚡ LEVEL UP ZONE ⚡</p>
@@ -300,17 +330,73 @@
     ⚠️ Ton navigateur bloque la sauvegarde locale (souvent en navigation privée) — la progression fonctionne mais ne sera pas gardée si tu fermes la page.
   </div>
 
-  <div class="participants-panel" id="participants-panel"></div>
-
   <div id="app">
     <div class="loading">Chargement de ta progression…</div>
   </div>
 
-  <footer>Level Up Zone v1.5 — progression sauvegardée automatiquement</footer>
+  <footer>
+    <button class="btn-parent" id="btn-mode-parent">👨‍👩‍👧 Mode Parent</button>
+    <div class="version">Level Up Zone v2.0 — progression sauvegardée automatiquement</div>
+  </footer>
 </div>
 
+<!-- Code parent -->
+<div class="overlay" id="overlay-code">
+  <div class="modale">
+    <h3 id="titre-code">🔒 Mode Parent</h3>
+    <p id="texte-code" style="font-size:.85rem;color:var(--text-dim);"></p>
+    <div class="champ-mdp">
+      <input type="password" id="code1" class="code" placeholder="Code parent" autocomplete="off">
+      <button type="button" class="oeil" data-oeil="code1" aria-label="Afficher ou masquer le code">👁️</button>
+    </div>
+    <div class="champ-mdp" id="bloc-code2">
+      <input type="password" id="code2" class="code" placeholder="Retape le code" autocomplete="off">
+      <button type="button" class="oeil" data-oeil="code2" aria-label="Afficher ou masquer le code">👁️</button>
+    </div>
+    <div class="erreur-p" id="erreur-code"></div>
+    <button class="btn-p vert" id="btn-valider-code">Entrer</button>
+    <div><button class="lien-fermer" id="btn-fermer-code">Annuler</button></div>
+  </div>
+</div>
+
+<!-- Mode Parent -->
+<div class="overlay" id="overlay-parent">
+  <div class="modale large">
+    <h3>👨‍👩‍👧 Mode Parent</h3>
+    <div class="onglets" id="onglets-parent">
+      <button class="onglet" data-onglet="joueurs">👥 Joueurs</button>
+      <button class="onglet" data-onglet="historique">📜 Historique</button>
+      <button class="onglet" data-onglet="analyse">📊 Analyse</button>
+      <button class="onglet" data-onglet="rapport">📄 Rapport</button>
+      <button class="onglet" data-onglet="donnees">💾 Données</button>
+      <button class="onglet" data-onglet="reglages">⚙️ Réglages</button>
+    </div>
+    <div id="contenu-parent"></div>
+    <button class="btn-p gris" id="btn-quitter-parent" style="margin-top:16px;">⬅️ Quitter le Mode Parent</button>
+  </div>
+</div>
+
+<!-- Confirmation -->
+<div class="overlay dessus" id="overlay-confirm">
+  <div class="modale">
+    <h3>⚠️ Confirmation</h3>
+    <p id="texte-confirm" style="font-size:.9rem;"></p>
+    <div class="rangee">
+      <button class="btn-p gris" id="btn-annuler-confirm">Annuler</button>
+      <button class="btn-p danger" id="btn-ok-confirm">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fichier-import" class="fichier-cache" accept=".json,application/json">
+<div id="toast"></div>
+<div id="zoneImpression"></div>
+
 <script>
+const VERSION = '2.0';
 const STORAGE_KEY = 'levelupzone:progress';
+const CLE_CODE = 'levelupzone:codeParent';
+const MAX_JOURS_ARCHIVES = 365;
 
 const TASKS = [
   {id:'debarrasser', group:1, label:'Débarrasser et nettoyer la table du petit-déjeuner', flavor:'Nettoyage de la zone de combat 🍽️'},
@@ -324,19 +410,39 @@ const TASKS = [
   {id:'plastique', group:2, label:'Jeter le plastique', flavor:'Mission recyclage ♻️'},
 ];
 
-function todayStr(){
-  const d = new Date();
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function dateLocale(d){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
+function todayStr(){ return dateLocale(new Date()); }
+// "AAAA-MM-JJ" -> Date locale (jamais new Date("chaîne"))
+function parseDate(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function fmtDate(iso){
+  const [y,m,d] = iso.split('-');
+  return d + '/' + m + '/' + y;
+}
 function prettyDate(){
-  const d = new Date();
-  return d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+  return new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+}
+function labelTache(id){
+  const t = TASKS.find(x => x.id === id);
+  return t ? t.label : id;
+}
+// Jour local d'une entrée d'historique (les entrées d'avant la v2.0 n'ont que ts, en UTC)
+function jourEntree(e){
+  if(e.jour) return e.jour;
+  return dateLocale(new Date(Date.parse(e.ts)));
 }
 
 let record = null;
 let storageOK = true;
 let pendingPick = null;
-let historyOpen = false;
 
 function readStorage(key){
   try{
@@ -347,46 +453,52 @@ function readStorage(key){
     return null;
   }
 }
-
 function writeStorage(key, valueObj){
   try{
     localStorage.setItem(key, JSON.stringify(valueObj));
     storageOK = true;
   }catch(e){
-    // Cas typique : navigation privée, ou stockage désactivé par le navigateur.
     storageOK = false;
     console.error('Sauvegarde impossible', e);
   }
   updateStorageIndicator();
 }
-
 function updateStorageIndicator(){
-  const el = document.getElementById('storage-indicator');
+  const el = $('storage-indicator');
   if(!el) return;
   el.style.display = storageOK ? 'none' : 'block';
 }
 
-async function loadRecord(){
+// Archive d'une journée : liste des tâches faites (sert à l'historique et à l'analyse)
+function archiverJour(stored){
+  return { date: stored.date, faites: TASKS.filter(t => stored.checks && stored.checks[t.id]).map(t => t.id), total: TASKS.length };
+}
+function nouveauRecord(today, participants){
+  return { date: today, checks:{}, archivedXP:0, streak:0, participants: participants || [], sharedLog:[], jours:[] };
+}
+
+function loadRecord(){
   const stored = readStorage(STORAGE_KEY);
   const today = todayStr();
 
   if(!stored){
-    record = { date: today, checks:{}, archivedXP:0, streak:0, participants:[], sharedLog:[] };
+    record = nouveauRecord(today);
   } else if(stored.date !== today){
     const doneYesterday = TASKS.filter(t => stored.checks[t.id]).length;
     const allDoneYesterday = doneYesterday === TASKS.length;
     const priorArchived = stored.archivedXP !== undefined ? stored.archivedXP : (stored.totalXP || 0);
+    const jours = (stored.jours || []).concat([archiverJour(stored)]).slice(-MAX_JOURS_ARCHIVES);
     record = {
       date: today,
       checks: {},
       archivedXP: priorArchived + doneYesterday*10,
       streak: allDoneYesterday ? (stored.streak||0) + 1 : 0,
       participants: stored.participants || [],
-      sharedLog: stored.sharedLog || []
+      sharedLog: stored.sharedLog || [],
+      jours: jours
     };
   } else if(stored.archivedXP === undefined){
-    // Migration depuis l'ancien format (totalXP cumulatif incrémental) :
-    // on retire la part déjà comptée aujourd'hui pour repartir sur des bases saines.
+    // Migration depuis l'ancien format (totalXP cumulatif incrémental)
     const doneToday = TASKS.filter(t => stored.checks[t.id]).length;
     record = {
       date: stored.date,
@@ -394,13 +506,15 @@ async function loadRecord(){
       archivedXP: Math.max(0, (stored.totalXP || 0) - doneToday*10),
       streak: stored.streak || 0,
       participants: stored.participants || [],
-      sharedLog: stored.sharedLog || []
+      sharedLog: stored.sharedLog || [],
+      jours: stored.jours || []
     };
   } else {
     record = stored;
-    if(!record.participants) record.participants = [];
-    if(!record.sharedLog) record.sharedLog = [];
   }
+  if(!record.participants) record.participants = [];
+  if(!record.sharedLog) record.sharedLog = [];
+  if(!record.jours) record.jours = [];
   saveRecord();
 }
 
@@ -408,102 +522,43 @@ function saveRecord(){
   writeStorage(STORAGE_KEY, record);
 }
 
-function renderParticipants(){
-  const panel = document.getElementById('participants-panel');
-  const chipsHTML = record.participants.length
-    ? record.participants.map(name => `
-        <span class="chip">${name}<button data-name="${name}" class="remove-participant">✕</button></span>
-      `).join('')
-    : '<span class="empty-hint">Aucun participant pour l\'instant — ajoute des prénoms pour savoir qui fait quoi sur les tâches partagées.</span>';
-
-  panel.innerHTML = `
-    <div class="participants-title">👥 Participants aux tâches</div>
-    <div class="chips">${chipsHTML}</div>
-    <div class="add-row">
-      <input type="text" id="new-participant" placeholder="Prénom…" maxlength="20">
-      <button id="add-participant-btn">Ajouter</button>
-    </div>
-  `;
-
-  document.querySelectorAll('.remove-participant').forEach(btn => {
-    btn.addEventListener('click', () => removeParticipant(btn.dataset.name));
-  });
-  document.getElementById('add-participant-btn').addEventListener('click', addParticipantFromInput);
-  document.getElementById('new-participant').addEventListener('keydown', e => {
-    if(e.key === 'Enter') addParticipantFromInput();
-  });
-}
-
-function addParticipantFromInput(){
-  const input = document.getElementById('new-participant');
-  const name = input.value.trim();
-  if(!name) return;
-  if(record.participants.includes(name)){ input.value=''; return; }
-  record.participants.push(name);
-  saveRecord();
-  input.value = '';
-  renderParticipants();
-}
-
-function removeParticipant(name){
-  record.participants = record.participants.filter(n => n !== name);
-  saveRecord();
-  renderParticipants();
-}
-
-function formatWhen(ts){
-  const d = new Date(ts);
-  return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) + ' à ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-}
-
-function renderHistoryHTML(){
-  const entries = [...record.sharedLog].sort((a,b) => b.ts.localeCompare(a.ts)).slice(0,15);
-  const list = entries.length
-    ? entries.map(e => {
-        const t = TASKS.find(x => x.id === e.taskId);
-        const label = t ? t.label : e.taskId;
-        return `<div class="history-item"><span>${label}</span><span><b>${e.name}</b> — ${formatWhen(e.ts)}</span></div>`;
-      }).join('')
-    : '<div class="history-empty">Pas encore d\'historique sur les tâches partagées.</div>';
-
-  return `
-    <div class="history-panel">
-      <button class="history-toggle" id="history-toggle">📜 Historique des tâches partagées (${record.sharedLog.length}) ${historyOpen?'▲':'▼'}</button>
-      ${historyOpen ? `<div class="history-list">${list}</div>` : ''}
-    </div>`;
-}
-
 function render(){
-  document.getElementById('today-label').textContent = prettyDate();
-  document.getElementById('streak-label').textContent = record.streak;
+  $('today-label').textContent = prettyDate();
+  $('streak-label').textContent = record.streak;
 
   const doneCount = TASKS.filter(t => record.checks[t.id]).length;
-  const todayXP = doneCount * 10;
-  const totalXP = record.archivedXP + todayXP;
+  const totalXP = record.archivedXP + doneCount * 10;
   const level = Math.floor(totalXP/100) + 1;
   const xpInLevel = totalXP % 100;
   const pct = Math.round((doneCount/TASKS.length)*100);
   const allDone = doneCount === TASKS.length;
+  const today = todayStr();
 
   const groups = [1,2].map(g => {
     const items = TASKS.filter(t => t.group === g).map(t => {
       const done = !!record.checks[t.id];
 
       if(t.shared && pendingPick === t.id){
-        const names = record.participants.map(n => `<button class="picker-name" data-name="${n}">${n}</button>`).join('');
+        const names = record.participants.map(n => `<button class="picker-name" data-name="${esc(n)}">${esc(n)}</button>`).join('');
         return `
           <div class="picker">
-            <div class="picker-label">Qui a fait « ${t.label} » ?</div>
+            <div class="picker-label">Qui a fait « ${esc(t.label)} » ?</div>
             <div class="picker-btns">${names}<button class="picker-cancel" id="cancel-pick">Annuler</button></div>
           </div>`;
       }
 
+      let qui = '';
+      if(t.shared && done){
+        const entree = [...record.sharedLog].reverse().find(e => e.taskId === t.id && jourEntree(e) === today);
+        if(entree) qui = `<div class="task-who">✅ Fait par ${esc(entree.name)}</div>`;
+      }
       return `
         <div class="task ${done?'done':''}" data-id="${t.id}">
           <div class="checkbox">${done?'✓':''}</div>
           <div class="task-texts">
-            <div class="task-label">${t.label}${t.shared?'<span class="shared-tag">🤝 partagée</span>':''}</div>
-            <div class="task-flavor">${t.flavor}</div>
+            <div class="task-label">${esc(t.label)}${t.shared?'<span class="shared-tag">🤝 partagée</span>':''}</div>
+            <div class="task-flavor">${esc(t.flavor)}</div>
+            ${qui}
           </div>
         </div>`;
     }).join('');
@@ -511,7 +566,7 @@ function render(){
     return `<div class="chapter"><div class="chapter-title">${title} <span class="chapter-tag">${TASKS.filter(t=>t.group===g && record.checks[t.id]).length}/${TASKS.filter(t=>t.group===g).length}</span></div>${items}</div>`;
   }).join('');
 
-  document.getElementById('app').innerHTML = `
+  $('app').innerHTML = `
     <div class="statuspanel">
       <div class="statusrow">
         <span class="lvlbadge">Niveau ${level}</span>
@@ -537,11 +592,6 @@ function render(){
         <div class="reward-card-sub">Bonus non obligatoire, bien joué !</div>
       </div>
     </div>
-
-    ${renderHistoryHTML()}
-
-    <button class="resetbtn" id="resetday">Réinitialiser la journée (test)</button>
-    <button class="resetbtn" id="resetall" style="margin-top:6px;">Réinitialiser TOUT — XP compris (test)</button>
   `;
 
   document.querySelectorAll('.task').forEach(el => {
@@ -550,14 +600,8 @@ function render(){
   document.querySelectorAll('.picker-name').forEach(btn => {
     btn.addEventListener('click', () => confirmPick(pendingPick, btn.dataset.name));
   });
-  const cancelBtn = document.getElementById('cancel-pick');
+  const cancelBtn = $('cancel-pick');
   if(cancelBtn) cancelBtn.addEventListener('click', cancelPick);
-
-  const historyToggle = document.getElementById('history-toggle');
-  if(historyToggle) historyToggle.addEventListener('click', () => { historyOpen = !historyOpen; render(); });
-
-  document.getElementById('resetday').addEventListener('click', resetDay);
-  document.getElementById('resetall').addEventListener('click', resetAll);
 }
 
 function handleTaskClick(id){
@@ -573,7 +617,6 @@ function handleTaskClick(id){
     }
     return;
   }
-
   if(task.shared && done){
     delete record.checks[id];
     removeLastLogForTaskToday(id);
@@ -581,23 +624,19 @@ function handleTaskClick(id){
     render();
     return;
   }
-
   toggleTaskSimple(id);
 }
 
 function toggleTaskSimple(id){
-  if(record.checks[id]){
-    delete record.checks[id];
-  } else {
-    record.checks[id] = true;
-  }
+  if(record.checks[id]) delete record.checks[id];
+  else record.checks[id] = true;
   saveRecord();
   render();
 }
 
 function confirmPick(taskId, name){
   record.checks[taskId] = true;
-  record.sharedLog.push({ taskId, name, ts: new Date().toISOString() });
+  record.sharedLog.push({ taskId, name, ts: new Date().toISOString(), jour: todayStr() });
   pendingPick = null;
   saveRecord();
   render();
@@ -612,30 +651,433 @@ function removeLastLogForTaskToday(taskId){
   const today = todayStr();
   for(let i = record.sharedLog.length - 1; i >= 0; i--){
     const entry = record.sharedLog[i];
-    if(entry.taskId === taskId && entry.ts.slice(0,10) === today){
+    if(entry.taskId === taskId && jourEntree(entry) === today){
       record.sharedLog.splice(i,1);
       break;
     }
   }
 }
 
-async function resetDay(){
+/* =====================================================================
+   MESSAGES ET CONFIRMATIONS (remplacent alert()/confirm())
+   ===================================================================== */
+let toastTimer = null;
+function toast(message, type){
+  const t = $('toast');
+  t.className = type || '';
+  t.textContent = message;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3200);
+}
+let rappelConfirm = null;
+function demanderConfirmation(message, fn){
+  $('texte-confirm').textContent = message;
+  rappelConfirm = fn;
+  $('overlay-confirm').classList.add('actif');
+}
+$('btn-annuler-confirm').onclick = () => { rappelConfirm = null; $('overlay-confirm').classList.remove('actif'); };
+$('btn-ok-confirm').onclick = () => {
+  $('overlay-confirm').classList.remove('actif');
+  const fn = rappelConfirm; rappelConfirm = null;
+  if(typeof fn === 'function') fn();
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-oeil]');
+  if(!b) return;
+  const champ = $(b.dataset.oeil);
+  if(champ) champ.type = champ.type === 'password' ? 'text' : 'password';
+});
+
+/* =====================================================================
+   MODE PARENT — accès par code
+   ===================================================================== */
+function lireCode(){ try{ return localStorage.getItem(CLE_CODE); }catch(e){ return null; } }
+function ecrireCode(c){ try{ localStorage.setItem(CLE_CODE, c); return true; }catch(e){ return false; } }
+
+let modeCode = 'saisie';
+function ouvrirModeParent(){
+  const code = lireCode();
+  modeCode = code ? 'saisie' : 'creation';
+  $('titre-code').textContent = code ? '🔒 Mode Parent' : '🔒 Crée ton code parent';
+  $('texte-code').textContent = code
+    ? 'Entre le code parent.'
+    : 'Première ouverture : choisis un code d\'au moins 4 caractères. Il sera demandé à chaque accès au Mode Parent.';
+  $('bloc-code2').style.display = code ? 'none' : 'block';
+  $('btn-valider-code').textContent = code ? 'Entrer' : 'Créer le code';
+  ['code1','code2'].forEach(id => { $(id).value = ''; $(id).type = 'password'; });
+  $('erreur-code').textContent = '';
+  $('overlay-code').classList.add('actif');
+  setTimeout(() => $('code1').focus(), 50);
+}
+function validerCode(){
+  const v1 = $('code1').value.trim();
+  const erreur = $('erreur-code');
+  if(modeCode === 'creation'){
+    if(v1.length < 4){ erreur.textContent = 'Le code doit contenir au moins 4 caractères.'; return; }
+    if(v1 !== $('code2').value.trim()){ erreur.textContent = 'Les deux codes ne sont pas identiques.'; return; }
+    if(!ecrireCode(v1)){ erreur.textContent = 'Impossible d\'enregistrer le code sur cet appareil (navigation privée ?).'; return; }
+    toast('Code parent créé.', 'succes');
+  } else if(v1 !== lireCode()){
+    erreur.textContent = 'Code incorrect.';
+    return;
+  }
+  $('overlay-code').classList.remove('actif');
+  afficherModeParent('joueurs');
+}
+$('btn-mode-parent').onclick = ouvrirModeParent;
+$('btn-valider-code').onclick = validerCode;
+$('btn-fermer-code').onclick = () => $('overlay-code').classList.remove('actif');
+['code1','code2'].forEach(id => $(id).addEventListener('keydown', e => { if(e.key === 'Enter') validerCode(); }));
+
+let ongletActif = 'joueurs';
+let joueurEnRenommage = -1;
+let filtreHistorique = '__tous__';
+
+function afficherModeParent(onglet){
+  $('overlay-parent').classList.add('actif');
+  afficherOnglet(onglet || ongletActif);
+}
+$('btn-quitter-parent').onclick = () => {
+  $('overlay-parent').classList.remove('actif');
+  joueurEnRenommage = -1;
+  pendingPick = null;
+  render();
+};
+$('onglets-parent').addEventListener('click', e => {
+  const b = e.target.closest('[data-onglet]');
+  if(b) afficherOnglet(b.dataset.onglet);
+});
+
+function afficherOnglet(nom){
+  ongletActif = nom;
+  document.querySelectorAll('#onglets-parent .onglet').forEach(o => o.classList.toggle('actif', o.dataset.onglet === nom));
+  const c = $('contenu-parent');
+  if(nom === 'joueurs') c.innerHTML = htmlJoueurs();
+  else if(nom === 'historique') c.innerHTML = htmlHistorique();
+  else if(nom === 'analyse') c.innerHTML = htmlAnalyse();
+  else if(nom === 'rapport') c.innerHTML = htmlRapport();
+  else if(nom === 'donnees') c.innerHTML = htmlDonnees();
+  else if(nom === 'reglages') c.innerHTML = htmlReglages();
+}
+
+/* ---------- Joueurs ---------- */
+function htmlJoueurs(){
+  let html = '<div class="titre-p">👥 Joueurs (pour les tâches partagées)</div>';
+  if(record.participants.length === 0) html += '<p class="aide-p">Aucun joueur : les tâches partagées se cochent sans demander qui les a faites.</p>';
+  record.participants.forEach((p, i) => {
+    if(i === joueurEnRenommage){
+      html += `<div class="ligne-p" style="display:block;">
+        <div>Renommer « ${esc(p)} » :</div>
+        <input type="text" id="input-renommer" value="${esc(p)}" maxlength="20">
+        <div class="actions">
+          <button class="mini-btn" data-action="valider-renommer" data-i="${i}">Valider</button>
+          <button class="mini-btn gris" data-action="annuler-renommer">Annuler</button>
+        </div></div>`;
+    } else {
+      html += `<div class="ligne-p"><span>🎮 ${esc(p)}</span><span class="actions">
+        <button class="mini-btn" data-action="renommer" data-i="${i}">Renommer</button>
+        <button class="mini-btn danger" data-action="supprimer-joueur" data-i="${i}">Supprimer</button>
+      </span></div>`;
+    }
+  });
+  html += `<div class="titre-p">➕ Ajouter un joueur</div>
+    <div class="rangee"><input type="text" id="input-nouveau-joueur" placeholder="Prénom" maxlength="20">
+    <button class="mini-btn" data-action="ajouter-joueur">Ajouter</button></div>
+    <p class="aide-p">Supprimer un joueur ne supprime pas l'historique déjà enregistré.</p>`;
+  return html;
+}
+
+/* ---------- Jours (archives + aujourd'hui) ---------- */
+function listerJours(){
+  const jours = record.jours.map(j => ({ date: j.date, faites: j.faites, total: j.total }));
+  jours.push(archiverJour(record));
+  jours.sort((a,b) => a.date < b.date ? 1 : -1);
+  return jours;
+}
+
+/* ---------- Historique ---------- */
+function htmlHistorique(){
+  const noms = Array.from(new Set(record.participants.concat(record.sharedLog.map(e => e.name)))).filter(Boolean);
+  let html = `<div class="titre-p">📜 Historique</div>
+    <select id="select-filtre-historique">
+      <option value="__tous__"${filtreHistorique === '__tous__' ? ' selected' : ''}>Tous les jours</option>
+      ${noms.map(n => `<option value="${esc(n)}"${filtreHistorique === n ? ' selected' : ''}>Tâches partagées de ${esc(n)}</option>`).join('')}
+    </select>`;
+  const today = todayStr();
+  if(filtreHistorique === '__tous__'){
+    const jours = listerJours().slice(0, 60);
+    if(record.jours.length === 0) html += '<p class="aide-p">Les jours sont archivés depuis la v2.0 : l\'historique se remplit à partir d\'aujourd\'hui.</p>';
+    jours.forEach(j => {
+      const nonFaites = TASKS.filter(t => j.faites.indexOf(t.id) === -1).map(t => t.label);
+      const partagees = record.sharedLog.filter(e => jourEntree(e) === j.date);
+      const complet = j.faites.length === j.total;
+      html += `<details class="jour"><summary>${fmtDate(j.date)}${j.date === today ? " (aujourd'hui)" : ''} — ${j.faites.length}/${j.total} ${complet ? '🏆' : ''}</summary>
+        ${nonFaites.length ? '<div>Non fait :</div><ul>' + nonFaites.map(n => '<li>' + esc(n) + '</li>').join('') + '</ul>' : '<div>✅ Tout est fait.</div>'}
+        ${partagees.length ? '<div>Tâches partagées :</div><ul>' + partagees.map(e => '<li>' + esc(labelTache(e.taskId)) + ' — ' + esc(e.name) + '</li>').join('') + '</ul>' : ''}
+      </details>`;
+    });
+  } else {
+    const entrees = record.sharedLog.filter(e => e.name === filtreHistorique).sort((a,b) => b.ts.localeCompare(a.ts));
+    if(entrees.length === 0) return html + '<p class="aide-p">Aucune tâche partagée enregistrée pour ce joueur.</p>';
+    entrees.slice(0, 100).forEach(e => {
+      const d = new Date(Date.parse(e.ts));
+      html += `<div class="ligne-p"><span>${fmtDate(jourEntree(e))} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span><span>${esc(labelTache(e.taskId))}</span></div>`;
+    });
+  }
+  return html;
+}
+
+/* ---------- Calculs d'analyse (Analyse + Rapport) ---------- */
+function calculerAnalyse(){
+  const today = todayStr();
+  const jours = listerJours();
+  const termines = jours.filter(j => j.date !== today);
+  const complets = jours.filter(j => j.faites.length === j.total).length;
+  const tauxMoyen = jours.length ? Math.round(100 * jours.reduce((s, j) => s + j.faites.length / j.total, 0) / jours.length) : 0;
   const doneCount = TASKS.filter(t => record.checks[t.id]).length;
-  record.archivedXP += doneCount * 10; // on garde l'XP déjà gagné aujourd'hui
-  record.checks = {};
-  saveRecord();
-  render();
+  const totalXP = record.archivedXP + doneCount * 10;
+
+  const oublis = TASKS.map(t => ({
+    nom: t.label,
+    oubli: termines.filter(j => j.faites.indexOf(t.id) === -1).length,
+    presence: termines.length
+  })).filter(o => o.oubli > 0).sort((a,b) => b.oubli - a.oubli).slice(0, 5);
+
+  const repartition = {};
+  record.sharedLog.forEach(e => {
+    if(!repartition[e.name]) repartition[e.name] = {};
+    const l = labelTache(e.taskId);
+    repartition[e.name][l] = (repartition[e.name][l] || 0) + 1;
+  });
+
+  return { jours, termines, complets, tauxMoyen, totalXP, niveau: Math.floor(totalXP/100) + 1, oublis, repartition };
 }
 
-function resetAll(){
-  record = { date: todayStr(), checks:{}, archivedXP:0, streak:0, participants: record.participants || [], sharedLog:[] };
-  saveRecord();
-  render();
+/* ---------- Analyse ---------- */
+function htmlAnalyse(){
+  const a = calculerAnalyse();
+  let html = `<div class="titre-p">📊 Vue d'ensemble</div>
+    <span class="stat">Niveau ${a.niveau} — ${a.totalXP} XP</span>
+    <span class="stat">Série : ${record.streak} jour(s) 🔥</span>
+    <span class="stat">${a.jours.length} jour(s) enregistré(s)</span>
+    <span class="stat">${a.complets} jour(s) à 100 % 🏆</span>
+    <span class="stat">Réussite moyenne : ${a.tauxMoyen} %</span>
+    <div class="titre-p">😴 Tâches les plus souvent oubliées</div>`;
+  if(a.termines.length === 0) html += '<p class="aide-p">Pas encore de journée terminée depuis la v2.0.</p>';
+  else html += a.oublis.length
+    ? a.oublis.map(o => `<div class="ligne-p"><span>${esc(o.nom)}</span><span>oubliée ${o.oubli} fois sur ${o.presence}</span></div>`).join('')
+    : '<p class="aide-p">Aucun oubli sur les jours terminés. Bravo !</p>';
+  html += '<div class="titre-p">🤝 Tâches partagées : qui fait quoi</div>';
+  const personnes = Object.keys(a.repartition);
+  html += personnes.length
+    ? personnes.map(p => `<div class="ligne-p" style="display:block;"><b>🎮 ${esc(p)}</b><br>${Object.keys(a.repartition[p]).map(t => esc(t) + ' : ' + a.repartition[p][t] + ' fois').join(' · ')}</div>`).join('')
+    : '<p class="aide-p">Aucune tâche partagée enregistrée.</p>';
+  return html;
 }
 
-loadRecord().then(() => { renderParticipants(); render(); });
+/* ---------- Rapport (évolutif) ---------- */
+function construireRapportTexte(){
+  const a = calculerAnalyse();
+  const maintenant = new Date();
+  const L = [];
+  L.push('=== Rapport Level Up Zone (v' + VERSION + ') ===');
+  L.push('Généré le ' + maintenant.toLocaleDateString('fr-FR') + ' à ' + maintenant.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}));
+  L.push('');
+  L.push('--- Configuration ---');
+  L.push('Joueurs : ' + (record.participants.join(', ') || '(aucun)'));
+  L.push('Tâches (' + TASKS.length + ') : ' + TASKS.map(t => t.label + (t.shared ? ' [partagée]' : '')).join(' ; '));
+  L.push('');
+  L.push('--- Vue d\'ensemble ---');
+  L.push('Niveau ' + a.niveau + ' (' + a.totalXP + ' XP) | Série : ' + record.streak + ' jour(s) | Jours enregistrés : ' + a.jours.length + ' | Jours à 100 % : ' + a.complets + ' | Réussite moyenne : ' + a.tauxMoyen + ' %');
+  L.push('');
+  L.push('--- Tâches les plus souvent oubliées ---');
+  if(a.termines.length === 0) L.push('Pas encore de journée terminée.');
+  else if(a.oublis.length === 0) L.push('Aucun oubli.');
+  a.oublis.forEach(o => L.push('- ' + o.nom + ' : oubliée ' + o.oubli + ' fois sur ' + o.presence));
+  L.push('');
+  L.push('--- Tâches partagées : qui fait quoi ---');
+  const personnes = Object.keys(a.repartition);
+  if(personnes.length === 0) L.push('Aucune tâche partagée enregistrée.');
+  personnes.forEach(p => L.push('- ' + p + ' : ' + Object.keys(a.repartition[p]).map(t => t + ' ×' + a.repartition[p][t]).join(', ')));
+  L.push('');
+  L.push('--- 14 derniers jours ---');
+  a.jours.slice(0, 14).forEach(j => {
+    const nonFaites = TASKS.filter(t => j.faites.indexOf(t.id) === -1).map(t => t.label);
+    L.push(fmtDate(j.date) + ' : ' + j.faites.length + '/' + j.total + (nonFaites.length === 0 ? ' (100 %)' : ' — non fait : ' + nonFaites.join(', ')));
+  });
+  L.push('');
+  L.push('--- Observations du parent ---');
+  L.push(record.notesParent && record.notesParent.trim() ? record.notesParent.trim() : '(aucune)');
+  return L.join('\n');
+}
+function htmlRapport(){
+  return `<div class="titre-p">📝 Tes observations (ajoutées au rapport)</div>
+    <textarea id="zone-notes" rows="3" placeholder="Ex : la lecture d'une heure est trop longue, il saute souvent le plastique…">${esc(record.notesParent || '')}</textarea>
+    <button class="mini-btn" data-action="enregistrer-notes">Enregistrer les observations</button>
+    <div class="titre-p">📄 Rapport</div>
+    <pre class="rapport">${esc(construireRapportTexte())}</pre>
+    <button class="btn-p" data-action="imprimer-rapport">🖨️ Imprimer / PDF</button>
+    <button class="btn-p" data-action="telecharger-rapport">📄 Télécharger en .txt</button>
+    <button class="btn-p gris" data-action="copier-rapport">📋 Copier le texte (pour le transmettre à Claude)</button>`;
+}
+
+/* ---------- Données ---------- */
+function htmlDonnees(){
+  return `<div class="titre-p">💾 Sauvegarde</div>
+    <button class="btn-p" data-action="exporter">📤 Exporter les données (.json)</button>
+    <button class="btn-p" data-action="importer">📂 Importer une sauvegarde (.json)</button>
+    <div class="titre-p">🧹 Réinitialiser</div>
+    <button class="btn-p gris" data-action="reset-jour">Réinitialiser la journée (l'XP déjà gagné est gardé)</button>
+    <button class="btn-p danger" data-action="reset-tout">Tout réinitialiser — XP et historique compris</button>
+    <p class="aide-p">Les joueurs et le code parent sont conservés lors d'une réinitialisation complète.</p>`;
+}
+
+/* ---------- Réglages ---------- */
+function htmlReglages(){
+  return `<div class="titre-p">🔑 Changer le code parent</div>
+    <div class="champ-mdp"><input type="password" id="nouveau-code1" class="code" placeholder="Nouveau code" autocomplete="off">
+      <button type="button" class="oeil" data-oeil="nouveau-code1">👁️</button></div>
+    <div class="champ-mdp"><input type="password" id="nouveau-code2" class="code" placeholder="Retape le nouveau code" autocomplete="off">
+      <button type="button" class="oeil" data-oeil="nouveau-code2">👁️</button></div>
+    <button class="btn-p vert" data-action="changer-code">Enregistrer le nouveau code</button>
+    <p class="aide-p">Le code protège le Mode Parent sur cet appareil. Si tu l'oublies, il faut effacer les données du site dans le navigateur.</p>`;
+}
+
+/* ---------- Actions du Mode Parent (délégation) ---------- */
+function telecharger(contenu, nomFichier, type){
+  const blob = new Blob([contenu], {type: type + ';charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nomFichier;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$('contenu-parent').addEventListener('change', e => {
+  if(e.target.id === 'select-filtre-historique'){
+    filtreHistorique = e.target.value;
+    afficherOnglet('historique');
+  }
+});
+
+$('contenu-parent').addEventListener('click', e => {
+  const b = e.target.closest('[data-action]');
+  if(!b) return;
+  const action = b.dataset.action;
+  const i = b.dataset.i !== undefined ? Number(b.dataset.i) : -1;
+
+  if(action === 'renommer'){ joueurEnRenommage = i; afficherOnglet('joueurs'); }
+  else if(action === 'annuler-renommer'){ joueurEnRenommage = -1; afficherOnglet('joueurs'); }
+  else if(action === 'valider-renommer'){
+    const ancien = record.participants[i];
+    const nouveau = $('input-renommer').value.trim();
+    if(!nouveau){ toast('Le prénom ne peut pas être vide.', 'erreur'); return; }
+    if(nouveau !== ancien && record.participants.includes(nouveau)){ toast('Ce prénom existe déjà.', 'erreur'); return; }
+    record.participants[i] = nouveau;
+    record.sharedLog.forEach(en => { if(en.name === ancien) en.name = nouveau; });
+    joueurEnRenommage = -1;
+    saveRecord();
+    toast('Joueur renommé.', 'succes');
+    afficherOnglet('joueurs');
+  }
+  else if(action === 'supprimer-joueur'){
+    const nom = record.participants[i];
+    demanderConfirmation('Supprimer « ' + nom + ' » de la liste des joueurs ? Son historique est conservé.', () => {
+      record.participants.splice(i, 1);
+      saveRecord();
+      afficherOnglet('joueurs');
+      toast(nom + ' a été retiré.', 'succes');
+    });
+  }
+  else if(action === 'ajouter-joueur'){
+    const val = $('input-nouveau-joueur').value.trim();
+    if(!val){ toast('Écris un prénom.', 'erreur'); return; }
+    if(record.participants.includes(val)){ toast('Ce prénom existe déjà.', 'erreur'); return; }
+    record.participants.push(val);
+    saveRecord();
+    afficherOnglet('joueurs');
+    toast(val + ' a été ajouté.', 'succes');
+  }
+  else if(action === 'enregistrer-notes'){
+    record.notesParent = $('zone-notes').value;
+    saveRecord();
+    afficherOnglet('rapport');
+    toast('Observations enregistrées.', 'succes');
+  }
+  else if(action === 'imprimer-rapport'){
+    $('zoneImpression').innerHTML = '<pre>' + esc(construireRapportTexte()) + '</pre>';
+    window.print();
+  }
+  else if(action === 'telecharger-rapport'){
+    telecharger(construireRapportTexte(), 'rapport_level_up_zone_' + todayStr() + '.txt', 'text/plain');
+  }
+  else if(action === 'copier-rapport'){
+    const texte = construireRapportTexte();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(texte).then(() => toast('Rapport copié.', 'succes'), () => toast('Copie impossible : sélectionne le texte du rapport à la main.', 'erreur'));
+    } else {
+      toast('Copie impossible : sélectionne le texte du rapport à la main.', 'erreur');
+    }
+  }
+  else if(action === 'exporter'){
+    telecharger(JSON.stringify({format:'levelUpZone_v1', version: VERSION, exporteLe: todayStr(), record}, null, 2), 'level_up_zone_sauvegarde_' + todayStr() + '.json', 'application/json');
+  }
+  else if(action === 'importer'){ $('fichier-import').click(); }
+  else if(action === 'reset-jour'){
+    demanderConfirmation('Remettre à zéro les tâches d\'aujourd\'hui ? L\'XP déjà gagné aujourd\'hui est gardé.', () => {
+      const doneCount = TASKS.filter(t => record.checks[t.id]).length;
+      record.archivedXP += doneCount * 10;
+      record.checks = {};
+      saveRecord();
+      render();
+      toast('Journée réinitialisée.', 'succes');
+    });
+  }
+  else if(action === 'reset-tout'){
+    demanderConfirmation('Effacer TOUTE la progression (XP, niveau, série, historique) ? Pense à exporter une sauvegarde avant.', () => {
+      record = nouveauRecord(todayStr(), record.participants);
+      saveRecord();
+      render();
+      afficherOnglet('joueurs');
+      toast('Progression effacée.', 'succes');
+    });
+  }
+  else if(action === 'changer-code'){
+    const c1 = $('nouveau-code1').value.trim();
+    if(c1.length < 4){ toast('Le code doit contenir au moins 4 caractères.', 'erreur'); return; }
+    if(c1 !== $('nouveau-code2').value.trim()){ toast('Les deux codes ne sont pas identiques.', 'erreur'); return; }
+    ecrireCode(c1);
+    afficherOnglet('reglages');
+    toast('Code parent modifié.', 'succes');
+  }
+});
+
+$('fichier-import').addEventListener('change', e => {
+  const fichier = e.target.files[0];
+  e.target.value = '';
+  if(!fichier) return;
+  const lecteur = new FileReader();
+  lecteur.onload = ev => {
+    let paquet;
+    try{ paquet = JSON.parse(ev.target.result); }catch(err){ paquet = null; }
+    if(!paquet || paquet.format !== 'levelUpZone_v1' || !paquet.record || !paquet.record.checks){
+      toast('Fichier invalide : ce n\'est pas une sauvegarde Level Up Zone.', 'erreur');
+      return;
+    }
+    demanderConfirmation('Remplacer toute la progression actuelle par celle de la sauvegarde ?', () => {
+      writeStorage(STORAGE_KEY, paquet.record);
+      loadRecord();
+      render();
+      afficherOnglet('joueurs');
+      toast('Sauvegarde importée.', 'succes');
+    });
+  };
+  lecteur.readAsText(fichier);
+});
+
+loadRecord();
+render();
 </script>
-<!-- hub-commun v1.0 : bouton Mes jeux + Mode Parent partage -->
-<script src="hub-commun.js"></script>
 </body>
 </html>
