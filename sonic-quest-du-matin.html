@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<!-- Sonic Quest du Matin — v4.0 — 09/11/2026
+<!-- Sonic Quest du Matin — v4.1 — 09/11/2026
+     v4.1 : intégration de hub-commun.js (barre « ← Retour aux jeux » commune au hub) ;
+            meta hub-parent=propre (pas de cadenas partagé, l'outil a son propre Mode Parent) ;
+            bouton Retour maison retiré (doublon avec la barre du hub)
      v4.0 : Mode Parent standard (règle MAJP du 09/11/2026)
             - accès par le bouton « 👨‍👩‍👧 Mode Parent » ; code parent créé au 1er accès (aucun code écrit dans le fichier)
             - onglets : Joueurs (ajouter / renommer / supprimer), Tâches, Historique (filtrable par joueur),
@@ -16,6 +19,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="hub-parent" content="propre">
 <title>Sonic Quest du Matin</title>
 <style>
   :root{
@@ -43,7 +47,7 @@
   }
   input, select, textarea, .rapport{user-select:text;}
   .wrap{max-width:640px;margin:0 auto;}
-  header{text-align:center;padding:40px 10px 10px;}
+  header{text-align:center;padding:14px 10px 10px;}
   h1{
     margin:0;font-size:1.7em;letter-spacing:1px;
     background: linear-gradient(90deg, var(--or), var(--bleu));
@@ -221,14 +225,13 @@
   }
   @media print{
     body{background:#fff !important;color:#000;padding:0;}
-    .wrap, .overlay, .btn-retour, #toast{display:none !important;}
+    .wrap, .overlay, #toast{display:none !important;}
     #zoneImpression{display:block;}
     #zoneImpression pre{white-space:pre-wrap;font-family:Consolas, "Courier New", monospace;font-size:11pt;color:#000;}
   }
 </style>
 </head>
 <body>
-<a class="btn-retour" href="index.html">⬅️ Retour</a>
 <div class="wrap">
 
   <header>
@@ -261,7 +264,7 @@
 
   <footer>
     <button class="btn-parent" id="btnModeParent">👨‍👩‍👧 Mode Parent</button>
-    <div class="version">Sonic Quest du Matin — v4.0</div>
+    <div class="version">Sonic Quest du Matin — v4.1</div>
   </footer>
 </div>
 
@@ -331,7 +334,7 @@
 <script>
 (function(){
 
-  const VERSION = "4.0";
+  const VERSION = "4.1";
 
   const TACHES_PAR_DEFAUT = [
     {id:"table", icone:"🍽️", nom:"Débarrasser et nettoyer la table du petit-déj", groupe:"matin"},
@@ -1205,5 +1208,7 @@
   init();
 })();
 </script>
+<!-- hub-commun : barre « Retour aux jeux » du hub -->
+<script src="hub-commun.js"></script>
 </body>
 </html>

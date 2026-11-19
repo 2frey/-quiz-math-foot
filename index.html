@@ -6,6 +6,9 @@
   HISTORIQUE DES VERSIONS
   | Version | Date       | Modifications                                                                  |
   |---------|------------|--------------------------------------------------------------------------------|
+  | 4.1     | 2026-11-09 | Thème de page par enfant, choisi dans « Joueurs et jeux » : Classique,         |
+  |         |            | Manga couleur (maquette A v3 validée) ou Football (maquette B validée).         |
+  |         |            | Univers originaux : aucun logo, personnage ou portrait existant.                |
   | 4.0     | 2026-11-09 | Une page par enfant : écran « Qui joue ? », puis seuls ses jeux s'affichent.     |
   |         |            | Réglage « Joueurs et jeux » dans le Mode Parent (cadenas) : joueurs + jeux de   |
   |         |            | chacun, enregistrés en ligne (Firebase quizz-multiplication, doc hub/joueurs),   |
@@ -201,6 +204,83 @@
   .bouton.rouge{background:#fff;color:#B91C1C;border:2px solid #B91C1C;box-shadow:none;}
   #toast-hub{display:none;position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:2147483600;background:#1F2340;color:#fff;font-weight:800;padding:12px 20px;border-radius:14px;max-width:90%;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.3);}
 
+
+  /* ===================== THÈMES PAR ENFANT (v4.1) ===================== */
+  #entete-theme{display:none;}
+  body[data-theme="manga"] #entete-theme, body[data-theme="foot"] #entete-theme{display:block;}
+  body[data-theme="manga"] .mascotte, body[data-theme="manga"] header h1, body[data-theme="manga"] .salut, body[data-theme="manga"] .motiv,
+  body[data-theme="foot"] .mascotte, body[data-theme="foot"] header h1, body[data-theme="foot"] .salut, body[data-theme="foot"] .motiv,
+  body[data-theme="foot"] #stats{display:none;}
+
+  /* ----- Thème Manga couleur : trait d'encre, aplats, trames, lignes de concentration ----- */
+  body[data-theme="manga"]{--encre:#111;--nuit:#13235B;--rouge:#E3262F;--jaune:#FFD23F;--ciel:#7CC8F2;background:#FFF6E0;}
+  body[data-theme="manga"] .m-ouverture{
+    position:relative;overflow:hidden;border:3px solid var(--encre);min-height:220px;margin:0 0 10px;
+    display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;
+    background:
+      radial-gradient(ellipse at 50% 52%, var(--jaune) 0 30%, rgba(255,210,63,0) 36%),
+      repeating-conic-gradient(from 0deg at 50% 52%, rgba(17,17,17,.9) 0deg .8deg, rgba(0,0,0,0) .8deg 4.5deg),
+      radial-gradient(circle at 50% 52%, var(--rouge) 0 40%, var(--nuit) 85%);
+  }
+  body[data-theme="manga"] .m-bulle{background:#fff;border:3px solid var(--encre);border-radius:50%;padding:18px 22px;position:relative;z-index:1;box-shadow:0 0 0 5px var(--jaune),0 0 0 8px var(--encre);max-width:90%;}
+  body[data-theme="manga"] .m-bulle .jp{font-size:12px;font-weight:900;letter-spacing:3px;color:var(--rouge);}
+  body[data-theme="manga"] .m-bulle .fr{font-size:clamp(20px,5.5vw,28px);font-weight:900;font-style:italic;color:var(--nuit);}
+  body[data-theme="manga"] .m-bulle .qui{font-size:15px;font-weight:800;margin-top:2px;color:var(--encre);}
+  body[data-theme="manga"] .m-sfx{position:absolute;z-index:2;font-weight:900;line-height:1;font-size:clamp(30px,8vw,42px);color:var(--jaune);-webkit-text-stroke:2.5px var(--encre);paint-order:stroke fill;text-shadow:3px 3px 0 var(--encre);}
+  body[data-theme="manga"] .m-s1{top:10px;left:10px;transform:rotate(-14deg);}
+  body[data-theme="manga"] .m-s2{bottom:10px;right:12px;transform:rotate(10deg);color:#fff;}
+  body[data-theme="manga"] .m-paris{position:absolute;top:10px;right:10px;z-index:2;background:var(--nuit);color:#fff;font-size:11px;font-weight:900;padding:3px 8px;letter-spacing:1px;border:2px solid var(--encre);border-left:6px solid var(--rouge);}
+  body[data-theme="manga"] .stat{border-radius:0;border:2px solid var(--encre);background:var(--jaune);box-shadow:none;}
+  body[data-theme="manga"] .stat:nth-child(2n){background:var(--ciel);}
+  body[data-theme="manga"] .joueur-actif .bouton{border-radius:0;border:2px solid var(--encre);color:var(--nuit);box-shadow:3px 3px 0 var(--encre);}
+  body[data-theme="manga"] .consigne{border:3px solid var(--encre);border-radius:0;}
+  body[data-theme="manga"] .rubriques{background:rgba(255,246,224,.95);}
+  body[data-theme="manga"] .rubriques a{border-radius:0;border:2px solid var(--encre);}
+  body[data-theme="manga"] .puce{border-radius:0;border:2px solid var(--encre);}
+  body[data-theme="manga"] .titre-section{background:var(--nuit);color:#fff;border:2px solid var(--encre);border-left:8px solid var(--rouge);padding:7px 10px;margin-left:0;font-size:18px;}
+  body[data-theme="manga"] .titre-section .episode{font-size:11px;letter-spacing:2px;color:var(--jaune);font-weight:900;}
+  body[data-theme="manga"] .titre-section .pastille{border-radius:0;background:var(--jaune);color:var(--encre);}
+  body[data-theme="manga"] .grille{gap:8px;}
+  body[data-theme="manga"] .carte{
+    border-radius:0;border:3px solid var(--encre);box-shadow:none;
+    background:radial-gradient(circle, rgba(0,0,0,.18) 1.2px, transparent 1.5px) 0 0/7px 7px, #FFE1E6;
+  }
+  body[data-theme="manga"] .carte:nth-child(3n+2){background:radial-gradient(circle, rgba(19,35,91,.22) 1.2px, transparent 1.5px) 0 0/7px 7px, #DDF1FD;}
+  body[data-theme="manga"] .carte:nth-child(3n){background:radial-gradient(circle, rgba(0,0,0,.18) 1.2px, transparent 1.5px) 0 0/7px 7px, #FFF1BF;}
+  body[data-theme="manga"] .carte:hover{border-color:var(--rouge);}
+  body[data-theme="manga"] .carte .icone{background:#fff;border:2px solid var(--encre);border-radius:0;filter:drop-shadow(3px 3px 0 var(--encre));}
+  body[data-theme="manga"] .carte h3{color:var(--nuit);}
+  body[data-theme="manga"] .carte p{position:relative;background:#fff;border:2px solid var(--encre);border-radius:16px;padding:7px 10px;color:var(--encre);margin-bottom:18px;}
+  body[data-theme="manga"] .carte p::after{content:"";position:absolute;left:20px;bottom:-9px;width:12px;height:12px;background:#fff;border-right:2px solid var(--encre);border-bottom:2px solid var(--encre);transform:rotate(45deg) skew(10deg,10deg);}
+  body[data-theme="manga"] .carte .jouer{background:var(--rouge);border-radius:0;border:2px solid var(--encre);box-shadow:3px 3px 0 var(--encre);text-transform:uppercase;}
+  body[data-theme="manga"] .carte .etiquette{top:auto;bottom:16px;right:14px;border-radius:0;border:2px solid var(--encre);background:var(--jaune);color:var(--encre);}
+  body[data-theme="manga"] .carte .sfx{position:absolute;top:12px;right:12px;font-weight:900;font-size:20px;color:var(--rouge);-webkit-text-stroke:1.5px var(--encre);paint-order:stroke fill;transform:rotate(12deg);}
+  body[data-theme="manga"] footer{color:var(--encre);}
+
+  /* ----- Thème Football : pelouse, tableau d'affichage, cartes de joueur dorées ----- */
+  body[data-theme="foot"]{background:repeating-linear-gradient(180deg,#2E8B3A 0 70px,#277A32 70px 140px);color:#fff;}
+  body[data-theme="foot"] .f-terrain{position:relative;padding-top:4px;overflow:hidden;}
+  body[data-theme="foot"] .f-terrain::before{content:"";position:absolute;left:50%;top:60px;width:170px;height:170px;margin-left:-85px;border:3px solid rgba(255,255,255,.35);border-radius:50%;pointer-events:none;}
+  body[data-theme="foot"] .f-terrain::after{content:"";position:absolute;left:0;right:0;top:145px;border-top:3px solid rgba(255,255,255,.35);pointer-events:none;}
+  body[data-theme="foot"] .f-tableau{position:relative;z-index:1;max-width:420px;margin:6px auto 8px;background:#111;border:4px solid #444;border-radius:12px;padding:10px;text-align:center;font-family:"Courier New",monospace;}
+  body[data-theme="foot"] .f-tableau .eq{font-weight:900;font-size:13px;color:#FFD23F;letter-spacing:2px;text-transform:uppercase;}
+  body[data-theme="foot"] .f-tableau .score{font-size:32px;font-weight:900;color:#FF5A3C;letter-spacing:4px;}
+  body[data-theme="foot"] .f-tableau .min{font-size:12.5px;color:#9be39b;}
+  body[data-theme="foot"] .f-salut{position:relative;z-index:1;text-align:center;font-weight:900;font-size:clamp(18px,4.5vw,22px);margin:12px 0 2px;text-shadow:0 2px 0 rgba(0,0,0,.35);}
+  body[data-theme="foot"] .f-sous{position:relative;z-index:1;text-align:center;font-size:14px;font-weight:700;}
+  body[data-theme="foot"] .joueur-actif .stat{color:var(--texte);}
+  body[data-theme="foot"] .consigne{border-color:#fff;color:var(--texte);}
+  body[data-theme="foot"] .reprise h2{color:#fff;}
+  body[data-theme="foot"] .rubriques{background:rgba(39,122,50,.92);}
+  body[data-theme="foot"] .titre-section{color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3);}
+  body[data-theme="foot"] .carte{background:linear-gradient(160deg,#FFF7D6,#FFE08A);border:3px solid #C99A1E;border-radius:16px;box-shadow:0 5px 0 rgba(0,0,0,.25);}
+  body[data-theme="foot"] .carte:hover{border-color:#8A6A10;}
+  body[data-theme="foot"] .carte .icone{background:#1F2340;color:#FFD23F;flex-direction:column;width:64px;height:78px;border-radius:10px;font-size:26px;line-height:1;}
+  body[data-theme="foot"] .carte .icone b{font-size:24px;font-weight:900;margin-bottom:4px;}
+  body[data-theme="foot"] .carte .jouer{background:#2E8B3A;border:2px solid #0E3B17;box-shadow:none;}
+  body[data-theme="foot"] .carte .vu{color:#14532D;}
+  body[data-theme="foot"] footer{color:#fff;}
+
   footer{text-align:center;font-size:12.5px;color:var(--texte-doux);margin-top:10px;}
   noscript .consigne{border-color:#C2410C;}
 
@@ -218,6 +298,7 @@
 <div class="page">
 
   <header>
+    <div id="entete-theme"></div>
     <div class="mascotte" aria-hidden="true">🚀</div>
     <h1>Mes jeux pour apprendre</h1>
     <p class="salut" id="salut">Bonjour, champion !</p>
@@ -247,7 +328,7 @@
     <div id="sections-e"></div>
   </main>
 
-  <footer>Mes jeux pour apprendre — v4.0 (en ligne)</footer>
+  <footer>Mes jeux pour apprendre — v4.1 (en ligne)</footer>
 </div>
 <div id="toast-hub" role="status" aria-live="polite"></div>
 
@@ -499,6 +580,60 @@
   }
 
   /* ---------- Affichage côté enfant ---------- */
+  var THEMES = [
+    { id:"classique", nom:"Classique" },
+    { id:"manga", nom:"Manga couleur" },
+    { id:"foot", nom:"Football" }
+  ];
+  var SFX_MANGA = ["バン!", "シュッ", "キラッ", "ドン!", "ズバッ", "ゴゴゴ"];
+  function themeDe(j){
+    var t = j && j.theme;
+    return THEMES.some(function(x){ return x.id === t; }) ? t : "classique";
+  }
+  /* nombre de jours (60 derniers) où ce jeu a été ouvert sur cet appareil */
+  function joursJoues(nom){
+    var vus = lire(CLE_VUS, {}), n = 0;
+    Object.keys(vus).forEach(function(k){ if(vus[k].indexOf(nom) >= 0) n++; });
+    return n;
+  }
+  function appliquerTheme(){
+    var j = joueurActif(), th = j ? themeDe(j) : "classique";
+    document.body.setAttribute("data-theme", th);
+    var e = $("entete-theme");
+    if(th === "classique"){ e.innerHTML = ""; return; }
+    var vus = lire(CLE_VUS, {}), auj = (vus[cleJour(new Date())] || []).length, serie = serieJours(vus);
+    if(th === "manga"){
+      e.innerHTML = "<div class=\"m-ouverture\"><span class=\"m-sfx m-s1\" aria-hidden=\"true\">ドン!</span>" +
+        "<span class=\"m-paris\" aria-hidden=\"true\">PARIS</span>" +
+        "<div class=\"m-bulle\"><div class=\"jp\" aria-hidden=\"true\">ミッション</div><div class=\"fr\">MES MISSIONS !</div>" +
+        "<div class=\"qui\">Bonjour, " + esc(j.nom) + " !</div></div>" +
+        "<span class=\"m-sfx m-s2\" aria-hidden=\"true\">ゴゴゴ</span></div>";
+    } else {
+      e.innerHTML = "<div class=\"f-terrain\"><div class=\"f-tableau\"><div class=\"eq\">" + esc(j.nom) + " FC — Devoirs</div>" +
+        "<div class=\"score\">" + auj + " - 0</div>" +
+        "<div class=\"min\">🔥 " + pluriel(serie, "jour") + " de suite · " + auj + (auj > 1 ? " jeux" : " jeu") + " aujourd'hui</div></div>" +
+        "<div class=\"f-salut\">Bonjour, " + esc(j.nom) + " ! ⚽</div><div class=\"f-sous\">Le match commence, montre ton talent !</div></div>";
+    }
+    /* habillage des rubriques et des cartes */
+    var titres = document.querySelectorAll("#sections-e .titre-section");
+    Array.prototype.forEach.call(titres, function(h, i){
+      if(th === "manga"){ var ep = document.createElement("span"); ep.className = "episode"; ep.textContent = "ÉPISODE " + (i + 1); h.insertBefore(ep, h.firstChild); }
+      if(th === "foot" && h.id === "h-routine"){ h.firstChild.textContent = "☀️ Avant-match "; }
+    });
+    var cartes = document.querySelectorAll("#sections-e .carte");
+    Array.prototype.forEach.call(cartes, function(c, i){
+      var ic = c.querySelector(".icone"), nom = c.getAttribute("data-nom");
+      if(th === "manga"){
+        var s = document.createElement("span"); s.className = "sfx"; s.setAttribute("aria-hidden", "true"); s.textContent = SFX_MANGA[i % SFX_MANGA.length]; c.appendChild(s);
+      } else {
+        var em = ic.textContent; ic.textContent = "";
+        var b = document.createElement("b"); b.textContent = joursJoues(nom); b.title = "jours joués"; ic.appendChild(b);
+        ic.appendChild(document.createTextNode(em));
+        var jouer = c.querySelector(".jouer"); if(!c.classList.contains("indisponible")) jouer.textContent = "⚽ Coup d'envoi";
+      }
+    });
+  }
+
   function afficherSelonJoueur(){
     var aChoisir = config.joueurs.length > 0 && !joueurActif();
     $("zone-qui-joue").hidden = !aChoisir;
@@ -509,7 +644,7 @@
       $("zone-reprise").hidden = true; $("rubriques").hidden = true;
       construireChoix();
     }
-    majBandeauJoueur(); accueil();
+    majBandeauJoueur(); accueil(); appliquerTheme();
   }
   function construireChoix(){
     var z = $("choix-joueurs"); z.innerHTML = "";
@@ -608,7 +743,12 @@
     brouillon.joueurs.forEach(function(j, i){
       h += "<div class=\"pj-ligne\"><input class=\"pj-emoji\" data-i=\"" + i + "\" data-champ=\"emoji\" maxlength=\"4\" aria-label=\"Emoji du joueur\" value=\"" + esc(j.emoji) + "\">" +
         "<input class=\"pj-nom\" data-i=\"" + i + "\" data-champ=\"nom\" maxlength=\"20\" placeholder=\"Prénom ou pseudo\" aria-label=\"Prénom du joueur\" value=\"" + esc(j.nom) + "\">" +
-        "<button type=\"button\" class=\"bouton rouge\" data-pj=\"supprimer\" data-i=\"" + i + "\">Supprimer</button></div>";
+        "<button type=\"button\" class=\"bouton rouge\" data-pj=\"supprimer\" data-i=\"" + i + "\">Supprimer</button></div>" +
+        "<div class=\"pj-puces\" style=\"margin:-2px 0 12px;\"><span class=\"pj-aide\" style=\"align-self:center;\">Thème de sa page :</span>" +
+        THEMES.map(function(t){
+          var on = themeDe(j) === t.id;
+          return "<button type=\"button\" class=\"pj-puce" + (on ? " on" : "") + "\" aria-pressed=\"" + on + "\" data-pj=\"theme\" data-i=\"" + i + "\" data-theme=\"" + t.id + "\">" + (on ? "✅ " : "") + esc(t.nom) + "</button>";
+        }).join("") + "</div>";
     });
     h += "<button type=\"button\" class=\"bouton clair\" data-pj=\"ajouter\">➕ Ajouter un joueur</button>";
     h += "<h3>2. Les jeux de chacun</h3>";
@@ -652,7 +792,7 @@
     if(action === "fermer"){ fermerPJ(); return; }
     if(action === "oeil"){ var m = $("pj-mdp"); m.type = m.type === "password" ? "text" : "password"; return; }
     if(action === "ajouter"){
-      brouillon.joueurs.push({ id: "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), nom: "", emoji: "🙂" });
+      brouillon.joueurs.push({ id: "j" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), nom: "", emoji: "🙂", theme: "classique" });
       rendrePJ();
       var champs = fondPJ.querySelectorAll(".pj-nom"); if(champs.length) champs[champs.length - 1].focus();
       return;
@@ -661,6 +801,10 @@
       var i = Number(b.getAttribute("data-i")), id = brouillon.joueurs[i].id;
       brouillon.joueurs.splice(i, 1);
       brouillon.attributions.forEach(function(a){ a.joueurs = a.joueurs.filter(function(x){ return x !== id; }); });
+      rendrePJ(); return;
+    }
+    if(action === "theme"){
+      brouillon.joueurs[Number(b.getAttribute("data-i"))].theme = b.getAttribute("data-theme");
       rendrePJ(); return;
     }
     if(action === "basculer"){

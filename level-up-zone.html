@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
+<meta name="hub-parent" content="propre">
 <title>Level Up Zone</title>
 <!--
   HISTORIQUE DES VERSIONS
@@ -26,6 +27,8 @@
   |         |            | Correctif : la décoche d'une tâche partagée après 20 h ne        |
   |         |            | retirait pas l'entrée d'historique (date UTC) → champ « jour »   |
   |         |            | en date locale. Données existantes conservées (même clé).        |
+  | 2.1     | 2026-11-09 | Intégration de hub-commun.js (barre « ← Retour aux jeux ») ;     |
+  |         |            | meta hub-parent=propre ; bouton Retour maison retiré (doublon).  |
 -->
 <style>
   :root{
@@ -55,7 +58,7 @@
     padding:20px 14px 60px;
   }
   .wrap{max-width:640px;margin:0 auto;}
-  header{text-align:center;margin-bottom:18px;padding-top:30px;}
+  header{text-align:center;margin-bottom:18px;}
   .btn-retour{
     position:fixed;top:10px;left:10px;z-index:40;
     background:var(--card);border:2px solid var(--purple-glow);color:#e9ddff;
@@ -307,14 +310,13 @@
   }
   @media print{
     body{background:#fff !important;color:#000;padding:0;}
-    .wrap, .overlay, .btn-retour, #toast{display:none !important;}
+    .wrap, .overlay, #toast{display:none !important;}
     #zoneImpression{display:block;}
     #zoneImpression pre{white-space:pre-wrap;font-family:Consolas, "Courier New", monospace;font-size:11pt;color:#000;}
   }
 </style>
 </head>
 <body>
-<a class="btn-retour" href="index.html">⬅️ Retour</a>
 <div class="wrap">
   <header>
     <p class="logo">⚡ LEVEL UP ZONE ⚡</p>
@@ -336,7 +338,7 @@
 
   <footer>
     <button class="btn-parent" id="btn-mode-parent">👨‍👩‍👧 Mode Parent</button>
-    <div class="version">Level Up Zone v2.0 — progression sauvegardée automatiquement</div>
+    <div class="version">Level Up Zone v2.1 — progression sauvegardée automatiquement</div>
   </footer>
 </div>
 
@@ -393,7 +395,7 @@
 <div id="zoneImpression"></div>
 
 <script>
-const VERSION = '2.0';
+const VERSION = '2.1';
 const STORAGE_KEY = 'levelupzone:progress';
 const CLE_CODE = 'levelupzone:codeParent';
 const MAX_JOURS_ARCHIVES = 365;
@@ -1079,5 +1081,7 @@ $('fichier-import').addEventListener('change', e => {
 loadRecord();
 render();
 </script>
+<!-- hub-commun : barre « Retour aux jeux » du hub -->
+<script src="hub-commun.js"></script>
 </body>
 </html>

@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<!--
+  Conversions de longueurs — Le tableau des longueurs (CM1/CM2)
+  v1.3 (19/11/2026) : intégration au hub
+    - balise meta « hub » (carte d’accueil créée par le robot a-publier)
+    - chaque partie terminée est enregistrée dans l’historique commun du hub (HubHistorique) :
+      résumé de la semaine, compétences, points à revoir
+    - onglet Rapport : bouton « Rapport détaillé (format hub) » (HubRapport, à transmettre à Claude)
+  v1.2 (18/11/2026) : nouvelle saisie du tableau (choix B validé par le parent)
+    - étiquettes 0 à 9, virgule et gomme toujours disponibles : touche une étiquette, puis une case (aucun chiffre fourni d’avance)
+    - la virgule s’écrit DANS la case de l’unité demandée, collée au chiffre (« 0, »), plus à cheval sur la bordure
+    - niveau 2, étape 3 : « Pose la virgule » sans indiquer la colonne, validation par le bouton Valider
+    - niveau 3 : la virgule se pose avec son étiquette (toucher le nom d’une colonne ne place plus rien)
+  v1.1 (18/11/2026) : ajout d’un prénom facilité
+    - écran d’accueil sans joueur : grand bouton « ➕ Ajouter un joueur » (ouvre le Mode Parent, onglet Joueurs, curseur dans le champ)
+    - touche Entrée pour ajouter / renommer un joueur
+    - fiche imprimée : bordure gauche des tableaux rétablie ; rapport .txt : espaces insécables avant « : » et « ; »
+  v1.0 (18/11/2026) : création
+    - 4 niveaux : 1 Je range les unités · 2 Pas à pas (5 étapes guidées) · 3 Tout seul · 4 Défi éclair
+    - Leçon « La méthode » avec 3 exemples, mémo activable par joueur
+    - Fiche d’entraînement imprimable (10 conversions + corrigé)
+    - Mode Parent standard : code créé au 1er accès, joueurs, réglages, historique, analyse, rapport, données
+  Stockage local : clés conv_v1_* (ne pas renommer)
+-->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="hub-parent" content="propre">
+<meta name="hub" content='{"titre":"Le tableau des longueurs","texte":"Convertis km, m, cm, mm… avec le tableau de conversion et deviens le champion !","emoji":"📏","couleur":"orange","section":"entrainement","etiquette":"Conversions","bouton":"▶ Jouer"}'>
+<title>Conversions de longueurs — Le tableau</title>
+<style>
+  :root{
+    --bleu:#1E5AA8; --bleu-f:#123E78; --bleu-c:#E8F0FB;
+    --or:#F2B705; --or-c:#FFF6D6; --or-f:#8A6400;
+    --vert:#2E8B57; --vert-c:#E5F5EC; --vert-f:#1E5E3A;
+    --corail:#E8833A; --corail-c:#FDEFE3; --corail-f:#9A4A10;
+    --gris:#5B6472; --gris-c:#F3F5F8; --bord:#DDE3EC;
+    --multi:#DCE8F8; --sous:#E3F4EA; --unite:#FFE08A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Segoe UI', Verdana, Arial, sans-serif; color:#1F2633;
+    background:linear-gradient(160deg,#EEF4FC 0%,#FDF8EA 100%); min-height:100vh;}
+  .app{max-width:780px; margin:0 auto; padding:16px 14px 60px;}
+  .ecran{display:none;} .ecran.actif{display:block; animation:apparition .25s ease;}
+  @keyframes apparition{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  header.haut{display:flex; justify-content:space-between; align-items:center; margin:4px 0 16px;}
+  header.haut .titre{font-weight:800; color:var(--bleu); font-size:16px;}
+  .badge-version{font-size:11px; color:#7F8899; background:#fff; border:1px solid var(--bord); padding:2px 9px; border-radius:20px;}
+  .carte{background:#fff; border:1px solid var(--bord); border-radius:18px; padding:20px; box-shadow:0 2px 12px rgba(30,60,110,.07); margin-bottom:16px;}
+  h1{font-size:23px; margin:0 0 8px;} h2{font-size:19px; margin:0 0 10px;} h3{font-size:16px; margin:16px 0 8px;}
+  p{line-height:1.5;}
+  .consigne{background:var(--bleu-c); border:2px dashed var(--bleu); color:var(--bleu-f); border-radius:12px;
+    padding:12px 14px; font-weight:700; font-size:15px; margin:12px 0 14px; text-align:center;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; border:none; border-radius:14px;
+    padding:13px 18px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; transition:transform .08s;}
+  .btn:active{transform:scale(.97);}
+  .btn-primaire{background:var(--bleu); color:#fff; box-shadow:0 3px 0 var(--bleu-f);}
+  .btn-secondaire{background:#fff; color:var(--bleu); border:2px solid var(--bleu-c);}
+  .btn-or{background:var(--or); color:#3D2C00; box-shadow:0 3px 0 #B38800;}
+  .btn-danger{background:#C0392B; color:#fff;}
+  .btn-ghost{background:transparent; color:var(--gris); font-weight:600;}
+  .btn-petit{padding:8px 12px; font-size:13px; border-radius:10px;}
+  .btn-large{width:100%;}
+  .rangee{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .rangee > .btn{flex:1;}
+  .lien-parent{display:block; margin:26px auto 0; background:none; border:none; color:#98A1B3; font-size:12.5px; cursor:pointer; font-family:inherit;}
+  .vide{color:#8A93A6; text-align:center; font-size:14px; padding:14px 0;}
+
+  /* Joueurs */
+  .liste-pills{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:10px 0;}
+  .pill{background:var(--bleu-c); color:var(--bleu-f); border:2px solid transparent; border-radius:30px;
+    padding:12px 20px; font-weight:800; font-size:16px; cursor:pointer; font-family:inherit;}
+  .pill:active,.pill.actif{border-color:var(--bleu); background:#fff;}
+
+  /* Menu */
+  .grille-niveaux{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media(max-width:520px){.grille-niveaux{grid-template-columns:1fr;}}
+  .tuile{background:#fff; border:2px solid var(--bord); border-radius:16px; padding:16px; cursor:pointer; text-align:left;
+    font-family:inherit; display:flex; gap:12px; align-items:flex-start;}
+  .tuile:active{border-color:var(--bleu);}
+  .tuile .emoji{font-size:30px; line-height:1;}
+  .tuile strong{display:block; font-size:15.5px; margin-bottom:3px; color:#1F2633;}
+  .tuile span.desc{font-size:12.5px; color:var(--gris); line-height:1.4;}
+  .tuile .meilleur{display:inline-block; margin-top:6px; font-size:11.5px; background:var(--or-c); color:var(--or-f); padding:2px 8px; border-radius:10px;}
+  .tuile.methode{grid-column:1/-1; background:var(--or-c); border-color:#F5D774;}
+
+  /* Tableau de conversion */
+  .tab-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; padding:4px 10px 10px 2px; margin:0 -4px;}
+  table.tableau{border-collapse:collapse; margin:0 auto; min-width:330px;}
+  table.tableau th, table.tableau td{border:2px solid #9FB0C8; text-align:center;}
+  table.tableau th.groupe{font-size:10.5px; font-weight:700; color:var(--gris); background:#F7F9FC; padding:3px 2px; text-transform:uppercase; letter-spacing:.03em;}
+  table.tableau th.u{font-size:16px; padding:8px 4px; min-width:46px; cursor:pointer; user-select:none;}
+  table.tableau th.u.multi{background:var(--multi);} table.tableau th.u.unite{background:var(--unite);} table.tableau th.u.sous{background:var(--sous);}
+  table.tableau td.case{position:relative; height:58px; min-width:46px; width:52px; font-size:30px; font-weight:800; color:#1F2633; cursor:pointer; background:#fff;}
+  table.tableau.statique td.case, table.tableau.statique th.u{cursor:default;}
+  table.tableau td.case.verrou{color:#4B5563; background:#F6F7FA;}
+  table.tableau td.case.faux{background:var(--corail-c); box-shadow:inset 0 0 0 3px var(--corail);}
+  table.tableau td.case.zero{color:var(--or-f); background:var(--or-c);}
+  table.tableau .cible{box-shadow:inset 0 0 0 3px var(--vert) !important;}
+  table.tableau th.u.cible{background:var(--vert-c) !important;}
+  .virg{color:#D9480F; font-weight:900; margin-left:1px;}
+  table.tableau td.case.a-virgule{background:#FFF4EC;}
+  @media(max-width:420px){
+    table.tableau{min-width:0;}
+    table.tableau td.case{min-width:40px; width:44px; height:52px; font-size:26px;}
+    table.tableau th.u{min-width:40px; font-size:14px; padding:7px 2px;}
+    .question{font-size:26px;}
+  }
+  table.tableau.petit td.case{height:38px; font-size:20px; min-width:34px; width:36px;}
+  table.tableau.petit th.u{font-size:13px; padding:5px 2px; min-width:34px;}
+
+  /* Question */
+  .barre-jeu{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
+  .etiquette{font-size:12.5px; font-weight:700; background:#fff; border:1px solid var(--bord); padding:5px 11px; border-radius:20px; color:var(--bleu-f);}
+  .progression{display:flex; gap:5px; margin-bottom:12px;}
+  .progression .seg{flex:1; height:7px; border-radius:6px; background:var(--bord);}
+  .progression .seg.ok{background:var(--vert);} .progression .seg.ko{background:var(--corail);} .progression .seg.encours{background:var(--bleu);}
+  .question{font-size:30px; font-weight:800; text-align:center; margin:4px 0 2px; color:#1F2633;}
+  .question .trou{display:inline-block; min-width:70px; border-bottom:4px dotted var(--bleu); color:var(--bleu); margin:0 6px;}
+  .chiffre-unites{background:var(--unite); border-radius:6px; padding:0 4px; box-shadow:0 0 0 2px #E0B400;}
+
+  /* Pavé numérique */
+  .pave{display:grid; grid-template-columns:repeat(6,1fr); gap:8px; max-width:420px; margin:12px auto 4px;}
+  .pave button{font-size:22px; font-weight:800; padding:12px 0; border-radius:12px; border:2px solid var(--bord); background:#fff; cursor:pointer; font-family:inherit; color:#1F2633;}
+  .pave button:active{background:var(--bleu-c);}
+  .pave button.virgule-tuile{color:#D9480F; font-size:28px; line-height:1;}
+  .pave button.gomme{background:var(--gris-c); font-size:15px;}
+  .pave button.on{background:var(--bleu); color:#fff; border-color:var(--bleu-f); box-shadow:0 3px 0 var(--bleu-f);}
+  .pave button.virgule-tuile.on{color:#fff;}
+  .aide-tuiles{text-align:center; font-size:13px; color:var(--gris); margin:2px 0 0;}
+  .zone-reponse{display:flex; align-items:center; justify-content:center; gap:10px; margin:16px 0 6px; flex-wrap:wrap;}
+  .zone-reponse label{font-weight:800; font-size:16px;}
+  .zone-reponse input{font-size:24px; font-weight:800; width:170px; padding:10px 12px; border-radius:12px; border:3px solid var(--bord); text-align:center; font-family:inherit;}
+  .zone-reponse input:focus{outline:none; border-color:var(--bleu);}
+  .zone-reponse .unite-cible{font-size:22px; font-weight:800;}
+
+  /* Rangement niveau 1 */
+  .emplacements{display:flex; gap:6px; justify-content:center; flex-wrap:nowrap; margin:10px 0 18px; overflow-x:auto;}
+  .emplacement{min-width:48px; height:54px; border:3px dashed #9FB0C8; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; cursor:pointer; background:#fff;}
+  .emplacement.plein{border-style:solid; border-color:var(--bleu); background:var(--bleu-c); color:var(--bleu-f);}
+  .emplacement.faux{border-color:var(--corail); background:var(--corail-c); color:var(--corail-f);}
+  .emplacement.juste{border-color:var(--vert); background:var(--vert-c); color:var(--vert-f);}
+  .jetons{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; min-height:54px;}
+  .jeton{padding:12px 16px; font-size:18px; font-weight:800; border-radius:12px; background:var(--or); color:#3D2C00; border:none; cursor:pointer; box-shadow:0 3px 0 #B38800; font-family:inherit;}
+  .choix-qcm{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px;}
+  .choix{padding:16px 8px; text-align:center; font-size:20px; font-weight:800; border-radius:14px; border:3px solid var(--bord); background:#fff; cursor:pointer;}
+  .choix.juste{border-color:var(--vert); background:var(--vert-c); color:var(--vert-f);}
+  .choix.faux{border-color:var(--corail); background:var(--corail-c); color:var(--corail-f);}
+
+  /* Retours */
+  .retour{border-radius:14px; padding:14px 16px; margin-top:14px; font-size:15px; line-height:1.5;}
+  .retour.ok{background:var(--vert-c); border:2px solid #A9DCBF; color:var(--vert-f);}
+  .retour.indice{background:var(--corail-c); border:2px solid #F5C9A6; color:var(--corail-f);}
+  .retour.correction{background:var(--or-c); border:2px solid #F5D774; color:#5C4300;}
+  .retour ol{margin:8px 0 8px 18px; padding:0;} .retour li{margin-bottom:4px;}
+  .retour .tab-wrap{margin-top:8px;}
+  .boutons-jeu{display:flex; gap:10px; margin-top:16px;}
+  .boutons-jeu .btn{flex:1;}
+
+  /* Méthode */
+  .regles{counter-reset:r; list-style:none; padding:0; margin:0;}
+  .regles li{counter-increment:r; position:relative; padding:10px 12px 10px 48px; margin-bottom:8px; background:var(--gris-c); border-radius:12px; font-size:15px; line-height:1.45;}
+  .regles li::before{content:counter(r); position:absolute; left:12px; top:9px; width:26px; height:26px; border-radius:50%; background:var(--bleu); color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; font-size:14px;}
+  .moyen-memo{background:var(--or-c); border-radius:12px; padding:12px 14px; font-weight:700; color:var(--or-f); text-align:center; margin:12px 0;}
+  .exemple{border:1px solid var(--bord); border-radius:14px; padding:14px; margin-top:14px;}
+  .exemple .titre-ex{font-weight:800; font-size:16px; margin-bottom:6px;}
+
+  /* Score */
+  .score{text-align:center; padding:10px 0 4px;}
+  .score .gros{font-size:56px; font-weight:900; color:var(--bleu);}
+  .score .sur{font-size:24px; color:var(--gris);}
+  .etoiles{font-size:30px; letter-spacing:4px; text-align:center; margin:6px 0 12px;}
+  .ligne-bilan{display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--bord); font-size:14.5px;}
+  .ligne-bilan:last-child{border-bottom:none;}
+
+  /* Mode Parent */
+  .onglets{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;}
+  .onglet{flex:1 1 30%; padding:10px 6px; border-radius:10px; background:var(--gris-c); font-weight:700; font-size:13px; color:var(--gris); cursor:pointer; text-align:center; border:none; font-family:inherit;}
+  .onglet.actif{background:var(--bleu); color:#fff;}
+  .panneau{display:none;} .panneau.actif{display:block;}
+  .ligne-joueur{display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid var(--bord); flex-wrap:wrap;}
+  .ligne-joueur .nom{flex:1; font-weight:800; min-width:110px;}
+  .interrupteur{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--gris); cursor:pointer;}
+  .toggle{width:48px; height:28px; border-radius:20px; background:#CBD2DE; position:relative; flex-shrink:0; transition:background .15s;}
+  .toggle::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .15s;}
+  .toggle.on{background:var(--vert);} .toggle.on::after{left:23px;}
+  .champ{width:100%; padding:12px; border-radius:12px; border:2px solid var(--bord); font-size:15px; font-family:inherit;}
+  .champ:focus{outline:none; border-color:var(--bleu);}
+  .champ-mdp{position:relative; margin-bottom:10px;}
+  .champ-mdp .champ{padding-right:50px;}
+  .champ-mdp .oeil{position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; font-size:20px; cursor:pointer; padding:6px;}
+  label.lbl{display:block; font-weight:700; font-size:13px; color:var(--gris); margin:14px 0 6px;}
+  .segment{display:flex; gap:6px; flex-wrap:wrap;}
+  .segment button{flex:1; padding:10px; border-radius:10px; border:2px solid var(--bord); background:#fff; font-weight:700; cursor:pointer; font-family:inherit;}
+  .segment button.actif{border-color:var(--bleu); background:var(--bleu-c); color:var(--bleu-f);}
+  .carte-hist{border:1px solid var(--bord); border-radius:12px; padding:11px 13px; margin-bottom:8px; cursor:pointer;}
+  .carte-hist .haut{display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; font-size:14px;}
+  .carte-hist .detail{display:none; margin-top:8px; padding-top:8px; border-top:1px dashed var(--bord); font-size:13px;}
+  .carte-hist.ouvert .detail{display:block;}
+  .pastille{display:inline-block; font-size:12px; font-weight:700; padding:3px 9px; border-radius:12px; background:var(--gris-c); color:#4B5261; margin:4px 4px 0 0;}
+  .pastille.bien{background:var(--vert-c); color:var(--vert-f);} .pastille.moyen{background:var(--or-c); color:var(--or-f);} .pastille.faible{background:var(--corail-c); color:var(--corail-f);}
+  .fiche{border:1px solid var(--bord); border-radius:14px; padding:14px; margin-bottom:14px;}
+  .fiche h4{margin:0 0 8px; font-size:15.5px; color:var(--bleu-f);}
+  .conseil{background:var(--bleu-c); border-radius:10px; padding:9px 12px; font-size:13.5px; margin-top:10px; color:var(--bleu-f);}
+  textarea.rapport{width:100%; min-height:260px; font-family:Consolas, monospace; font-size:12.5px; border:2px solid var(--bord); border-radius:12px; padding:10px;}
+
+  /* Modale & toast */
+  .voile{display:none; position:fixed; inset:0; background:rgba(15,25,45,.55); z-index:50; align-items:center; justify-content:center; padding:16px;}
+  .voile.actif{display:flex;}
+  .modale{background:#fff; border-radius:20px; padding:20px; width:100%; max-width:520px; max-height:88vh; overflow-y:auto;}
+  .modale h3{margin:0 0 10px;}
+  .modale .boutons{display:flex; gap:10px; margin-top:16px;} .modale .boutons .btn{flex:1;}
+  #toast{display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1F2633; color:#fff; padding:12px 18px; border-radius:12px; font-weight:600; font-size:14px; z-index:60; max-width:90%; text-align:center;}
+  #toast.erreur{background:#B4532A;} #toast.succes{background:var(--vert);}
+  footer.pied{text-align:center; font-size:11px; color:#A2AABB; margin-top:24px;}
+
+  /* Impression */
+  #zone-impression{display:none;}
+  @media print{
+    body{background:#fff;}
+    body > *:not(#zone-impression){display:none !important;}
+    #zone-impression{display:block !important; font-family:Arial, sans-serif; color:#000;}
+    #zone-impression h1{font-size:20px; margin:0 0 6px;}
+    #zone-impression .entete{display:flex; justify-content:space-between; margin:10px 0 16px; font-size:14px;}
+    #zone-impression .exo{page-break-inside:avoid; margin-bottom:14px;}
+    #zone-impression .exo .enonce{font-size:16px; font-weight:bold; margin-bottom:5px;}
+    #zone-impression table.tableau th, #zone-impression table.tableau td{border:1.5px solid #000;}
+    #zone-impression table.tableau th.u{background:#fff !important;}
+    #zone-impression table.tableau td.case{height:34px; width:44px; font-size:20px;}
+    #zone-impression table.tableau td.case.zero{background:#fff; color:#000;}
+    #zone-impression .saut{page-break-before:always;}
+    #zone-impression .tab-wrap{overflow:visible; margin:0; padding:2px 10px 4px 2px;}
+    #zone-impression pre{white-space:pre-wrap; font-size:12px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="haut">
+    <span class="titre">📏 Le tableau des longueurs</span>
+    <span class="badge-version">v1.3</span>
+  </header>
+
+  <!-- ===== CHOIX DU JOUEUR ===== -->
+  <section id="ecran-joueur" class="ecran actif">
+    <div class="carte" style="text-align:center;">
+      <h1>📏 Conversions de longueurs</h1>
+      <p style="color:var(--gris); margin:0 0 6px;">Deviens le champion du tableau de conversion&nbsp;!</p>
+      <div class="consigne">Qui joue&nbsp;? Touche ton prénom.</div>
+      <div id="liste-joueurs" class="liste-pills"></div>
+      <button class="lien-parent" onclick="ouvrirParent()">👨‍👩‍👧 Mode Parent</button>
+    </div>
+  </section>
+
+  <!-- ===== MENU ===== -->
+  <section id="ecran-menu" class="ecran">
+    <div class="carte">
+      <h2 id="menu-bonjour">Bonjour&nbsp;!</h2>
+      <p style="color:var(--gris); margin:0 0 14px;">Choisis ton entraînement. Commence par le niveau 1, puis monte petit à petit.</p>
+      <div class="grille-niveaux">
+        <button class="tuile methode" onclick="ouvrirMethode()"><span class="emoji">📖</span><span><strong>La méthode</strong><span class="desc">Regarde comment on utilise le tableau, avec 3 exemples.</span></span></button>
+        <button class="tuile" onclick="lancer(1)"><span class="emoji">🧩</span><span><strong>1 · Je range les unités</strong><span class="desc">Remets les unités dans l’ordre du tableau.</span><span class="meilleur" id="best-1"></span></span></button>
+        <button class="tuile" onclick="lancer(2)"><span class="emoji">👣</span><span><strong>2 · Pas à pas</strong><span class="desc">Convertis en suivant les 5 étapes, une par une.</span><span class="meilleur" id="best-2"></span></span></button>
+        <button class="tuile" onclick="lancer(3)"><span class="emoji">🎯</span><span><strong>3 · Tout seul</strong><span class="desc">Remplis tout le tableau toi-même.</span><span class="meilleur" id="best-3"></span></span></button>
+        <button class="tuile" onclick="lancer(4)"><span class="emoji">⚡</span><span><strong>4 · Défi éclair</strong><span class="desc">Le tableau est dans ta tête&nbsp;: écris juste le résultat.</span><span class="meilleur" id="best-4"></span></span></button>
+      </div>
+      <div class="rangee" style="margin-top:16px;">
+        <button class="btn btn-secondaire" onclick="imprimerFiche()">🖨️ Fiche à imprimer</button>
+        <button class="btn btn-ghost" onclick="ecranJoueur()">Changer de joueur</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MÉTHODE ===== -->
+  <section id="ecran-methode" class="ecran">
+    <div class="carte">
+      <h2>📖 La méthode du tableau</h2>
+      <ol class="regles">
+        <li>Je place le <strong>chiffre des unités</strong> du nombre dans la colonne de <strong>son unité</strong>.</li>
+        <li>J’écris les autres chiffres autour&nbsp;: <strong>un seul chiffre par case</strong>.</li>
+        <li>Je repère la colonne de l’<strong>unité demandée</strong>&nbsp;: la <strong>virgule</strong> s’écrit dans sa case, juste après le chiffre.</li>
+        <li>Je complète les cases vides avec des <strong>0</strong>, jusqu’à la colonne demandée.</li>
+        <li>Je lis le nombre de gauche à droite.</li>
+      </ol>
+      <div class="moyen-memo">Pour retenir l’ordre&nbsp;: Kilo – Hecto – Déca – mètre – déci – centi – milli</div>
+      <div id="methode-exemples"></div>
+      <button class="btn btn-primaire btn-large" style="margin-top:16px;" onclick="ecranMenu()">J’ai compris, je m’entraîne&nbsp;!</button>
+    </div>
+  </section>
+
+  <!-- ===== JEU ===== -->
+  <section id="ecran-jeu" class="ecran">
+    <div class="barre-jeu">
+      <button class="btn btn-secondaire btn-petit" onclick="quitterPartie()">⏸ Menu</button>
+      <span class="etiquette" id="jeu-niveau"></span>
+      <span class="etiquette" id="jeu-compteur"></span>
+    </div>
+    <div class="progression" id="jeu-progression"></div>
+    <div class="carte">
+      <div class="question" id="jeu-question"></div>
+      <div class="consigne" id="jeu-consigne"></div>
+      <div id="jeu-zone"></div>
+      <div id="jeu-pave" class="pave" style="display:none;"></div>
+      <div id="jeu-zone-reponse" class="zone-reponse" style="display:none;">
+        <label for="jeu-reponse">Résultat&nbsp;:</label>
+        <input id="jeu-reponse" type="text" inputmode="decimal" autocomplete="off" maxlength="12">
+        <span class="unite-cible" id="jeu-unite-cible"></span>
+      </div>
+      <div id="jeu-retour"></div>
+      <div class="boutons-jeu">
+        <button class="btn btn-or" id="btn-memo" onclick="ouvrirMemo()" style="display:none;">💡 Mémo</button>
+        <button class="btn btn-primaire" id="btn-valider" onclick="valider()">Valider ✓</button>
+        <button class="btn btn-primaire" id="btn-suivant" onclick="questionSuivante()" style="display:none;">Suivant →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SCORE ===== -->
+  <section id="ecran-score" class="ecran">
+    <div class="carte">
+      <h2 id="score-titre">Partie terminée&nbsp;!</h2>
+      <div class="score"><span class="gros" id="score-points">0</span><span class="sur" id="score-total">/0</span></div>
+      <div class="etoiles" id="score-etoiles"></div>
+      <p id="score-message" style="text-align:center; font-weight:700;"></p>
+      <div id="score-bilan"></div>
+    </div>
+    <div class="rangee">
+      <button class="btn btn-primaire" id="btn-niveau-suivant" style="display:none;"></button>
+      <button class="btn btn-secondaire" id="btn-rejouer">🔁 Rejouer</button>
+      <button class="btn btn-ghost" onclick="ecranMenu()">Retour au menu</button>
+    </div>
+  </section>
+
+  <!-- ===== MODE PARENT : CODE ===== -->
+  <section id="ecran-parent-code" class="ecran">
+    <div class="carte">
+      <h2>👨‍👩‍👧 Mode Parent</h2>
+      <div id="pc-creation">
+        <p>Première ouverture&nbsp;: crée ton code parent (4 caractères minimum). Il protège les réglages et l’historique.</p>
+        <div class="champ-mdp"><input class="champ" type="password" id="pc-code1" placeholder="Nouveau code"><button class="oeil" data-cible="pc-code1" title="Afficher">👁️</button></div>
+        <div class="champ-mdp"><input class="champ" type="password" id="pc-code2" placeholder="Retape le code"><button class="oeil" data-cible="pc-code2" title="Afficher">👁️</button></div>
+        <button class="btn btn-primaire btn-large" onclick="creerCode()">Créer le code et entrer</button>
+      </div>
+      <div id="pc-saisie">
+        <p>Entre le code parent.</p>
+        <div class="champ-mdp"><input class="champ" type="password" id="pc-code" placeholder="Code parent"><button class="oeil" data-cible="pc-code" title="Afficher">👁️</button></div>
+        <button class="btn btn-primaire btn-large" onclick="verifierCode()">Entrer</button>
+      </div>
+      <button class="btn btn-ghost btn-large" style="margin-top:10px;" onclick="ecranJoueur()">← Revenir aux jeux</button>
+    </div>
+  </section>
+
+  <!-- ===== MODE PARENT ===== -->
+  <section id="ecran-parent" class="ecran">
+    <div class="carte">
+      <h2>👨‍👩‍👧 Mode Parent</h2>
+      <div class="onglets" id="onglets-parent">
+        <button class="onglet actif" data-p="joueurs">Joueurs</button>
+        <button class="onglet" data-p="reglages">Réglages</button>
+        <button class="onglet" data-p="historique">Historique</button>
+        <button class="onglet" data-p="analyse">Analyse</button>
+        <button class="onglet" data-p="rapport">Rapport</button>
+        <button class="onglet" data-p="donnees">Données</button>
+      </div>
+
+      <div class="panneau actif" id="p-joueurs">
+        <div id="liste-joueurs-parent"></div>
+        <label class="lbl" for="nouveau-joueur">Ajouter un joueur</label>
+        <div class="rangee"><input class="champ" id="nouveau-joueur" placeholder="Prénom" style="flex:1;"><button class="btn btn-primaire btn-petit" onclick="ajouterJoueur()">Ajouter</button></div>
+      </div>
+
+      <div class="panneau" id="p-reglages">
+        <h3 style="margin-top:0;">Réglages par joueur</h3>
+        <p style="font-size:13px; color:var(--gris); margin:0 0 6px;">«&nbsp;Mémo&nbsp;»&nbsp;: autorise le bouton 💡 pendant les exercices. «&nbsp;Nombres à virgule&nbsp;»&nbsp;: ajoute des nombres comme 2,5&nbsp;km (fin de CM2).</p>
+        <div id="reglages-joueurs"></div>
+        <label class="lbl">Nombre de questions (niveaux 3 et 4)</label>
+        <div class="segment" id="seg-nb"></div>
+        <h3>Changer le code parent</h3>
+        <div class="champ-mdp"><input class="champ" type="password" id="nc-code1" placeholder="Nouveau code"><button class="oeil" data-cible="nc-code1" title="Afficher">👁️</button></div>
+        <div class="champ-mdp"><input class="champ" type="password" id="nc-code2" placeholder="Retape le nouveau code"><button class="oeil" data-cible="nc-code2" title="Afficher">👁️</button></div>
+        <button class="btn btn-secondaire btn-large" onclick="changerCode()">Enregistrer le nouveau code</button>
+      </div>
+
+      <div class="panneau" id="p-historique">
+        <label class="lbl" style="margin-top:0;">Filtrer par joueur</label>
+        <div class="segment" id="filtre-hist"></div>
+        <div id="liste-hist" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="panneau" id="p-analyse"><div id="zone-analyse"></div></div>
+
+      <div class="panneau" id="p-rapport">
+        <p style="font-size:13.5px; color:var(--gris); margin-top:0;">Rapport complet des exercices faits, à lire puis à transmettre à Claude pour faire évoluer l’outil.</p>
+        <textarea class="rapport" id="texte-rapport" readonly></textarea>
+        <div class="rangee" style="margin-top:10px;">
+          <button class="btn btn-secondaire btn-petit" onclick="imprimerRapport()">🖨️ Imprimer / PDF</button>
+          <button class="btn btn-secondaire btn-petit" onclick="telechargerRapport()">⬇️ Télécharger .txt</button>
+          <button class="btn btn-secondaire btn-petit" onclick="copierRapport()">📋 Copier</button>
+        </div>
+        <button class="btn btn-primaire btn-large" style="margin-top:12px;" onclick="rapportHub()">📊 Rapport détaillé (format hub, pour Claude)</button>
+      </div>
+
+      <div class="panneau" id="p-donnees">
+        <button class="btn btn-secondaire btn-large" onclick="exporterDonnees()">📤 Exporter les données (JSON)</button>
+        <button class="btn btn-secondaire btn-large" style="margin-top:10px;" onclick="document.getElementById('fichier-import').click()">📥 Importer des données (JSON)</button>
+        <input type="file" id="fichier-import" accept=".json,application/json" style="display:none;">
+        <button class="btn btn-danger btn-large" style="margin-top:22px;" onclick="reinitialiser()">🗑️ Réinitialiser toutes les données</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-large" onclick="ecranJoueur()">← Quitter le Mode Parent</button>
+  </section>
+
+  <footer class="pied">Le tableau des longueurs · v1.3 · données enregistrées sur cet appareil uniquement</footer>
+</div>
+
+<div class="voile" id="voile"><div class="modale" id="modale"></div></div>
+<div id="toast"></div>
+<div id="zone-impression"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   CONSTANTES
+   ============================================================ */
+const VERSION = "v1.3";
+const NB = " ";
+const U = ["km","hm","dam","m","dm","cm","mm"];
+const NOMS_U = {km:"kilomètre", hm:"hectomètre", dam:"décamètre", m:"mètre", dm:"décimètre", cm:"centimètre", mm:"millimètre"};
+const CLES = {J:"conv_v1_joueurs", S:"conv_v1_sessions", C:"conv_v1_code", R:"conv_v1_reglages"};
+const NOMS_NIVEAU = {1:"Je range les unités", 2:"Pas à pas", 3:"Tout seul", 4:"Défi éclair"};
+const LIB_ERR = {
+  ordre:"Ordre des unités dans le tableau",
+  qcm:"Lien entre deux unités (×10, ×100…)",
+  placement:"Chiffre des unités mal placé",
+  zeros:"Oubli (ou excès) de zéros",
+  virgule:"Virgule dans la mauvaise colonne",
+  lecture:"Erreur en lisant le tableau",
+  chiffres:"Résultat faux (défi)"
+};
+const CONSEILS = {
+  ordre:"Refaire le niveau 1 et relire le moyen mnémotechnique (Kilo – Hecto – Déca…).",
+  qcm:"Revoir avec lui que chaque colonne vaut 10 fois la suivante (1 m = 10 dm = 100 cm).",
+  placement:"Insister sur l’étape 1 du niveau 2&nbsp;: le chiffre des unités va sous l’unité écrite.",
+  zeros:"Refaire le niveau 2 en verbalisant l’étape 4&nbsp;: «&nbsp;je bouche les trous avec des 0 jusqu’à la virgule&nbsp;».",
+  virgule:"Rappeler que la virgule se place juste après la colonne de l’unité DEMANDÉE.",
+  lecture:"Faire lire le nombre à voix haute de gauche à droite avant de l’écrire.",
+  chiffres:"Revenir au niveau 3 (tableau visible) avant de retenter le défi."
+};
+
+/* ============================================================
+   OUTILS
+   ============================================================ */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function rnd(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+function melanger(t){ const a=t.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function deux(n){ return (n<10?"0":"") + n; }
+/* Dates en heure locale (jamais toISOString) */
+function fmtDate(ts){ const d=new Date(ts); return deux(d.getDate())+"/"+deux(d.getMonth()+1)+"/"+d.getFullYear()+" à "+deux(d.getHours())+"h"+deux(d.getMinutes()); }
+function dateLocale(ts){ const d=new Date(ts); return d.getFullYear()+"-"+deux(d.getMonth()+1)+"-"+deux(d.getDate()); }
+function guil(t){ return "«"+NB+t+NB+"»"; }
+/* Nombre affiché avec espaces des milliers : "34500" -> "34 500", "3,45" -> "3,45" */
+function fmtNb(s){
+  const p = String(s).split(",");
+  p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, NB);
+  return p.join(",");
+}
+/* Normalise une réponse saisie ; renvoie null si invalide */
+function normaliser(s){
+  let t = String(s).replace(/[\s  ]/g,"").replace(".",",");
+  if(!/^\d+(,\d+)?$/.test(t)) return null;
+  let [e, d] = t.split(",");
+  e = e.replace(/^0+(?=\d)/,"");
+  d = (d||"").replace(/0+$/,"");
+  return d ? e+","+d : e;
+}
+function chiffresSignificatifs(s){ return String(s).replace(",","").replace(/^0+/,"").replace(/0+$/,""); }
+
+function lire(k, def){ try{ const v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; }catch(e){ return def; } }
+function ecrire(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ toast("Enregistrement impossible sur cet appareil.", "erreur"); } }
+function joueurs(){ return lire(CLES.J, []); }
+function sessions(){ return lire(CLES.S, []); }
+function reglages(){ return Object.assign({nbQuestions:6}, lire(CLES.R, {})); }
+function joueurCourant(){ return joueurs().find(j => j.nom === ETAT.joueur) || {nom:ETAT.joueur, aide:false, virgules:false}; }
+
+let ETAT = { joueur:null, filtreHist:"__tous__" };
+let J = null; // partie en cours
+
+/* ============================================================
+   TOAST & MODALE (pas de alert/confirm)
+   ============================================================ */
+let minuteurToast = null;
+function toast(msg, type){
+  const t = $("toast"); t.className = type || ""; t.textContent = msg; t.style.display = "block";
+  clearTimeout(minuteurToast); minuteurToast = setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+function modale(titre, html, boutons){
+  const m = $("modale");
+  m.innerHTML = "<h3>"+titre+"</h3><div>"+html+"</div><div class='boutons'></div>";
+  const zb = m.querySelector(".boutons");
+  (boutons || [{txt:"Fermer", cls:"btn-primaire"}]).forEach(b => {
+    const el = document.createElement("button");
+    el.className = "btn " + (b.cls || "btn-secondaire"); el.textContent = b.txt;
+    el.onclick = () => { if(!b.garder) fermerModale(); if(b.action) b.action(); };
+    zb.appendChild(el);
+  });
+  $("voile").classList.add("actif");
+}
+function fermerModale(){ $("voile").classList.remove("actif"); }
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function afficher(id){
+  document.querySelectorAll(".ecran").forEach(e => e.classList.remove("actif"));
+  $(id).classList.add("actif");
+  window.scrollTo(0,0);
+}
+function ecranJoueur(){
+  const js = joueurs();
+  const z = $("liste-joueurs");
+  if(!js.length){
+    z.innerHTML = "<p class='vide'>Aucun joueur pour l’instant. Demande à un parent d’ajouter ton prénom.</p>" +
+      "<button class='btn btn-primaire' id='btn-ajout-accueil'>➕ Ajouter un joueur</button>";
+    $("btn-ajout-accueil").onclick = () => { ETAT.apresCode = "ajout"; ouvrirParent(); };
+  } else {
+    z.innerHTML = js.map((j,i) => "<button class='pill' data-i='"+i+"'>"+esc(j.nom)+"</button>").join("");
+    z.querySelectorAll(".pill").forEach(b => b.onclick = () => { ETAT.joueur = js[+b.dataset.i].nom; ecranMenu(); });
+  }
+  afficher("ecran-joueur");
+}
+function ecranMenu(){
+  if(!ETAT.joueur){ ecranJoueur(); return; }
+  $("menu-bonjour").textContent = "Bonjour " + ETAT.joueur + NB + "!";
+  const ss = sessions().filter(s => s.joueur === ETAT.joueur);
+  for(let n=1;n<=4;n++){
+    const sn = ss.filter(s => s.niveau === n);
+    const el = $("best-"+n);
+    if(sn.length){
+      const best = sn.reduce((a,s) => (s.score/s.total > a.score/a.total ? s : a), sn[0]);
+      el.textContent = "🏅 Meilleur" + NB + ": " + best.score + "/" + best.total; el.style.display = "inline-block";
+    } else { el.style.display = "none"; }
+  }
+  afficher("ecran-menu");
+}
+
+/* ============================================================
+   MODÈLE D'UNE CONVERSION
+   ============================================================ */
+function construireQ(intStr, decStr, s, t){
+  const cells = Array(7).fill("");
+  const n = intStr.length;
+  for(let i=0;i<n;i++) cells[s-n+1+i] = intStr[i];
+  for(let i=0;i<decStr.length;i++) cells[s+1+i] = decStr[i];
+  const pleins = cells.map((v,i) => v !== "" ? i : -1).filter(i => i >= 0);
+  const premier = pleins[0], dernier = pleins[pleins.length-1];
+  const a = Math.min(premier, t), b = Math.max(dernier, t);
+  const att = cells.slice(); const zeros = [];
+  for(let i=a;i<=b;i++) if(att[i] === ""){ att[i] = "0"; zeros.push(i); }
+  const ent = att.slice(a, t+1).join("").replace(/^0+(?=\d)/,"");
+  const dec = att.slice(t+1, b+1).join("").replace(/0+$/,"");
+  return { type:"conv", s, t, intStr, decStr,
+    source: decStr ? intStr+","+decStr : intStr,
+    cellsSource: cells, cellsAttendues: att, zeros, reponse: dec ? ent+","+dec : ent };
+}
+function genererConversion(avecVirgule, deja){
+  for(let k=0;k<400;k++){
+    const s = rnd(0,6);
+    const t = rnd(Math.max(0,s-3), Math.min(6,s+3));
+    if(t === s) continue;
+    const n = rnd(1, Math.min(3, s+1));
+    let intStr = String(rnd(1,9));
+    for(let i=1;i<n;i++) intStr += rnd(0,9);
+    let decStr = "";
+    if(avecVirgule && Math.random() < 0.7){
+      const m = Math.min(2, 6-s);
+      if(m < 1) continue;
+      const nd = rnd(1,m);
+      for(let i=0;i<nd-1;i++) decStr += rnd(0,9);
+      decStr += rnd(1,9);
+    }
+    const q = construireQ(intStr, decStr, s, t);
+    const cle = q.source + U[s] + U[t];
+    if(deja.has(cle)) continue;
+    deja.add(cle);
+    return q;
+  }
+  return construireQ("345","",5,3);
+}
+function texteQ(q){ return fmtNb(q.source)+NB+U[q.s]+" = ?"+NB+U[q.t]; }
+
+/* ============================================================
+   RENDU DU TABLEAU
+   opts : editable, virgule, sel, marques{i:"faux"|"zero"}, verrou[], cibleCol, statique, petit, entete(bool)
+   ============================================================ */
+function htmlTableau(cells, o){
+  o = o || {};
+  const cls = "tableau" + (o.statique ? " statique" : "") + (o.petit ? " petit" : "");
+  let h = "<div class='tab-wrap'><table class='"+cls+"'><thead>";
+  if(!o.petit) h += "<tr><th class='groupe' colspan='3'>Multiples</th><th class='groupe'>Unité</th><th class='groupe' colspan='3'>Sous-multiples</th></tr>";
+  h += "<tr>" + U.map((u,i) => {
+    const g = i<3 ? "multi" : (i===3 ? "unite" : "sous");
+    return "<th class='u "+g+(o.cibleCol===i?" cible":"")+"' data-col='"+i+"'>"+u+"</th>";
+  }).join("") + "</tr></thead><tbody><tr>";
+  h += cells.map((v,i) => {
+    let c = "case";
+    if(o.verrou && o.verrou.indexOf(i) >= 0) c += " verrou";
+    if(o.marques && o.marques[i]) c += " " + o.marques[i];
+    if(o.cibleCol === i) c += " cible";
+    if(o.virgule === i) c += " a-virgule";
+    return "<td class='"+c+"' data-col='"+i+"'>"+esc(v)+(o.virgule===i ? "<span class='virg'>,</span>" : "")+"</td>";
+  }).join("");
+  h += "</tr></tbody></table></div>";
+  return h;
+}
+function htmlCorrection(q){
+  const marques = {}; q.zeros.forEach(i => marques[i] = "zero");
+  let h = "<ol>";
+  h += "<li>Le chiffre des unités de <strong>"+fmtNb(q.source)+"</strong> va dans la colonne "+guil(U[q.s])+".</li>";
+  h += "<li>On veut des "+guil(U[q.t])+"&nbsp;: la virgule s’écrit dans la case "+guil(U[q.t])+", juste après son chiffre.</li>";
+  if(q.zeros.length) h += "<li>On complète les cases vides avec des 0 (en jaune).</li>";
+  h += "<li>On lit&nbsp;: <strong>"+fmtNb(q.source)+NB+U[q.s]+" = "+fmtNb(q.reponse)+NB+U[q.t]+"</strong>.</li></ol>";
+  h += htmlTableau(q.cellsAttendues, {statique:true, virgule:q.t, marques, cibleCol:q.t});
+  if(q.reponse.indexOf(",") < 0) h += "<p style='font-size:13px; margin:4px 0 0;'>Ici, il n’y a rien après la virgule&nbsp;: on ne l’écrit pas dans le résultat.</p>";
+  return h;
+}
+
+/* ============================================================
+   MÉTHODE (leçon)
+   ============================================================ */
+function ouvrirMethode(){
+  const ex = [
+    {q:construireQ("345","",5,3), titre:"Exemple 1 · 345 cm en m", txt:"Le 5 (chiffre des unités) va sous cm. On veut des m : la virgule s’écrit dans la case m, après le 3."},
+    {q:construireQ("7","",3,5), titre:"Exemple 2 · 7 m en cm", txt:"Le 7 va sous m. On veut des cm : on bouche les cases vides avec des 0 jusqu’à la colonne cm."},
+    {q:construireQ("45","",5,3), titre:"Exemple 3 · 45 cm en m", txt:"Le 5 va sous cm. La case m est vide : on y écrit un 0, puis la virgule juste après lui."}
+  ];
+  $("methode-exemples").innerHTML = ex.map(e => {
+    const marques = {}; e.q.zeros.forEach(i => marques[i] = "zero");
+    return "<div class='exemple'><div class='titre-ex'>"+e.titre+"</div><p style='margin:0 0 8px; font-size:14px;'>"+e.txt.replace(/ :/g, NB+":")+"</p>" +
+      htmlTableau(e.q.cellsAttendues, {statique:true, virgule:e.q.t, marques, cibleCol:e.q.t}) +
+      (e.q.reponse.indexOf(",") < 0 ? "<p style='font-size:13px; margin:4px 0 0;'>Rien après la virgule&nbsp;: on ne l’écrit pas.</p>" : "") +
+      "<p style='margin:8px 0 0; font-weight:800; text-align:center; font-size:17px;'>"+fmtNb(e.q.source)+NB+U[e.q.s]+" = "+fmtNb(e.q.reponse)+NB+U[e.q.t]+"</p></div>";
+  }).join("");
+  afficher("ecran-methode");
+}
+function ouvrirMemo(){
+  modale("💡 Mémo",
+    "<ol class='regles'><li>Chiffre des unités sous son unité.</li><li>Un seul chiffre par case.</li><li>Virgule dans la case de l’unité demandée, après son chiffre.</li><li>Cases vides → des 0.</li><li>Je lis de gauche à droite.</li></ol>" +
+    "<div class='moyen-memo'>Kilo – Hecto – Déca – mètre – déci – centi – milli</div>");
+}
+
+/* ============================================================
+   PARTIE
+   ============================================================ */
+function genererQcm(n){
+  const liste = []; const textes = new Set();
+  let garde = 0;
+  while(liste.length < n && garde++ < 200){
+    const type = ["droite","gauche","combien"][rnd(0,2)];
+    let item;
+    if(type === "droite" || type === "gauche"){
+      const i = type === "droite" ? rnd(0,5) : rnd(1,6);
+      const bonne = type === "droite" ? U[i+1] : U[i-1];
+      const pieges = melanger(U.filter(u => u !== bonne && u !== U[i])).slice(0,2);
+      item = {type:"qcm", texte:"Dans le tableau, quelle unité est juste à "+type+" de "+guil(U[i])+NB+"?",
+        choix:melanger([bonne].concat(pieges)), bonne,
+        expl:"Dans le tableau, "+guil(bonne)+" est juste à "+type+" de "+guil(U[i])+".", ref:i};
+    } else {
+      const a = rnd(0,5); const b = Math.min(6, a + rnd(1,3)); const d = b - a;
+      const bonne = fmtNb(String(Math.pow(10,d)));
+      const choix = ["10","100","1000","10000"].map(fmtNb).filter(c => c !== bonne);
+      item = {type:"qcm", texte:"1"+NB+U[a]+" = combien de "+U[b]+NB+"?",
+        choix:melanger([bonne].concat(melanger(choix).slice(0,2))), bonne,
+        expl:"Chaque colonne vaut 10 fois la colonne de droite. De "+guil(U[a])+" à "+guil(U[b])+", il y a "+d+" colonne"+(d>1?"s":"")+"&nbsp;: 1"+NB+U[a]+" = "+bonne+NB+U[b]+".",
+        conv:construireQ("1","",a,b)};
+    }
+    if(textes.has(item.texte)) continue;
+    textes.add(item.texte); liste.push(item);
+  }
+  return liste;
+}
+function lancer(niveau){
+  const j = joueurCourant(); const r = reglages();
+  J = {niveau, i:0, resultats:[], questions:[], debut:Date.now()};
+  if(niveau === 1){
+    J.questions = [{type:"ordre"}].concat(genererQcm(4));
+  } else {
+    const n = niveau === 2 ? 4 : r.nbQuestions;
+    const deja = new Set();
+    for(let k=0;k<n;k++) J.questions.push(genererConversion(!!j.virgules, deja));
+  }
+  afficher("ecran-jeu");
+  preparerQuestion();
+}
+function Q(){ return J.questions[J.i]; }
+function preparerQuestion(){
+  Object.assign(J, {cells:Array(7).fill(""), virgule:null, tuile:null, essais:0, essaisEtape:0, erreurs:[], marques:{},
+    termine:false, retour:null, cibleCol:null, rangement:[], choixFait:null, debutQ:Date.now(), donne:""});
+  const q = Q();
+  if(q.type === "ordre") J.jetons = melanger(U);
+  if(J.niveau === 2) J.etape = "unite";
+  $("jeu-reponse").value = "";
+  $("jeu-reponse").disabled = false;
+  rendre();
+}
+function ajouterErreur(t){ if(J.erreurs.indexOf(t) < 0) J.erreurs.push(t); }
+function retour(type, html){ J.retour = {type, html}; }
+
+function rendre(){
+  const q = Q(); const n = J.niveau;
+  $("jeu-niveau").textContent = "Niveau " + n + " · " + NOMS_NIVEAU[n];
+  $("jeu-compteur").textContent = "Question " + (J.i+1) + "/" + J.questions.length;
+  $("jeu-progression").innerHTML = J.questions.map((x,k) => {
+    let c = "seg";
+    if(k < J.resultats.length) c += J.resultats[k].ok ? " ok" : " ko";
+    else if(k === J.i) c += " encours";
+    return "<div class='"+c+"'></div>";
+  }).join("");
+  $("btn-memo").style.display = (joueurCourant().aide && !J.termine) ? "inline-flex" : "none";
+  $("jeu-retour").innerHTML = J.retour ? "<div class='retour "+J.retour.type+"'>"+J.retour.html+"</div>" : "";
+  $("btn-suivant").style.display = J.termine ? "inline-flex" : "none";
+  $("btn-suivant").textContent = (J.i === J.questions.length-1) ? "Voir mon score →" : "Suivant →";
+
+  if(q.type === "ordre") return rendreOrdre();
+  if(q.type === "qcm") return rendreQcm();
+  rendreConversion();
+}
+
+/* ---------- Niveau 1 : ranger les unités ---------- */
+function rendreOrdre(){
+  $("jeu-question").innerHTML = "🧩 Range les unités";
+  $("jeu-consigne").textContent = "Touche les unités de la plus grande à la plus petite. Touche une case pleine pour la vider.";
+  let h = "<div class='emplacements'>";
+  for(let k=0;k<7;k++){
+    const u = J.rangement[k];
+    let c = "emplacement" + (u ? " plein" : "");
+    if(J.marques[k]) c += " " + J.marques[k];
+    h += "<div class='"+c+"' data-k='"+k+"'>"+(u || "?")+"</div>";
+  }
+  h += "</div><div class='jetons'>";
+  J.jetons.filter(u => J.rangement.indexOf(u) < 0).forEach(u => { h += "<button class='jeton' data-u='"+u+"'>"+u+"</button>"; });
+  h += "</div>";
+  $("jeu-zone").innerHTML = h;
+  $("jeu-pave").style.display = "none";
+  $("jeu-zone-reponse").style.display = "none";
+  $("btn-valider").style.display = J.termine ? "none" : "inline-flex";
+  if(J.termine) return;
+  $("jeu-zone").querySelectorAll(".jeton").forEach(b => b.onclick = () => {
+    if(J.rangement.length < 7){ J.rangement.push(b.dataset.u); J.marques = {}; rendre(); }
+  });
+  $("jeu-zone").querySelectorAll(".emplacement.plein").forEach(e => e.onclick = () => {
+    J.rangement.splice(+e.dataset.k, 1); J.marques = {}; rendre();
+  });
+}
+function validerOrdre(){
+  if(J.rangement.length < 7){ toast("Place les 7 unités avant de valider."); return; }
+  const fautes = []; for(let k=0;k<7;k++) if(J.rangement[k] !== U[k]) fautes.push(k);
+  J.essais++;
+  if(!fautes.length){
+    for(let k=0;k<7;k++) J.marques[k] = "juste";
+    retour("ok", "✅ Bravo&nbsp;! Les unités sont dans le bon ordre&nbsp;: de la plus grande (km) à la plus petite (mm).");
+    return terminerQuestion();
+  }
+  ajouterErreur("ordre");
+  if(J.essais === 1){
+    J.marques = {}; fautes.forEach(k => J.marques[k] = "faux");
+    retour("indice", "Pas encore. Les unités en orange ne sont pas à leur place&nbsp;: touche-les pour les retirer, puis recommence.");
+    rendre(); return;
+  }
+  J.rangement = U.slice(); J.marques = {}; for(let k=0;k<7;k++) J.marques[k] = "juste";
+  retour("correction", "Voici le bon ordre&nbsp;: <strong>km – hm – dam – m – dm – cm – mm</strong>.<br>Astuce pour le retenir&nbsp;: <strong>K</strong>ilo – <strong>H</strong>ecto – <strong>D</strong>éca – <strong>m</strong>ètre – <strong>d</strong>éci – <strong>c</strong>enti – <strong>m</strong>illi.");
+  terminerQuestion();
+}
+
+/* ---------- Niveau 1 : QCM ---------- */
+function rendreQcm(){
+  const q = Q();
+  $("jeu-question").innerHTML = "<span style='font-size:22px;'>"+q.texte+"</span>";
+  $("jeu-consigne").textContent = "Touche la bonne réponse.";
+  $("jeu-zone").innerHTML = "<div class='choix-qcm'>" + q.choix.map(c => {
+    let cl = "choix";
+    if(J.termine && c === q.bonne) cl += " juste";
+    if(J.termine && c === J.choixFait && c !== q.bonne) cl += " faux";
+    return "<div class='"+cl+"' data-c='"+c+"'>"+c+"</div>";
+  }).join("") + "</div>";
+  $("jeu-pave").style.display = "none";
+  $("jeu-zone-reponse").style.display = "none";
+  $("btn-valider").style.display = "none";
+  if(J.termine) return;
+  $("jeu-zone").querySelectorAll(".choix").forEach(d => d.onclick = () => {
+    J.choixFait = d.dataset.c;
+    if(J.choixFait === q.bonne){ retour("ok", "✅ Exact&nbsp;! " + q.expl); }
+    else {
+      ajouterErreur("qcm");
+      let h = "La bonne réponse est <strong>"+q.bonne+"</strong>. " + q.expl;
+      if(q.conv) h += htmlTableau(q.conv.cellsAttendues, {statique:true, petit:true, cibleCol:q.conv.t, marques:Object.fromEntries(q.conv.zeros.map(i => [i,"zero"]))});
+      else h += htmlTableau(U.map(() => ""), {statique:true, petit:true, cibleCol:U.indexOf(q.bonne)});
+      retour("correction", h);
+    }
+    terminerQuestion();
+  });
+}
+
+/* ---------- Niveaux 2, 3, 4 : conversions ---------- */
+function nombreHtml(q, surligner){
+  const e = q.intStr; let h;
+  if(surligner) h = e.slice(0,-1) + "<span class='chiffre-unites'>"+e.slice(-1)+"</span>";
+  else h = fmtNb(e);
+  return h + (q.decStr ? ","+q.decStr : "");
+}
+function consigneConversion(q){
+  const n = J.niveau;
+  if(J.termine) return "Question terminée.";
+  if(n === 4) return "Écris directement le résultat. Imagine le tableau dans ta tête&nbsp;!";
+  if(n === 3) return "Pose les chiffres, les 0 et la virgule dans le tableau (touche une étiquette, puis une case), puis écris le résultat.";
+  switch(J.etape){
+    case "unite": return "Étape 1/5 — Touche la colonne où va le chiffre des unités (le chiffre en jaune).";
+    case "chiffres": return "Étape 2/5 — Pose le nombre "+fmtNb(q.source)+" dans le tableau&nbsp;: un seul chiffre par case. Touche une étiquette, puis une case.";
+    case "virgule": return "Étape 3/5 — On veut des "+guil(U[q.t])+". Pose la virgule dans la bonne case, puis valide.";
+    case "zeros": return "Étape 4/5 — Complète avec des 0 les cases qu’il faut remplir, puis valide.";
+    case "reponse": return "Étape 5/5 — Lis le nombre dans le tableau et écris le résultat.";
+  }
+  return "";
+}
+function tableauEditable(){
+  if(J.termine) return false;
+  if(J.niveau === 3) return true;
+  if(J.niveau === 2) return J.etape === "chiffres" || J.etape === "virgule" || J.etape === "zeros";
+  return false;
+}
+function rendreConversion(){
+  const q = Q(); const n = J.niveau;
+  $("jeu-question").innerHTML = nombreHtml(q, n === 2) + NB + U[q.s] + " = <span class='trou'>?</span>" + U[q.t];
+  $("jeu-consigne").innerHTML = consigneConversion(q);
+  const edit = tableauEditable();
+  if(n === 4){
+    $("jeu-zone").innerHTML = "";
+  } else {
+    const verrou = (n === 2 && (J.etape === "zeros" || J.etape === "virgule")) ? q.cellsSource.map((v,i) => v !== "" ? i : -1).filter(i => i >= 0) : [];
+    $("jeu-zone").innerHTML = htmlTableau(J.cells, {virgule:J.virgule, marques:J.marques, verrou, cibleCol:J.cibleCol, statique:J.termine});
+    $("jeu-zone").querySelectorAll("[data-col]").forEach(el => el.onclick = () => clicColonne(+el.dataset.col, el.tagName === "TH"));
+  }
+  const pave = $("jeu-pave");
+  pave.style.display = edit ? "grid" : "none";
+  $("jeu-aide-tuiles").style.display = edit ? "block" : "none";
+  pave.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.d === J.tuile));
+  const voirReponse = n === 4 || n === 3 || (n === 2 && (J.etape === "reponse" || J.termine));
+  $("jeu-zone-reponse").style.display = voirReponse ? "flex" : "none";
+  $("jeu-unite-cible").textContent = U[q.t];
+  $("jeu-reponse").disabled = J.termine;
+  const valide = !J.termine && (n !== 2 || ["chiffres","virgule","zeros","reponse"].indexOf(J.etape) >= 0);
+  $("btn-valider").style.display = valide ? "inline-flex" : "none";
+}
+function construirePave(){
+  const p = $("jeu-pave");
+  p.innerHTML = ["1","2","3","4","5","6","7","8","9","0"].map(d => "<button data-d='"+d+"'>"+d+"</button>").join("") +
+    "<button class='virgule-tuile' data-d=',' title='Virgule'>,</button><button class='gomme' data-d='x' title='Gomme'>⌫ gomme</button>";
+  p.querySelectorAll("button").forEach(b => b.onclick = () => choisirTuile(b.dataset.d));
+  p.insertAdjacentHTML("afterend", "<p class='aide-tuiles' id='jeu-aide-tuiles' style='display:none;'>Touche une étiquette, puis une case. L’étiquette reste choisie&nbsp;: tu peux la poser plusieurs fois.</p>");
+}
+/* Cases déjà justes (chiffres du nombre) : protégées aux étapes 3 et 4 du niveau 2 */
+function estVerrou(i){ return J.niveau === 2 && (J.etape === "zeros" || J.etape === "virgule") && Q().cellsSource[i] !== ""; }
+function choisirTuile(d){
+  if(!tableauEditable()) return;
+  J.tuile = d;
+  rendre();
+}
+function poserTuile(i){
+  if(J.tuile === null){ toast("Choisis d’abord une étiquette sous le tableau."); return; }
+  delete J.marques[i];
+  if(J.tuile === ","){
+    J.virgule = (J.virgule === i) ? null : i;
+  } else if(J.tuile === "x"){
+    if(J.virgule === i) J.virgule = null;
+    else if(estVerrou(i)){ toast("Ce chiffre est déjà juste, il est protégé."); return; }
+    else J.cells[i] = "";
+  } else {
+    if(estVerrou(i)){ toast("Ce chiffre est déjà juste, il est protégé."); return; }
+    J.cells[i] = J.tuile;
+  }
+  rendre();
+}
+function clicColonne(i, enTete){
+  if(J.termine) return;
+  const q = Q();
+  if(J.niveau === 2 && J.etape === "unite"){
+    if(i === q.s){
+      J.cibleCol = i; retour("ok", "✅ Oui&nbsp;! Le chiffre des unités va sous "+guil(U[q.s])+".");
+      return passerEtape("chiffres");
+    }
+    return erreurEtape("placement",
+      "Pas tout à fait. Regarde l’unité écrite après le nombre&nbsp;: c’est "+guil(U[q.s])+".",
+      () => { J.cibleCol = q.s; },
+      "chiffres", "Le chiffre des unités va dans la colonne de l’unité écrite&nbsp;: "+guil(U[q.s])+" (en vert). À toi pour la suite&nbsp;!");
+  }
+  if(tableauEditable()) poserTuile(i);
+}
+function passerEtape(e){
+  J.etape = e; J.essaisEtape = 0; J.marques = {}; J.tuile = null;
+  if(e === "reponse" && !Q().zeros.length && J.retour && J.retour.type !== "correction"){
+    J.retour.html += "<br>Ici, aucune case vide à compléter&nbsp;: passe à la lecture du résultat.";
+  }
+  if(e === "fin"){ return terminerQuestion(); }
+  rendre();
+  if(e === "reponse") setTimeout(() => $("jeu-reponse").focus(), 50);
+}
+function erreurEtape(type, indice, corriger, suivante, texteCorrection){
+  ajouterErreur(type);
+  if(J.essaisEtape === 0){
+    J.essaisEtape = 1; retour("indice", indice); rendre(); return;
+  }
+  corriger();
+  retour("correction", "Voici la bonne réponse. " + texteCorrection);
+  passerEtape(suivante);
+}
+function cellulesFausses(attendu){
+  const m = {}; for(let i=0;i<7;i++) if((J.cells[i]||"") !== attendu[i]) m[i] = "faux"; return m;
+}
+function egal(a,b){ for(let i=0;i<7;i++) if((a[i]||"") !== (b[i]||"")) return false; return true; }
+
+function valider(){
+  const q = Q();
+  if(J.termine) return;
+  if(q.type === "ordre") return validerOrdre();
+  if(J.niveau === 2) return validerEtape();
+  if(J.niveau === 3) return validerTout();
+  if(J.niveau === 4) return validerDefi();
+}
+function lireReponse(){
+  const brut = $("jeu-reponse").value;
+  if(!brut.trim()){ toast("Écris ton résultat avant de valider."); return undefined; }
+  const n = normaliser(brut);
+  if(n === null){ toast("Écris seulement des chiffres et, si besoin, une virgule."); return undefined; }
+  return n;
+}
+function validerEtape(){
+  const q = Q();
+  if(J.etape === "chiffres"){
+    if(egal(J.cells, q.cellsSource)){
+      retour("ok", "✅ Bien placé&nbsp;: un chiffre par case, et le chiffre des unités sous "+guil(U[q.s])+".");
+      return passerEtape("virgule");
+    }
+    J.marques = cellulesFausses(q.cellsSource);
+    return erreurEtape("placement",
+      "Vérifie les cases en orange. Le chiffre en jaune doit être sous "+guil(U[q.s])+", puis les autres chiffres dans l’ordre, un par case.",
+      () => { J.cells = q.cellsSource.slice(); J.marques = {}; },
+      "virgule", "Observe&nbsp;: le chiffre des unités est sous "+guil(U[q.s])+" et chaque chiffre a sa case.");
+  }
+  if(J.etape === "virgule"){
+    if(J.virgule === q.t){
+      J.cibleCol = q.t;
+      retour("ok", "✅ Oui&nbsp;! La virgule s’écrit dans la case "+guil(U[q.t])+", juste après son chiffre.");
+      return passerEtape(q.zeros.length ? "zeros" : "reponse");
+    }
+    return erreurEtape("virgule",
+      J.virgule === null ? "Tu n’as pas encore posé la virgule&nbsp;: choisis l’étiquette "+guil(",")+" puis touche une case."
+        : "Ce n’est pas la bonne case. La virgule va dans la case de l’unité demandée, celle écrite après le signe =.",
+      () => { J.virgule = q.t; J.cibleCol = q.t; },
+      q.zeros.length ? "zeros" : "reponse", "La virgule s’écrit dans la case "+guil(U[q.t])+" (en vert), juste après son chiffre.");
+  }
+  if(J.etape === "zeros"){
+    if(egal(J.cells, q.cellsAttendues)){
+      retour("ok", "✅ Parfait, les trous sont bouchés avec des 0.");
+      return passerEtape("reponse");
+    }
+    J.marques = cellulesFausses(q.cellsAttendues);
+    return erreurEtape("zeros",
+      "Regarde les cases en orange&nbsp;: il manque des 0, ou il y en a de trop. On ne bouche que les trous entre le nombre et la case de la virgule.",
+      () => { J.cells = q.cellsAttendues.slice(); J.marques = {}; q.zeros.forEach(i => J.marques[i] = "zero"); },
+      "reponse", "Les 0 ajoutés sont en jaune.");
+  }
+  if(J.etape === "reponse"){
+    const r = lireReponse(); if(r === undefined) return;
+    if(r === normaliser(q.reponse)){
+      retour("ok", (J.erreurs.length ? "✔️ Bien lu&nbsp;! " : "✅ Parfait, sans aucune erreur&nbsp;! ") + "<strong>"+fmtNb(q.source)+NB+U[q.s]+" = "+fmtNb(q.reponse)+NB+U[q.t]+"</strong>");
+      J.donne = r; return terminerQuestion();
+    }
+    ajouterErreur("lecture");
+    if(J.essaisEtape === 0){
+      J.essaisEtape = 1;
+      retour("indice", "Relis le tableau de gauche à droite, jusqu’à la virgule (n’écris pas les 0 du début).");
+      rendre(); return;
+    }
+    J.donne = r; $("jeu-reponse").value = fmtNb(q.reponse);
+    retour("correction", "Voici la bonne réponse&nbsp;: <strong>"+fmtNb(q.source)+NB+U[q.s]+" = "+fmtNb(q.reponse)+NB+U[q.t]+"</strong>." + htmlCorrection(q));
+    terminerQuestion();
+  }
+}
+function typeErreurTableau(q){
+  for(let i=0;i<7;i++) if(q.cellsSource[i] !== "" && J.cells[i] !== q.cellsSource[i]) return "placement";
+  for(let i=0;i<7;i++) if(q.cellsAttendues[i] !== (J.cells[i]||"")) return "zeros";
+  return null;
+}
+function validerTout(){
+  const q = Q();
+  const r = lireReponse(); if(r === undefined) return;
+  const tabOk = egal(J.cells, q.cellsAttendues);
+  const virOk = J.virgule === q.t;
+  const repOk = r === normaliser(q.reponse);
+  J.donne = r;
+  if(tabOk && virOk && repOk){
+    J.marques = {};
+    retour("ok", "✅ Bravo&nbsp;! <strong>"+fmtNb(q.source)+NB+U[q.s]+" = "+fmtNb(q.reponse)+NB+U[q.t]+"</strong>");
+    return terminerQuestion();
+  }
+  const te = typeErreurTableau(q);
+  if(te) ajouterErreur(te);
+  if(!virOk) ajouterErreur("virgule");
+  if(tabOk && virOk && !repOk) ajouterErreur("lecture");
+  J.essais++;
+  if(J.essais === 1){
+    const pts = [];
+    if(!tabOk){ J.marques = cellulesFausses(q.cellsAttendues); pts.push("Le tableau n’est pas encore juste (cases en orange)."); }
+    if(!virOk) pts.push(J.virgule === null ? "Tu n’as pas posé la virgule&nbsp;: choisis l’étiquette "+guil(",")+" puis touche une case." : "La virgule n’est pas dans la bonne case.");
+    if(!repOk) pts.push("Ton résultat n’est pas le bon.");
+    retour("indice", "Presque&nbsp;! Corrige et valide à nouveau&nbsp;:<ol><li>" + pts.join("</li><li>") + "</li></ol>");
+    rendre(); return;
+  }
+  J.cells = q.cellsAttendues.slice(); J.virgule = q.t; J.marques = {}; q.zeros.forEach(i => J.marques[i] = "zero");
+  retour("correction", "Voici la correction&nbsp;:" + htmlCorrection(q));
+  terminerQuestion();
+}
+function validerDefi(){
+  const q = Q();
+  const r = lireReponse(); if(r === undefined) return;
+  J.donne = r;
+  if(r === normaliser(q.reponse)){
+    retour("ok", "⚡ Éclair&nbsp;! <strong>"+fmtNb(q.source)+NB+U[q.s]+" = "+fmtNb(q.reponse)+NB+U[q.t]+"</strong>");
+    return terminerQuestion();
+  }
+  ajouterErreur(chiffresSignificatifs(r) === chiffresSignificatifs(q.reponse) ? "virgule" : "chiffres");
+  retour("correction", "Tu as écrit " + fmtNb(r) + NB + U[q.t] + ". La bonne réponse est <strong>" + fmtNb(q.reponse) + NB + U[q.t] + "</strong>." + htmlCorrection(q));
+  terminerQuestion();
+}
+function terminerQuestion(){
+  const q = Q();
+  J.termine = true; J.tuile = null;
+  const ok = J.erreurs.length === 0;
+  let texte, attendu;
+  if(q.type === "ordre"){ texte = "Ranger les unités"; attendu = U.join(" "); }
+  else if(q.type === "qcm"){ texte = q.texte; attendu = q.bonne; }
+  else { texte = texteQ(q); attendu = q.reponse; }
+  J.resultats.push({texte, attendu,
+    donne: q.type === "ordre" ? "" : (q.type === "qcm" ? J.choixFait : (J.donne || "")),
+    ok, erreurs: J.erreurs.slice(), comps: competencesQuestion(q),
+    tempsSec: Math.round((Date.now() - J.debutQ) / 1000), indice: J.erreurs.length > 0 && !ok && J.niveau !== 4 && q.type !== "qcm"});
+  rendre();
+}
+/* Compétences travaillées par une question : [{cle, ok}] */
+function competencesQuestion(q){
+  const sans = t => J.erreurs.indexOf(t) < 0;
+  if(q.type === "ordre") return [{cle:"ordre", ok:sans("ordre")}];
+  if(q.type === "qcm") return [{cle:"relations", ok:sans("qcm")}];
+  if(J.niveau === 4) return [{cle:"tete", ok:J.erreurs.length === 0}];
+  const c = [{cle:"placement", ok:sans("placement")}];
+  if(q.zeros.length) c.push({cle:"zeros", ok:sans("zeros")});
+  c.push({cle:"virgule", ok:sans("virgule")}, {cle:"lecture", ok:sans("lecture")});
+  return c;
+}
+const LIB_COMP = {ordre:"Ordre des unités", relations:"Relations entre unités (×10, ×100…)", placement:"Placer le nombre dans le tableau",
+  zeros:"Compléter avec des 0", virgule:"Placer la virgule", lecture:"Lire le résultat", tete:"Convertir de tête"};
+/* Passage au format du hub (HubHistorique / HubRapport) */
+function passageHub(s){
+  const comp = {};
+  (s.details || []).forEach(d => (d.comps || []).forEach(c => {
+    comp[c.cle] = comp[c.cle] || {label:LIB_COMP[c.cle], ok:0, n:0}; comp[c.cle].n++; if(c.ok) comp[c.cle].ok++;
+  }));
+  return {outil:"conversions-longueurs", titre:"Le tableau des longueurs", version:s.version || VERSION,
+    joueur:s.joueur, score:s.score, total:s.total, dureeSec:s.dureeSec, niveau:s.niveau,
+    competences:Object.keys(comp).map(k => comp[k]),
+    aRevoir:(s.details || []).map((d,k) => ({d,k})).filter(x => !x.d.ok).map(x => ({q:x.k+1, texte:x.d.texte, correction:"Réponse attendue" + NB + ": " + fmtNb(x.d.attendu)})),
+    questions:(s.details || []).map((d,k) => ({n:k+1, ref:"niv"+s.niveau+"-"+d.texte, comp:"niv"+s.niveau, compLabel:"Niveau "+s.niveau+" · "+NOMS_NIVEAU[s.niveau],
+      type:s.niveau === 1 ? "qcm" : "conversion", enonce:d.texte, reponse:d.donne || "", attendu:d.attendu, ok:d.ok,
+      tempsSec:d.tempsSec, indice:!!d.indice, erreurs:(d.erreurs || []).map(e => LIB_ERR[e])}))};
+}
+function questionSuivante(){
+  if(J.i < J.questions.length - 1){ J.i++; preparerQuestion(); }
+  else finirPartie();
+}
+function quitterPartie(){
+  modale("Arrêter la partie&nbsp;?", "<p>Cette partie ne sera pas enregistrée.</p>", [
+    {txt:"Continuer à jouer", cls:"btn-secondaire"},
+    {txt:"Arrêter", cls:"btn-primaire", action:() => { J = null; ecranMenu(); }}
+  ]);
+}
+function finirPartie(){
+  const score = J.resultats.filter(r => r.ok).length, total = J.resultats.length;
+  const ts = Date.now();
+  const ss = sessions();
+  const session = {joueur:ETAT.joueur, ts, date:dateLocale(ts), niveau:J.niveau, score, total, version:VERSION,
+    dureeSec:Math.round((ts - J.debut) / 1000), details:J.resultats};
+  ss.push(session);
+  ecrire(CLES.S, ss);
+  try{ if(window.HubHistorique && typeof window.HubHistorique.enregistrer === "function") window.HubHistorique.enregistrer(passageHub(session)); }
+  catch(e){ console.warn("Historique du hub indisponible", e); }
+  $("score-points").textContent = score;
+  $("score-total").textContent = "/" + total;
+  $("score-etoiles").textContent = J.resultats.map(r => r.ok ? "⭐" : "☆").join("");
+  const taux = score / total;
+  $("score-message").textContent = taux === 1 ? "Champion" + NB + "! Le tableau n’a plus de secret pour toi." :
+    taux >= 0.7 ? "Très bien" + NB + "! Encore un petit effort et c’est parfait." :
+    taux >= 0.4 ? "C’est en bonne voie. Rejoue pour progresser" + NB + "!" :
+    "Pas grave" + NB + "! Relis la méthode, puis réessaie.";
+  $("score-bilan").innerHTML = J.resultats.map(r =>
+    "<div class='ligne-bilan'><span>"+esc(r.texte).replace(/&amp;nbsp;/g," ")+"</span><span>"+(r.ok ? "✅" : "🔸 " + esc(fmtNb(r.attendu)))+"</span></div>").join("");
+  const niv = J.niveau;
+  const bs = $("btn-niveau-suivant");
+  if(taux === 1 && niv < 4){ bs.style.display = "inline-flex"; bs.textContent = "Niveau " + (niv+1) + " →"; bs.onclick = () => lancer(niv+1); }
+  else bs.style.display = "none";
+  $("btn-rejouer").onclick = () => lancer(niv);
+  afficher("ecran-score");
+}
+
+/* ============================================================
+   FICHE IMPRIMABLE
+   ============================================================ */
+function imprimerFiche(){
+  const j = joueurCourant(); const deja = new Set(); const qs = [];
+  for(let k=0;k<10;k++) qs.push(genererConversion(!!j.virgules, deja));
+  const vide = Array(7).fill("");
+  let h = "<h1>📏 Conversions de longueurs — Fiche d’entraînement</h1>" +
+    "<div class='entete'><span>Prénom" + NB + ": " + esc(j.nom || "") + "</span><span>Date" + NB + ": ....................</span></div>" +
+    "<p>Pour chaque conversion, remplis le tableau, place la virgule, puis écris le résultat.</p>";
+  qs.forEach((q,k) => {
+    h += "<div class='exo'><div class='enonce'>" + (k+1) + ") " + fmtNb(q.source) + NB + U[q.s] + " = ....................." + NB + U[q.t] + "</div>" + htmlTableau(vide, {statique:true, petit:true}) + "</div>";
+  });
+  h += "<div class='saut'></div><h1>Corrigé</h1>";
+  qs.forEach((q,k) => {
+    const m = {}; q.zeros.forEach(i => m[i] = "zero");
+    h += "<div class='exo'><div class='enonce'>" + (k+1) + ") " + fmtNb(q.source) + NB + U[q.s] + " = " + fmtNb(q.reponse) + NB + U[q.t] + "</div>" +
+      htmlTableau(q.cellsAttendues, {statique:true, petit:true, marques:m, virgule:(q.reponse.indexOf(",")>=0 ? q.t : null)}) + "</div>";
+  });
+  $("zone-impression").innerHTML = h;
+  lancerImpression();
+}
+function lancerImpression(){
+  try{ window.print(); }
+  catch(e){ toast("Impression impossible ici\u00a0: ouvre la page dans ton navigateur.", "erreur"); }
+}
+
+/* ============================================================
+   MODE PARENT
+   ============================================================ */
+function ouvrirParent(){
+  const existe = !!localStorage.getItem(CLES.C);
+  $("pc-creation").style.display = existe ? "none" : "block";
+  $("pc-saisie").style.display = existe ? "block" : "none";
+  ["pc-code","pc-code1","pc-code2"].forEach(id => { $(id).value = ""; $(id).type = "password"; });
+  afficher("ecran-parent-code");
+}
+function creerCode(){
+  const a = $("pc-code1").value.trim(), b = $("pc-code2").value.trim();
+  if(a.length < 4){ toast("Le code doit faire au moins 4 caractères.", "erreur"); return; }
+  if(a !== b){ toast("Les deux codes ne sont pas identiques.", "erreur"); return; }
+  localStorage.setItem(CLES.C, a);
+  toast("Code parent créé.", "succes");
+  entrerParent();
+}
+function verifierCode(){
+  if($("pc-code").value.trim() === localStorage.getItem(CLES.C)) entrerParent();
+  else toast("Code incorrect.", "erreur");
+}
+function entrerParent(){
+  afficher("ecran-parent"); ongletParent("joueurs");
+  if(ETAT.apresCode === "ajout" || !joueurs().length) setTimeout(() => $("nouveau-joueur").focus(), 80);
+  ETAT.apresCode = null;
+}
+function ongletParent(p){
+  document.querySelectorAll("#onglets-parent .onglet").forEach(o => o.classList.toggle("actif", o.dataset.p === p));
+  document.querySelectorAll(".panneau").forEach(x => x.classList.remove("actif"));
+  $("p-"+p).classList.add("actif");
+  ({joueurs:rendreJoueursParent, reglages:rendreReglages, historique:rendreHistorique, analyse:rendreAnalyse, rapport:rendreRapport, donnees:()=>{}})[p]();
+}
+function rendreJoueursParent(){
+  const js = joueurs(); const z = $("liste-joueurs-parent");
+  if(!js.length){ z.innerHTML = "<p class='vide'>Aucun joueur. Ajoute un prénom ci-dessous.</p>"; return; }
+  z.innerHTML = js.map((j,i) => "<div class='ligne-joueur'><span class='nom'>"+esc(j.nom)+"</span>" +
+    "<button class='btn btn-secondaire btn-petit' data-ren='"+i+"'>✏️ Renommer</button>" +
+    "<button class='btn btn-secondaire btn-petit' data-sup='"+i+"'>🗑️ Supprimer</button></div>").join("");
+  z.querySelectorAll("[data-ren]").forEach(b => b.onclick = () => renommerJoueur(+b.dataset.ren));
+  z.querySelectorAll("[data-sup]").forEach(b => b.onclick = () => supprimerJoueur(+b.dataset.sup));
+}
+function ajouterJoueur(){
+  const nom = $("nouveau-joueur").value.trim();
+  if(!nom){ toast("Écris un prénom.", "erreur"); return; }
+  const js = joueurs();
+  if(js.some(j => j.nom.toLowerCase() === nom.toLowerCase())){ toast("Ce joueur existe déjà.", "erreur"); return; }
+  js.push({nom, aide:false, virgules:false}); ecrire(CLES.J, js);
+  $("nouveau-joueur").value = ""; rendreJoueursParent(); toast(nom + " a été ajouté. Tu peux en ajouter un autre.", "succes");
+  $("nouveau-joueur").focus();
+}
+function renommerJoueur(i){
+  const js = joueurs(); const ancien = js[i].nom;
+  modale("Renommer " + esc(ancien), "<input class='champ' id='champ-renommer' value='"+esc(ancien)+"'>", [
+    {txt:"Annuler"},
+    {txt:"Enregistrer", cls:"btn-primaire", action:() => {
+      const nv = ($("champ-renommer") ? $("champ-renommer").value : "").trim();
+      if(!nv || nv === ancien) return;
+      const liste = joueurs();
+      if(liste.some((j,k) => k !== i && j.nom.toLowerCase() === nv.toLowerCase())){ toast("Ce prénom existe déjà.", "erreur"); return; }
+      liste[i].nom = nv; ecrire(CLES.J, liste);
+      ecrire(CLES.S, sessions().map(s => { if(s.joueur === ancien) s.joueur = nv; return s; }));
+      if(ETAT.joueur === ancien) ETAT.joueur = nv;
+      rendreJoueursParent(); toast("Joueur renommé.", "succes");
+    }}
+  ]);
+  const champ = $("champ-renommer");
+  champ.focus(); champ.select();
+  champ.addEventListener("keydown", ev => { if(ev.key === "Enter"){ const b = $("modale").querySelector(".btn-primaire"); if(b) b.click(); } });
+}
+function supprimerJoueur(i){
+  const nom = joueurs()[i].nom;
+  modale("Supprimer " + esc(nom) + NB + "?", "<p>Le joueur et tout son historique seront supprimés définitivement.</p>", [
+    {txt:"Annuler"},
+    {txt:"Supprimer", cls:"btn-danger", action:() => {
+      ecrire(CLES.J, joueurs().filter(j => j.nom !== nom));
+      ecrire(CLES.S, sessions().filter(s => s.joueur !== nom));
+      if(ETAT.joueur === nom) ETAT.joueur = null;
+      rendreJoueursParent(); toast(nom + " a été supprimé.", "succes");
+    }}
+  ]);
+}
+function rendreReglages(){
+  const js = joueurs(); const z = $("reglages-joueurs");
+  z.innerHTML = js.length ? js.map((j,i) => "<div class='ligne-joueur'><span class='nom'>"+esc(j.nom)+"</span>" +
+    "<span class='interrupteur' data-i='"+i+"' data-k='aide'><span class='toggle"+(j.aide?" on":"")+"'></span>Mémo</span>" +
+    "<span class='interrupteur' data-i='"+i+"' data-k='virgules'><span class='toggle"+(j.virgules?" on":"")+"'></span>Nombres à virgule</span></div>").join("")
+    : "<p class='vide'>Aucun joueur.</p>";
+  z.querySelectorAll(".interrupteur").forEach(el => el.onclick = () => {
+    const liste = joueurs(); const j = liste[+el.dataset.i]; j[el.dataset.k] = !j[el.dataset.k];
+    ecrire(CLES.J, liste); rendreReglages();
+  });
+  const r = reglages();
+  $("seg-nb").innerHTML = [5,6,8,10].map(n => "<button class='"+(r.nbQuestions===n?"actif":"")+"' data-n='"+n+"'>"+n+"</button>").join("");
+  $("seg-nb").querySelectorAll("button").forEach(b => b.onclick = () => {
+    const rr = reglages(); rr.nbQuestions = +b.dataset.n; ecrire(CLES.R, rr); rendreReglages();
+  });
+}
+function changerCode(){
+  const a = $("nc-code1").value.trim(), b = $("nc-code2").value.trim();
+  if(a.length < 4){ toast("Le code doit faire au moins 4 caractères.", "erreur"); return; }
+  if(a !== b){ toast("Les deux codes ne sont pas identiques.", "erreur"); return; }
+  localStorage.setItem(CLES.C, a); $("nc-code1").value = ""; $("nc-code2").value = "";
+  toast("Nouveau code enregistré.", "succes");
+}
+function classePastille(t){ return t >= 0.8 ? "bien" : (t >= 0.5 ? "moyen" : "faible"); }
+function rendreHistorique(){
+  const ss = sessions().slice().sort((a,b) => b.ts - a.ts);
+  const noms = Array.from(new Set(joueurs().map(j => j.nom).concat(ss.map(s => s.joueur))));
+  if(ETAT.filtreHist !== "__tous__" && noms.indexOf(ETAT.filtreHist) < 0) ETAT.filtreHist = "__tous__";
+  $("filtre-hist").innerHTML = "<button data-f='__tous__' class='"+(ETAT.filtreHist==="__tous__"?"actif":"")+"'>Tous</button>" +
+    noms.map(n => "<button data-f='"+esc(n)+"' class='"+(ETAT.filtreHist===n?"actif":"")+"'>"+esc(n)+"</button>").join("");
+  $("filtre-hist").querySelectorAll("button").forEach(b => b.onclick = () => { ETAT.filtreHist = b.dataset.f; rendreHistorique(); });
+  const liste = ETAT.filtreHist === "__tous__" ? ss : ss.filter(s => s.joueur === ETAT.filtreHist);
+  const z = $("liste-hist");
+  if(!liste.length){ z.innerHTML = "<p class='vide'>Aucune partie enregistrée.</p>"; return; }
+  z.innerHTML = liste.map(s => "<div class='carte-hist'><div class='haut'><strong>"+esc(s.joueur)+"</strong><span style='color:var(--gris);'>"+fmtDate(s.ts)+"</span></div>" +
+    "<span class='pastille'>Niveau "+s.niveau+" · "+NOMS_NIVEAU[s.niveau]+"</span><span class='pastille "+classePastille(s.score/s.total)+"'>"+s.score+"/"+s.total+"</span>" +
+    "<div class='detail'>" + s.details.map(d => "<div>"+(d.ok?"✅":"🔸")+" "+d.texte+(d.ok ? "" : " — attendu" + NB + ": "+esc(fmtNb(d.attendu))+(d.donne ? " · donné" + NB + ": "+esc(fmtNb(d.donne)) : "")+" · "+d.erreurs.map(e => LIB_ERR[e]).join(", "))+"</div>").join("") + "</div></div>").join("");
+  z.querySelectorAll(".carte-hist").forEach(c => c.onclick = () => c.classList.toggle("ouvert"));
+}
+function statsJoueur(nom){
+  const ss = sessions().filter(s => s.joueur === nom).sort((a,b) => a.ts - b.ts);
+  const parNiveau = {1:{ok:0,tot:0,n:0},2:{ok:0,tot:0,n:0},3:{ok:0,tot:0,n:0},4:{ok:0,tot:0,n:0}};
+  const err = {}; const recents = [];
+  ss.forEach(s => {
+    const p = parNiveau[s.niveau]; p.ok += s.score; p.tot += s.total; p.n++;
+    s.details.forEach(d => { d.erreurs.forEach(e => err[e] = (err[e]||0) + 1); if(!d.ok) recents.push({s, d}); });
+  });
+  return {ss, parNiveau, err, recents:recents.slice(-10).reverse()};
+}
+function rendreAnalyse(){
+  const noms = joueurs().map(j => j.nom); const z = $("zone-analyse");
+  if(!noms.length){ z.innerHTML = "<p class='vide'>Aucun joueur.</p>"; return; }
+  z.innerHTML = noms.map(nom => {
+    const st = statsJoueur(nom);
+    if(!st.ss.length) return "<div class='fiche'><h4>"+esc(nom)+"</h4><p class='vide'>Pas encore de partie.</p></div>";
+    let h = "<div class='fiche'><h4>"+esc(nom)+"</h4><span class='pastille'>"+st.ss.length+" partie(s)</span>";
+    for(let n=1;n<=4;n++){
+      const p = st.parNiveau[n]; if(!p.tot) continue;
+      const t = p.ok/p.tot;
+      h += "<span class='pastille "+classePastille(t)+"'>Niv. "+n+NB+": "+Math.round(100*t)+NB+"%</span>";
+    }
+    const tri = Object.keys(st.err).sort((a,b) => st.err[b] - st.err[a]);
+    if(tri.length){
+      h += "<div style='margin-top:10px; font-weight:700; font-size:13.5px;'>Difficultés récurrentes" + NB + ":</div><ul style='margin:4px 0 0 18px; padding:0; font-size:13.5px;'>" +
+        tri.map(e => "<li>"+LIB_ERR[e]+" — "+st.err[e]+" fois</li>").join("") + "</ul>";
+      h += "<div class='conseil'>💡 " + CONSEILS[tri[0]] + "</div>";
+    } else h += "<div class='conseil'>👏 Aucune erreur enregistrée&nbsp;: il peut passer au niveau supérieur.</div>";
+    return h + "</div>";
+  }).join("");
+}
+function texteRapport(){
+  const L = [];
+  const nb = s => s;
+  L.push("RAPPORT — Le tableau des longueurs " + VERSION);
+  L.push("Généré le " + nb(fmtDate(Date.now())));
+  L.push("Réglages" + NB + ": " + reglages().nbQuestions + " questions (niveaux 3 et 4)");
+  L.push("");
+  joueurs().forEach(j => {
+    const st = statsJoueur(j.nom);
+    L.push("=== " + j.nom + " (mémo " + (j.aide ? "activé" : "désactivé") + ", nombres à virgule " + (j.virgules ? "oui" : "non") + ") ===");
+    L.push("Parties jouées" + NB + ": " + st.ss.length);
+    for(let n=1;n<=4;n++){ const p = st.parNiveau[n]; if(p.tot) L.push("  Niveau " + n + " (" + NOMS_NIVEAU[n] + ")" + NB + ": " + p.n + " partie(s), " + p.ok + "/" + p.tot + " réussies (" + Math.round(100*p.ok/p.tot) + NB + "%)"); }
+    const tri = Object.keys(st.err).sort((a,b) => st.err[b] - st.err[a]);
+    L.push("Difficultés" + NB + ": " + (tri.length ? tri.map(e => LIB_ERR[e] + " ×" + st.err[e]).join(NB + "; ") : "aucune"));
+    if(st.ss.length){
+      L.push("Évolution (dernières parties)" + NB + ":");
+      st.ss.slice(-8).forEach(s => L.push("  " + s.date + " — niveau " + s.niveau + " — " + s.score + "/" + s.total));
+    }
+    if(st.recents.length){
+      L.push("Dernières erreurs" + NB + ":");
+      st.recents.forEach(r => L.push("  " + r.s.date + " niv." + r.s.niveau + " | " + nb(r.d.texte.replace(/&nbsp;/g," ")) + " | attendu " + r.d.attendu + (r.d.donne ? " | donné " + r.d.donne : "") + " | " + r.d.erreurs.map(e => LIB_ERR[e]).join(", ")));
+    }
+    L.push("");
+  });
+  if(!joueurs().length) L.push("Aucun joueur enregistré.");
+  return L.join("\n");
+}
+function rapportHub(){
+  if(!window.HubRapport || typeof window.HubRapport.ouvrir !== "function"){
+    toast("Disponible quand l’outil est ouvert depuis le hub en ligne.", "erreur"); return;
+  }
+  const ps = sessions().slice().sort((a,b) => a.ts - b.ts).map(s => Object.assign(passageHub(s), {date:s.ts}));
+  window.HubRapport.ouvrir({outil:{id:"conversions-longueurs", titre:"Le tableau des longueurs", version:VERSION}, passages:ps});
+}
+function rendreRapport(){ $("texte-rapport").value = texteRapport(); }
+function imprimerRapport(){ $("zone-impression").innerHTML = "<pre>" + esc(texteRapport()) + "</pre>"; lancerImpression(); }
+function telecharger(nomFichier, contenu, type){
+  const blob = new Blob([contenu], {type});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nomFichier;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function telechargerRapport(){ telecharger("rapport-conversions-longueurs-" + dateLocale(Date.now()) + ".txt", texteRapport(), "text/plain;charset=utf-8"); }
+function copierRapport(){
+  const t = $("texte-rapport");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t.value).then(() => toast("Rapport copié.", "succes"), () => { t.select(); toast("Sélectionne le texte et copie-le."); });
+  } else { t.select(); toast("Le texte est sélectionné\u00a0: copie-le."); }
+}
+function exporterDonnees(){
+  const data = {outil:"conversions-longueurs", version:VERSION, exporteLe:dateLocale(Date.now()), joueurs:joueurs(), sessions:sessions(), reglages:reglages()};
+  telecharger("conversions-longueurs-donnees-" + dateLocale(Date.now()) + ".json", JSON.stringify(data, null, 2), "application/json");
+}
+function importerFichier(f){
+  const lecteur = new FileReader();
+  lecteur.onload = () => {
+    try{
+      const d = JSON.parse(lecteur.result);
+      if(!d || !Array.isArray(d.joueurs) || !Array.isArray(d.sessions)) throw new Error("format");
+      modale("Importer ces données" + NB + "?", "<p>"+d.joueurs.length+" joueur(s) et "+d.sessions.length+" partie(s). Les données actuelles seront remplacées.</p>", [
+        {txt:"Annuler"},
+        {txt:"Importer", cls:"btn-primaire", action:() => {
+          ecrire(CLES.J, d.joueurs); ecrire(CLES.S, d.sessions); if(d.reglages) ecrire(CLES.R, d.reglages);
+          toast("Données importées.", "succes");
+        }}
+      ]);
+    }catch(e){ toast("Ce fichier n’est pas un export de cet outil.", "erreur"); }
+  };
+  lecteur.readAsText(f);
+}
+function reinitialiser(){
+  modale("Tout réinitialiser" + NB + "?", "<p>Joueurs, historique et réglages seront supprimés définitivement. Le code parent est conservé.</p>", [
+    {txt:"Annuler"},
+    {txt:"Tout supprimer", cls:"btn-danger", action:() => {
+      [CLES.J, CLES.S, CLES.R].forEach(k => localStorage.removeItem(k));
+      ETAT.joueur = null; toast("Données réinitialisées.", "succes"); ongletParent("joueurs");
+    }}
+  ]);
+}
+
+/* ============================================================
+   INITIALISATION
+   ============================================================ */
+function init(){
+  construirePave();
+  document.querySelectorAll("#onglets-parent .onglet").forEach(o => o.onclick = () => ongletParent(o.dataset.p));
+  document.querySelectorAll(".oeil").forEach(b => b.onclick = (ev) => {
+    ev.preventDefault(); const c = $(b.dataset.cible); c.type = c.type === "password" ? "text" : "password";
+  });
+  $("fichier-import").onchange = (ev) => { const f = ev.target.files[0]; if(f) importerFichier(f); ev.target.value = ""; };
+  $("jeu-reponse").addEventListener("keydown", ev => { if(ev.key === "Enter") valider(); });
+  $("pc-code").addEventListener("keydown", ev => { if(ev.key === "Enter") verifierCode(); });
+  $("pc-code2").addEventListener("keydown", ev => { if(ev.key === "Enter") creerCode(); });
+  $("nouveau-joueur").addEventListener("keydown", ev => { if(ev.key === "Enter") ajouterJoueur(); });
+  $("voile").addEventListener("click", ev => { if(ev.target.id === "voile") fermerModale(); });
+  ecranJoueur();
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+<script src="hub-commun.js"></script>
+</body>
+</html>
